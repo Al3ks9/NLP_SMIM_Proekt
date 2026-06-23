@@ -1,18 +1,23 @@
 import csv
 import json
 from collections import defaultdict, Counter
+from pathlib import Path
 import networkx as nx
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
 
 MIN_POEMS = 5
 
 # Load POS-tagged tokens
 pos_rows = []
-with open('pos_tagged.csv') as f:
+with open(DATA / 'pos_tagged.csv') as f:
     pos_rows = list(csv.DictReader(f))
 
 # Load TF-IDF scores
 tfidf = defaultdict(dict)  # author -> {word: score}
-with open('tfidf_results.csv') as f:
+with open(DATA / 'tfidf_results.csv') as f:
     for row in csv.DictReader(f):
         tfidf[row['author']][row['word']] = float(row['tfidf_score'])
 
@@ -42,7 +47,7 @@ for author, pos_map in author_pos_vocab.items():
             key=lambda x: -x[1]
         )
 
-with open('author_vocab.json', 'w', encoding='utf-8') as f:
+with open(MODELS / 'author_vocab.json', 'w', encoding='utf-8') as f:
     json.dump(vocab_data, f, ensure_ascii=False, indent=2)
 
 print(f"Saved author_vocab.json ({len(vocab_data)} authors)")
@@ -72,13 +77,13 @@ for author, from_pos_map in author_bigrams.items():
             for to_pos, cnt in to_counts.most_common()
         }
 
-with open('pos_transitions.json', 'w', encoding='utf-8') as f:
+with open(MODELS / 'pos_transitions.json', 'w', encoding='utf-8') as f:
     json.dump(pos_transitions, f, ensure_ascii=False, indent=2)
 
 print(f"Saved pos_transitions.json ({len(pos_transitions)} authors)")
 
 # --- Load existing SKG and enrich it ---
-G = nx.read_gexf('skg.gexf')
+G = nx.read_gexf(MODELS / 'skg.gexf')
 
 # Add vocab and transition data as JSON string attributes on author nodes
 for node_id, data in G.nodes(data=True):
@@ -123,7 +128,7 @@ for i in range(len(author_list)):
 
 print(f"Added {added} author-similarity edges (Jaccard ≥ {SIMILARITY_THRESHOLD})")
 
-nx.write_gexf(G, 'skg_enriched.gexf')
+nx.write_gexf(G, MODELS / 'skg_enriched.gexf')
 print(f"Saved skg_enriched.gexf — {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
 
 # Quick sanity check

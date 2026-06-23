@@ -1,13 +1,17 @@
 import csv
 from collections import Counter
+from pathlib import Path
 import spacy
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
 
 MIN_POEMS = 5
 KEEP_POS = {'NOUN', 'VERB', 'ADJ', 'ADV', 'PROPN'}
 
 nlp = spacy.load('mk_core_news_lg')
 
-with open('stripped_songs.csv') as f:
+with open(DATA / 'stripped_songs.csv') as f:
     rows = list(csv.DictReader(f))
 
 author_counts = Counter(r['author'] for r in rows)
@@ -31,7 +35,7 @@ for i, row in enumerate(rows):
     if (i + 1) % 100 == 0:
         print(f"  processed {i + 1}/{len(rows)} rows...")
 
-with open('pos_tagged.csv', 'w', newline='') as f:
+with open(DATA / 'pos_tagged.csv', 'w', newline='') as f:
     writer = csv.DictWriter(f, fieldnames=['author', 'song_title', 'word', 'lemma', 'pos'])
     writer.writeheader()
     writer.writerows(results)

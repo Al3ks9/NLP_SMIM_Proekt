@@ -12,10 +12,15 @@ import pickle
 import sys
 import random
 from collections import defaultdict, Counter
+from pathlib import Path
 
 import numpy as np
 import spacy
 import networkx as nx
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
 
 CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV'}  # PROPN excluded — never replace proper nouns
 
@@ -24,16 +29,16 @@ CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV'}  # PROPN excluded — never replace
 print("Loading resources...", flush=True)
 
 nlp = spacy.load('mk_core_news_lg')
-G = nx.read_gexf('skg_final.gexf')
+G = nx.read_gexf(MODELS / 'skg_final.gexf')
 
-with open('author_vocab.json', encoding='utf-8') as f:
+with open(MODELS / 'author_vocab.json', encoding='utf-8') as f:
     author_vocab = json.load(f)
 
 # Build surface form lookup: (author, lemma, pos) → most common surface word
 # This lets us insert grammatically natural word forms, not bare lemmas
 surface_counter: dict = defaultdict(Counter)
 pos_rows = []
-with open('pos_tagged.csv', encoding='utf-8') as f:
+with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
     pos_rows = list(csv.DictReader(f))
 for r in pos_rows:
     surface_counter[(r['author'], r['lemma'], r['pos'])][r['word']] += 1
@@ -75,18 +80,18 @@ for r in pos_rows:
 word_to_lemma = {w: c.most_common(1)[0][0] for w, c in word_lemma_counter.items()}
 
 tfidf_lemmas: dict = defaultdict(set)  # author → set of distinctive lemmas
-with open('tfidf_results.csv', encoding='utf-8') as f:
+with open(DATA / 'tfidf_results.csv', encoding='utf-8') as f:
     for row in csv.DictReader(f):
         lemma = word_to_lemma.get(row['word'], row['word'])
         tfidf_lemmas[row['author']].add(lemma)
 
-with open('classifier.pkl', 'rb') as f:
+with open(MODELS / 'classifier.pkl', 'rb') as f:
     classifier = pickle.load(f)
 
-with open('word_embeddings.json', encoding='utf-8') as f:
+with open(MODELS / 'word_embeddings.json', encoding='utf-8') as f:
     word_embeddings: dict = {k: np.array(v) for k, v in json.load(f).items()}
 
-with open('morph_lookup.json', encoding='utf-8') as f:
+with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
     morph_lookup: dict = json.load(f)
 
 print("Ready.\n")
@@ -255,7 +260,7 @@ if __name__ == '__main__':
         run(sys.argv[1], sys.argv[2])
     else:
         songs = []
-        with open('stripped_songs.csv', encoding='utf-8') as f:
+        with open(DATA / 'stripped_songs.csv', encoding='utf-8') as f:
             songs = list(csv.DictReader(f))
 
         source_author = 'Кочо Рацин'

@@ -14,16 +14,21 @@ Run once: uv run python add_embeddings.py
 
 import csv
 import json
+from pathlib import Path
 import numpy as np
 import networkx as nx
 from sentence_transformers import SentenceTransformer
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
 
 SIMILARITY_THRESHOLD = 0.65
 
 # --- Collect ALL unique lemmas from the full corpus ---
 print("Collecting lemmas from pos_tagged.csv...", flush=True)
 all_lemmas: set[str] = set()
-with open('pos_tagged.csv', encoding='utf-8') as f:
+with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
     for row in csv.DictReader(f):
         all_lemmas.add(row['lemma'])
 
@@ -40,13 +45,13 @@ all_embeddings = model.encode(
 )
 
 lemma_to_emb = {lemma: all_embeddings[i].tolist() for i, lemma in enumerate(lemma_list)}
-with open('word_embeddings.json', 'w', encoding='utf-8') as f:
+with open(MODELS / 'word_embeddings.json', 'w', encoding='utf-8') as f:
     json.dump(lemma_to_emb, f, ensure_ascii=False)
 print(f"Saved word_embeddings.json  ({len(lemma_to_emb)} entries)")
 
 # --- Add semantic similarity edges to the SKG (SKG word nodes only) ---
 print("Loading graph...", flush=True)
-G = nx.read_gexf('skg_enriched.gexf')
+G = nx.read_gexf(MODELS / 'skg_enriched.gexf')
 
 word_nodes = [(n, d) for n, d in G.nodes(data=True) if d.get('node_type') == 'word']
 node_ids  = [n for n, d in word_nodes]
@@ -72,5 +77,5 @@ for i in range(len(node_ids)):
             added += 1
 
 print(f"Added {added} semantic similarity edges (cosine ≥ {SIMILARITY_THRESHOLD}, same POS)")
-nx.write_gexf(G, 'skg_final.gexf')
+nx.write_gexf(G, MODELS / 'skg_final.gexf')
 print(f"Saved skg_final.gexf — {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")

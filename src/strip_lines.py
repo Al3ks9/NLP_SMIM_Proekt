@@ -1,5 +1,8 @@
-in_file = 'songs.csv'
-out_file = 'stripped_songs.csv'
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+in_file = ROOT / 'songs.csv'
+out_file = ROOT / 'data' / 'stripped_songs.csv'
 
 linii = []
 

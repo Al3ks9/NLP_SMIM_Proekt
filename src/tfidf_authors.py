@@ -1,13 +1,17 @@
 import csv
 import re
 from collections import defaultdict
+from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
 
 MIN_POEMS = 5
 TOP_N = 20
 
-with open('stripped_songs.csv') as f:
+with open(DATA / 'stripped_songs.csv') as f:
     rows = list(csv.DictReader(f))
 
 # Group poems by author
@@ -53,7 +57,7 @@ for i, author in enumerate(authors):
     print()
 
 # Save full results to CSV
-with open('tfidf_results.csv', 'w', newline='') as f:
+with open(DATA / 'tfidf_results.csv', 'w', newline='') as f:
     writer = csv.writer(f)
     writer.writerow(['author', 'rank', 'word', 'tfidf_score'])
     for author, words in results:

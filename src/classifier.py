@@ -1,6 +1,7 @@
 import csv
 import pickle
 from collections import Counter
+from pathlib import Path
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import LinearSVC
@@ -10,11 +11,15 @@ from sklearn.metrics import classification_report
 from sklearn.calibration import CalibratedClassifierCV
 import numpy as np
 
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
+
 MIN_POEMS = 5
 
 # Load corpus
 songs = []
-with open('stripped_songs.csv', encoding='utf-8') as f:
+with open(DATA / 'stripped_songs.csv', encoding='utf-8') as f:
     for row in csv.DictReader(f):
         songs.append(row)
 
@@ -65,9 +70,9 @@ final_pipeline = Pipeline([
 final_pipeline.fit(texts, labels)
 
 # Save model
-with open('classifier.pkl', 'wb') as f:
+with open(MODELS / 'classifier.pkl', 'wb') as f:
     pickle.dump(final_pipeline, f)
-print("\nModel saved to classifier.pkl")
+print("\nModel saved to models/classifier.pkl")
 
 # Per-author report on last fold for reference
 from sklearn.model_selection import train_test_split
@@ -82,7 +87,7 @@ print(classification_report(y_test, y_pred, zero_division=0))
 
 def predict_author(text: str) -> tuple[str, float]:
     """Return (predicted_author, confidence) for a given poem text."""
-    with open('classifier.pkl', 'rb') as f:
+    with open(MODELS / 'classifier.pkl', 'rb') as f:
         model = pickle.load(f)
     proba = model.predict_proba([text])[0]
     classes = model.classes_

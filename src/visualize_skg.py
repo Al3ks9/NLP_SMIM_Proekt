@@ -1,7 +1,11 @@
+from pathlib import Path
 import networkx as nx
 from pyvis.network import Network
 
-G = nx.read_gexf('skg.gexf')
+ROOT = Path(__file__).resolve().parent.parent
+MODELS = ROOT / 'models'
+
+G = nx.read_gexf(MODELS / 'skg_final.gexf')
 
 net = Network(height='900px', width='100%', bgcolor='#1a1a2e', font_color='white', notebook=False)
 net.barnes_hut(gravity=-5000, central_gravity=0.3, spring_length=150)
@@ -23,5 +27,5 @@ for u, v, data in G.edges(data=True):
     else:
         net.add_edge(u, v, color='rgba(255,255,255,0.1)', width=1)
 
-net.save_graph('skg_visual.html')
+net.save_graph(str(ROOT / 'skg_visual.html'))
 print("Saved to skg_visual.html — open it in a browser")

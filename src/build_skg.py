@@ -1,19 +1,24 @@
 import csv
 from collections import defaultdict, Counter
+from pathlib import Path
 import networkx as nx
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
 
 MIN_COOCCURRENCE = 2  # min times two words must co-occur across poems to get an edge
 MIN_WORD_FREQ = 2     # min times a (lemma, pos) must appear to become a node
 
 # Load TF-IDF results
 tfidf = defaultdict(dict)  # author -> {surface_word: score}
-with open('tfidf_results.csv') as f:
+with open(DATA / 'tfidf_results.csv') as f:
     for row in csv.DictReader(f):
         tfidf[row['author']][row['word']] = float(row['tfidf_score'])
 
 # Load POS-tagged tokens
 pos_rows = []
-with open('pos_tagged.csv') as f:
+with open(DATA / 'pos_tagged.csv') as f:
     pos_rows = list(csv.DictReader(f))
 
 # Build word frequency and best (lemma, pos) mapping per surface word per author
@@ -100,13 +105,13 @@ for (lp1, lp2), count in cooccurrence.items():
     if G.has_node(n1) and G.has_node(n2):
         G.add_edge(n1, n2, edge_type='cooccurrence', weight=count)
 
-nx.write_gexf(G, 'skg.gexf')
+nx.write_gexf(G, MODELS / 'skg.gexf')
 
 print(f"SKG built:")
 print(f"  Nodes: {G.number_of_nodes()} ({sum(1 for _, d in G.nodes(data=True) if d.get('node_type') == 'author')} authors, {sum(1 for _, d in G.nodes(data=True) if d.get('node_type') == 'word')} words)")
 print(f"  Edges: {G.number_of_edges()} ({sum(1 for *_, d in G.edges(data=True) if d.get('edge_type') == 'distinctive')} author→word, {sum(1 for *_, d in G.edges(data=True) if d.get('edge_type') == 'cooccurrence')} word↔word)")
-print(f"Saved to skg.gexf")
-print("\nIn Gephi: File → Open skg.gexf, then run Layout → ForceAtlas2")
+print(f"Saved to models/skg.gexf")
+print("\nIn Gephi: File → Open models/skg.gexf, then run Layout → ForceAtlas2")
 
 # Sanity check: top distinctive words for one author
 sample_author = sorted(tfidf.keys())[0]

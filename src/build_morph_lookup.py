@@ -13,13 +13,18 @@ Run once: uv run python build_morph_lookup.py
 import csv
 import json
 from collections import defaultdict, Counter
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
 
 MIN_POEMS = 5
 SUFFIX_LEN = 3
 
 # Load eligible authors
 songs = []
-with open('stripped_songs.csv', encoding='utf-8') as f:
+with open(DATA / 'stripped_songs.csv', encoding='utf-8') as f:
     songs = list(csv.DictReader(f))
 
 author_counts = Counter(r['author'] for r in songs)
@@ -31,7 +36,7 @@ raw: dict = defaultdict(
     lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(Counter)))
 )
 
-with open('pos_tagged.csv', encoding='utf-8') as f:
+with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
     for r in csv.DictReader(f):
         if r['author'] not in eligible:
             continue
@@ -54,7 +59,7 @@ result = {
     for author, lemma_map in raw.items()
 }
 
-with open('morph_lookup.json', 'w', encoding='utf-8') as f:
+with open(MODELS / 'morph_lookup.json', 'w', encoding='utf-8') as f:
     json.dump(result, f, ensure_ascii=False)
 
 total = sum(

@@ -1,13 +1,17 @@
 import csv
 from collections import defaultdict, Counter
 import math
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
 
 MIN_POEMS = 5
 CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV', 'PROPN'}
 
 # Load raw songs for line-level features
 songs = []
-with open('stripped_songs.csv') as f:
+with open(DATA / 'stripped_songs.csv') as f:
     for row in csv.DictReader(f):
         songs.append(row)
 
@@ -32,7 +36,7 @@ for author, poems in author_poems.items():
 
 # Load POS-tagged tokens
 pos_rows = []
-with open('pos_tagged.csv') as f:
+with open(DATA / 'pos_tagged.csv') as f:
     pos_rows = list(csv.DictReader(f))
 
 # Group tokens per author
@@ -115,7 +119,7 @@ for author in sorted(eligible_authors):
     })
 
 fields = list(profiles[0].keys())
-with open('author_style_profiles.csv', 'w', newline='') as f:
+with open(DATA / 'author_style_profiles.csv', 'w', newline='') as f:
     writer = csv.DictWriter(f, fieldnames=fields)
     writer.writeheader()
     writer.writerows(profiles)

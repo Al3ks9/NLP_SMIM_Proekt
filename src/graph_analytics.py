@@ -1,8 +1,13 @@
 import csv
+from pathlib import Path
 import networkx as nx
 import community as community_louvain
 
-G = nx.read_gexf('skg_enriched.gexf')
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / 'data'
+MODELS = ROOT / 'models'
+
+G = nx.read_gexf(MODELS / 'skg_final.gexf')
 
 # --- PageRank over word nodes ---
 pr = nx.pagerank(G, weight='weight')
@@ -60,7 +65,7 @@ for node_id, data in G.nodes(data=True):
         'community': partition[node_id],
     })
 
-with open('graph_analytics.csv', 'w', newline='', encoding='utf-8') as f:
+with open(DATA / 'graph_analytics.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
     writer.writeheader()
     writer.writerows(rows)
