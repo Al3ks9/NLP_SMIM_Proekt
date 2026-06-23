@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Large generated files
+word_embeddings.json
