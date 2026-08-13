@@ -11,3 +11,12 @@ wheels/
 
 # Large generated files
 word_embeddings.json
+
+# Backup written by apply_corrections.py (data/pos_corrections.csv is tracked)
+*.csv.bak
+
+# Secrets
+.env
+
+# Subagent-driven development scratch
+.superpowers/
