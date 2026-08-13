@@ -152,3 +152,28 @@ def test_target_author_is_preferred_over_the_pooled_index():
         'pooled': {'жена': {'NOUN': {FEM_SG_DEF: 'женава'}}},
     }
     assert morph.surface_form('A', 'жена', 'NOUN', FEM_SG_DEF, lookup)[0] == 'жената'
+
+
+import json
+from pathlib import Path
+
+MODELS = Path(__file__).resolve().parent.parent / 'models'
+
+
+def test_morph_lookup_has_both_indices():
+    with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
+        lookup = json.load(f)
+    assert set(lookup) == {'by_author', 'pooled'}
+
+
+def test_morph_lookup_keys_are_feats_not_suffixes():
+    with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
+        lookup = json.load(f)
+    keys = [k
+            for lemmas in lookup['by_author'].values()
+            for pos_map in lemmas.values()
+            for forms in pos_map.values()
+            for k in forms]
+    assert keys, 'lookup is empty'
+    # A feats key contains '='; a 3-char suffix never does.
+    assert sum('=' in k for k in keys) / len(keys) > 0.9
