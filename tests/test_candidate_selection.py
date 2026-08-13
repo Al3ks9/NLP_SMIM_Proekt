@@ -105,7 +105,18 @@ def test_sparse_pool_is_genuinely_short(resources):
     assert len(pool) < cs.MIN_CANDIDATES * 2
 
 
-def test_sparse_pool_fires_the_relaxation_chain(resources, caplog):
+def test_sparse_pool_fires_the_relaxation_chain(resources, caplog, monkeypatch):
+    # This test needs tier_primary to reject мемфис (the pool's one lemma) so
+    # relaxation has to run. It used to rely on cosine('вардар', 'мемфис')
+    # happening to sit below the real SEM_THRESHOLD (0.65) -- true when this
+    # test was written, but a hidden dependency, and it silently flipped false
+    # after word_embeddings.json was regenerated (cosine came back as 0.748,
+    # so tier_primary admitted the candidate directly and relaxation never
+    # fired). Monkeypatching SEM_THRESHOLD to 2.0 -- above the mathematical
+    # ceiling of 1.0 for cosine similarity between normalized vectors --
+    # forces the rejection deterministically, independent of what any future
+    # re-embedding produces.
+    monkeypatch.setattr(cs, 'SEM_THRESHOLD', 2.0)
     with caplog.at_level(logging.INFO, logger='candidate_selection'):
         ranked = cs.rank_candidates(
             'вардар', SPARSE_POS, SPARSE_AUTHOR, None, 'NOUN',
@@ -117,15 +128,24 @@ def test_sparse_pool_fires_the_relaxation_chain(resources, caplog):
     assert 'tier=relaxed_semantic' in caplog.text
 
 
-def test_relaxation_records_the_threshold_it_settled_on(resources):
+def test_relaxation_records_the_threshold_it_settled_on(resources, monkeypatch):
+    # Same hidden dependency as test_sparse_pool_fires_the_relaxation_chain
+    # above: without forcing tier_primary to reject, a corpus re-embedding can
+    # make it admit the candidate directly, leaving zero 'relaxed_semantic'
+    # entries -- at which point the loop below never runs and this test
+    # passes vacuously without checking anything. Force the rejection the
+    # same way, and assert the loop actually has something to iterate over
+    # before trusting what it finds inside.
+    monkeypatch.setattr(cs, 'SEM_THRESHOLD', 2.0)
     ranked = cs.rank_candidates(
         'вардар', SPARSE_POS, SPARSE_AUTHOR, None, 'NOUN',
         resources['author_vocab'], resources['tfidf'], resources['embeddings'],
         resources['cooc_index'], resources['transitions'],
     )
-    for c in ranked:
-        if c['tier'] == 'relaxed_semantic':
-            assert cs.SEM_FLOOR <= c['sem_threshold'] < cs.SEM_THRESHOLD
+    relaxed = [c for c in ranked if c['tier'] == 'relaxed_semantic']
+    assert relaxed, 'no relaxed_semantic candidates -- the loop below would run vacuously'
+    for c in relaxed:
+        assert cs.SEM_FLOOR <= c['sem_threshold'] < cs.SEM_THRESHOLD
 
 
 def test_relaxation_never_drops_below_the_floor(resources):
