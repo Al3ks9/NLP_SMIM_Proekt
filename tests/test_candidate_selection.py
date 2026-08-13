@@ -99,23 +99,33 @@ def test_log_slot_emits_the_six_required_fields(racin_slots, caplog):
 # corpus, so the semantic filter cannot leave MIN_CANDIDATES behind.
 SPARSE_AUTHOR, SPARSE_POS = 'Јосип Коцев', 'PROPN'
 
+# The real production threshold, captured at import time -- before any test
+# below monkeypatches cs.SEM_THRESHOLD to force tier_primary to reject. Any
+# assertion that needs to show relaxation loosened the threshold below what
+# primary actually uses must compare against this constant, not against
+# cs.SEM_THRESHOLD as read during the test (which is 2.0 there and would make
+# an upper-bound comparison trivially true for every value the loop emits).
+REAL_SEM_THRESHOLD = cs.SEM_THRESHOLD
+
 
 def test_sparse_pool_is_genuinely_short(resources):
     pool = cs.candidate_pool(SPARSE_AUTHOR, SPARSE_POS, resources['author_vocab'])
     assert len(pool) < cs.MIN_CANDIDATES * 2
 
 
-def test_sparse_pool_fires_the_relaxation_chain(resources, caplog, monkeypatch):
-    # This test needs tier_primary to reject мемфис (the pool's one lemma) so
-    # relaxation has to run. It used to rely on cosine('вардар', 'мемфис')
-    # happening to sit below the real SEM_THRESHOLD (0.65) -- true when this
-    # test was written, but a hidden dependency, and it silently flipped false
-    # after word_embeddings.json was regenerated (cosine came back as 0.748,
-    # so tier_primary admitted the candidate directly and relaxation never
-    # fired). Monkeypatching SEM_THRESHOLD to 2.0 -- above the mathematical
-    # ceiling of 1.0 for cosine similarity between normalized vectors --
-    # forces the rejection deterministically, independent of what any future
-    # re-embedding produces.
+def test_relaxation_chain_fires_when_primary_is_force_disabled(resources, caplog, monkeypatch):
+    """
+    Shows relaxation firing and recovering a candidate tier_primary rejected --
+    not that this pool naturally falls below the real SEM_THRESHOLD (0.65).
+    It doesn't: cosine('вардар', 'мемфис') is currently 0.748, comfortably
+    above 0.65, so tier_primary would admit it directly and relaxation would
+    never run. Depending on that live embedding value broke this test once
+    already (it drifts on every re-embedding), so instead we force tier_primary
+    to reject unconditionally by monkeypatching SEM_THRESHOLD to 2.0 -- above
+    the mathematical ceiling of 1.0 for cosine similarity between normalized
+    vectors -- which isolates the relaxation tier's behaviour from whatever
+    the live embeddings currently say.
+    """
     monkeypatch.setattr(cs, 'SEM_THRESHOLD', 2.0)
     with caplog.at_level(logging.INFO, logger='candidate_selection'):
         ranked = cs.rank_candidates(
@@ -129,13 +139,22 @@ def test_sparse_pool_fires_the_relaxation_chain(resources, caplog, monkeypatch):
 
 
 def test_relaxation_records_the_threshold_it_settled_on(resources, monkeypatch):
-    # Same hidden dependency as test_sparse_pool_fires_the_relaxation_chain
-    # above: without forcing tier_primary to reject, a corpus re-embedding can
-    # make it admit the candidate directly, leaving zero 'relaxed_semantic'
-    # entries -- at which point the loop below never runs and this test
-    # passes vacuously without checking anything. Force the rejection the
-    # same way, and assert the loop actually has something to iterate over
-    # before trusting what it finds inside.
+    """
+    Same force-disable mechanism as
+    test_relaxation_chain_fires_when_primary_is_force_disabled above (see its
+    docstring for why): primary is deliberately neutralised via
+    SEM_THRESHOLD=2.0 so relaxation is guaranteed to run, independent of the
+    live cosine('вардар', 'мемфис') value.
+
+    The recorded sem_threshold must be checked against REAL_SEM_THRESHOLD
+    (captured before any patching), not against cs.SEM_THRESHOLD as patched
+    in this test -- the patched value is 2.0, and threshold is decremented
+    before every filter step in tier_relaxed_semantic, so sem_threshold can
+    never exceed 2.0 - SEM_RELAX_STEP = 1.95. Comparing against the patched
+    value would make the upper bound trivially true for every value the loop
+    could ever produce instead of demonstrating relaxation actually loosened
+    the threshold below the real 0.65.
+    """
     monkeypatch.setattr(cs, 'SEM_THRESHOLD', 2.0)
     ranked = cs.rank_candidates(
         'вардар', SPARSE_POS, SPARSE_AUTHOR, None, 'NOUN',
@@ -145,7 +164,7 @@ def test_relaxation_records_the_threshold_it_settled_on(resources, monkeypatch):
     relaxed = [c for c in ranked if c['tier'] == 'relaxed_semantic']
     assert relaxed, 'no relaxed_semantic candidates -- the loop below would run vacuously'
     for c in relaxed:
-        assert cs.SEM_FLOOR <= c['sem_threshold'] < cs.SEM_THRESHOLD
+        assert cs.SEM_FLOOR <= c['sem_threshold'] < REAL_SEM_THRESHOLD
 
 
 def test_relaxation_never_drops_below_the_floor(resources):
