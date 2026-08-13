@@ -11,6 +11,8 @@ Defining the normalization once makes that divergence impossible.
 from collections import Counter
 from dataclasses import dataclass
 
+import corrections
+
 KEEP_POS = {'NOUN', 'VERB', 'ADJ', 'ADV', 'PROPN'}
 
 # classla tags што/кога/како/колку/каде as ADV, but they are relativizers, not
@@ -99,37 +101,66 @@ def tag_lines(text, verb_lemmas):
     """Tag text line by line, returning normalized content tokens.
 
     Offsets are line-relative because every consumer rebuilds output one line
-    at a time. Normalization matches pos_tag_corpus.py exactly: relativizers
-    dropped, -јќи forms re-lemmatized, words and lemmas lowercased.
+    at a time. Normalization matches pos_tag_corpus.py exactly: hand
+    corrections applied, relativizers dropped, -јќи forms re-lemmatized,
+    words and lemmas lowercased.
     """
     nlp = pipeline()
+    table = corrections.load()
     out = []
     for li, line in enumerate(text.splitlines()):
         if not line.strip():
             continue
         doc = nlp(line)
+        cursor = 0
         for sent in doc.sentences:
             for w in sent.words:
+                start, end = _span(w, line, cursor)
+                cursor = max(cursor, end)
+
                 pos, xpos = w.upos or '', w.xpos or ''
+                lemma, feats = w.lemma or '', w.feats or ''
+                # corrections.lookup() tries row scope, then poem scope, then
+                # the bare (word.lower(), pos) global key (src/corrections.py
+                # :83-89). Inference has no corpus author/title/position, so
+                # passing '' for author and title simply fails to match the
+                # narrow scopes and falls through to the global key -- which
+                # is correct, since poem/row-scoped fixes are corpus-position
+                # -specific and must not fire on arbitrary input. All 86
+                # corrections in pos_corrections.csv are global scope, so all
+                # 86 apply here, same as in pos_tag_corpus.py.
+                result = corrections.apply_to(
+                    table, w.text, pos, lemma, xpos, feats, '', '', line)
+                if result is None:
+                    continue
+                pos, lemma, xpos, feats = result
+
                 if not is_content(pos, xpos):
                     continue
-                lemma = (w.lemma or '').lower()
+                lemma = lemma.lower()
+                # A corrected POS clears xpos (see apply_to), so a corrected
+                # token never carries xpos == 'Rv' here and correctly skips
+                # gerund re-lemmatization -- same as the corpus build.
                 if xpos == 'Rv' and w.text.lower().endswith('јќи'):
                     lemma, _ = gerund_lemma(w.text.lower(), verb_lemmas)
-                start, end = _span(w, line)
                 out.append(Token(
                     text=w.text.lower(), lemma=lemma, pos=pos, xpos=xpos,
-                    feats=w.feats or '', line=li,
+                    feats=feats, line=li,
                     start_char=start, end_char=end,
                 ))
     return out
 
 
-def _span(word, line):
+def _span(word, line, cursor):
     """Character span of a classla word within its line.
 
     classla exposes offsets as a 'start_char|end_char' string in word.misc on
     most builds; fall back to locating the surface form when it is absent.
+    `cursor` is how far into the line previous tokens' spans already reached,
+    so the fallback search resumes after the last match instead of always
+    returning the first occurrence -- repeated words are common in this
+    poetry corpus, and a later splice keyed on these offsets would otherwise
+    send every repeat to the same position.
     """
     misc = getattr(word, 'misc', None) or ''
     start = end = None
@@ -139,7 +170,9 @@ def _span(word, line):
         elif part.startswith('end_char='):
             end = int(part.split('=', 1)[1])
     if start is None or end is None:
-        start = line.find(word.text)
+        start = line.find(word.text, cursor)
+        if start < 0:
+            start = line.find(word.text)
         end = start + len(word.text) if start >= 0 else 0
         start = max(start, 0)
     return start, end
