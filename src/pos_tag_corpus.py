@@ -16,30 +16,17 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import classla
-
 import corrections as C
+from tagging import KEEP_POS, RELATIVIZER_XPOS, is_content, gerund_lemma
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 
 MIN_POEMS = 5
-KEEP_POS = {'NOUN', 'VERB', 'ADJ', 'ADV', 'PROPN'}
-
-# classla tags што/кога/како/колку/каде as ADV, but they are relativizers, not
-# manner adverbs ("Зборовите што ти ги дадов"). They carry the bare xpos 'Rg' —
-# no degree slot — where real adverbs get Rgp/Rgc/Rgs, so xpos separates them
-# cleanly. Left in, these five forms are the most frequent "content" words in
-# the corpus and swamp any POS ratio built on it.
-RELATIVIZER_XPOS = 'Rg'
 
 # The first xpos letter each upos should agree with. classla runs the two
 # taggers separately, so a clash means neither reading is trustworthy.
 XPOS_CATEGORY = {'NOUN': 'N', 'PROPN': 'N', 'VERB': 'V', 'ADJ': 'A', 'ADV': 'R'}
-
-
-def is_content(pos, xpos):
-    return pos in KEEP_POS and xpos != RELATIVIZER_XPOS
 
 CYRILLIC = re.compile(r'[Ѐ-ӿ]')
 LATIN_GREEK = re.compile(r'[A-Za-zͰ-Ͽ]')
@@ -50,31 +37,6 @@ LATIN_GREEK = re.compile(r'[A-Za-zͰ-Ͽ]')
 # roughly triples the flags and lets in more genuine ambiguity.
 MIN_OCC = 4
 MAX_SHARE = 0.20
-
-
-def gerund_lemma(word, verb_lemmas):
-    """Lemmatise a -јќи verbal adverb (xpos Rv) back to its base verb.
-
-    classla tags these ADV and leaves them unlemmatised, so барајќи lemmatises
-    to барајќи rather than бара. Stripping -јќи gives the stem, but the ending
-    that goes back on is ambiguous: -ајќи always rebuilds an -а verb (барајќи ->
-    бара), while -ејќи comes from both и-verbs (велејќи -> вели) and e-verbs
-    (знаејќи -> знае). Rather than guess, weigh each candidate by how often
-    classla lemmatised a finite verb to it elsewhere in the corpus.
-
-    Frequency rather than first-match matters: бране and гале each occur once as
-    a verb lemma, off a single mistagged token, and would beat the correct брани
-    (20) and гали (15) on a bare membership test. и-verbs are the larger class,
-    so they win when the corpus has nothing to say.
-    """
-    stem = word[:-len('јќи')]
-    candidates = [stem]
-    if stem.endswith('е'):
-        candidates += [stem[:-1] + 'и', stem + 'е']
-    attested = [c for c in candidates if verb_lemmas[c]]
-    if attested:
-        return max(attested, key=lambda c: verb_lemmas[c]), True
-    return (stem[:-1] + 'и' if stem.endswith('е') else stem), False
 
 
 def flag_reasons(word, lemma, pos, xpos, tag_dist):
@@ -131,14 +93,8 @@ qualified = {a for a, c in author_counts.items() if c >= MIN_POEMS}
 poems = [r for r in rows if r['author'] in qualified]
 print(f"Tagging {len(qualified)} authors ({len(poems)} poems) with classla")
 
-# download_method=None keeps the run offline; the mk models are a one-time
-# `classla.download('mk')` setup step.
-try:
-    nlp = classla.Pipeline('mk', processors='tokenize,pos,lemma', download_method=None)
-except Exception as e:
-    raise SystemExit(
-        f"Could not load the classla 'mk' models ({e}).\n"
-        "Run this once to fetch them:  uv run python -c \"import classla; classla.download('mk')\"")
+from tagging import pipeline
+nlp = pipeline()
 
 # Tag everything first, including function words and punctuation. The audit
 # needs the tokens KEEP_POS throws away — unknown_tag fires almost entirely on
