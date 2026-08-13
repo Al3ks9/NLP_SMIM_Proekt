@@ -11,7 +11,6 @@ dependencies = [
     "pyvis>=0.3.2",
     "scikit-learn>=1.7.2",
     "sentence-transformers>=5.6.0",
-    "spacy>=3.8.14",
     "transformers>=5.9.0",
 ]
 

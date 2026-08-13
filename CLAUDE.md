@@ -17,6 +17,10 @@ lib/        JS assets used by pyvis when generating skg_visual.html
 
 All scripts resolve paths via `pathlib.Path(__file__)` so they work from any working directory.
 
+`src/tagging.py` owns the classla pipeline and the two corrections applied on top of it (relativizer filtering, `-јќи` re-lemmatization). Both `pos_tag_corpus.py` and the inference path import it, so corpus tags and inference tags cannot drift.
+
+`src/morph.py` owns feats parsing, the relaxation order, and `surface_form()`.
+
 ## Environment & commands
 
 This project uses `uv` for dependency management (Python 3.10+).
@@ -67,7 +71,7 @@ ADJ   Afpfs-y  A  Type f=qual/p=participial/s=possessive/g=general/o=ordinal  De
 ADV   Rgp      R  Type g=general/d=modal/v=verbal  Degree p/c/s
 ```
 
-Noun definiteness has four values, not two: `y` = neutral `-от/-та`, `p` = proximal `-ов/-ва`, `d` = distal `-он/-не`. `build_morph_lookup.py` still guesses gender/number/definiteness from suffixes and could read these directly instead.
+Noun definiteness has four values, not two: `y` = neutral `-от/-та`, `p` = proximal `-ов/-ва`, `d` = distal `-он/-не`. `build_morph_lookup.py` keys on the `feats` column directly — see `docs/superpowers/specs/2026-08-13-feats-morph-lookup-design.md`.
 
 Two corrections `pos_tag_corpus.py` applies on top of classla's output:
 
