@@ -559,7 +559,7 @@ def test_target_author_is_preferred_over_the_pooled_index():
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest tests/test_morph.py -v -k surface or tier or bug or featless`
+Run: `uv run pytest tests/test_morph.py -v -k "surface or tier or bug or featless"`
 Expected: FAIL — `AttributeError: module 'morph' has no attribute 'surface_form'`
 
 - [ ] **Step 3: Append `surface_form()` to `src/morph.py`**
