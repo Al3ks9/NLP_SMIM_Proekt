@@ -15,8 +15,10 @@ from collections import defaultdict, Counter
 from pathlib import Path
 
 import numpy as np
-import spacy
 import networkx as nx
+
+import tagging
+from morph import surface_form
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
@@ -28,49 +30,24 @@ CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV'}  # PROPN excluded — never replace
 
 print("Loading resources...", flush=True)
 
-nlp = spacy.load('mk_core_news_lg')
 G = nx.read_gexf(MODELS / 'skg_final.gexf')
 
 with open(MODELS / 'author_vocab.json', encoding='utf-8') as f:
     author_vocab = json.load(f)
 
-# Build surface form lookup: (author, lemma, pos) → most common surface word
-# This lets us insert grammatically natural word forms, not bare lemmas
-surface_counter: dict = defaultdict(Counter)
 pos_rows = []
 with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
     pos_rows = list(csv.DictReader(f))
-for r in pos_rows:
-    surface_counter[(r['author'], r['lemma'], r['pos'])][r['word']] += 1
 
 
-def get_surface(author: str, lemma: str, pos: str) -> str:
-    """Most common surface form used by author for (lemma, pos). Falls back to lemma."""
-    key = (author, lemma, pos)
-    if key in surface_counter:
-        return surface_counter[key].most_common(1)[0][0]
-    return lemma
+def get_surface_morph(author: str, lemma: str, pos: str, source_feats: str) -> str:
+    """Surface form of (lemma, pos) for author, in the source token's morphology.
 
-
-def get_surface_morph(author: str, lemma: str, pos: str, source_token) -> str:
+    Delegates to morph.surface_form and keeps only the form — callers here do
+    not audit tiers; candidate_selection.py does.
     """
-    Return the surface form of (lemma, pos) for author whose ending matches
-    the source token's suffix. In Macedonian, word endings encode grammatical
-    form (person, number, tense, definiteness, gender), so suffix matching
-    gives a good morphological proxy without a dedicated morphological analyzer.
-
-    Tries 3-char suffix first, then 2-char, then falls back to most common form.
-    """
-    src = source_token.text.lower()
-    lemma_morph = morph_lookup.get(author, {}).get(lemma, {}).get(pos, {})
-
-    for n in (3, 2):
-        suffix = src[-n:] if len(src) >= n else src
-        surface = lemma_morph.get(suffix)
-        if surface:
-            return surface
-
-    return get_surface(author, lemma, pos)
+    surface, _tier = surface_form(author, lemma, pos, source_feats, morph_lookup)
+    return surface
 
 
 # Map TF-IDF surface words → lemmas
@@ -109,12 +86,29 @@ def _poem_context_nodes(text: str) -> set[str]:
     Return all lemma_POS SKG nodes found in the poem.
     Used to score candidates by how well they fit the poem's semantic space.
     """
-    doc = nlp(text)
+    verb_lemmas = tagging.load_verb_lemmas(pos_rows)
+    tokens = tagging.tag_lines(text, verb_lemmas)
     return {
-        f'{token.lemma_}_{token.pos_}'
-        for token in doc
-        if token.pos_ in CONTENT_POS and f'{token.lemma_}_{token.pos_}' in G
+        f'{token.lemma}_{token.pos}'
+        for token in tokens
+        if token.pos in CONTENT_POS and f'{token.lemma}_{token.pos}' in G
     }
+
+
+def splice(line: str, edits: list) -> str:
+    """Write surfaces into the original line at recorded character offsets.
+
+    Rebuilding from the source text rather than from tagger tokens makes
+    out-of-region edits structurally impossible and preserves spacing and
+    punctuation exactly.
+    """
+    out, prev = [], 0
+    for start, end, surface in sorted(edits):
+        out.append(line[prev:start])
+        out.append(surface)
+        prev = end
+    out.append(line[prev:])
+    return ''.join(out)
 
 
 def _score(candidate_lemma: str, pos: str, target_author: str,
@@ -174,26 +168,31 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
     used_count: Counter = Counter()
     output_lines = []
 
-    for line in text.splitlines():
+    verb_lemmas = tagging.load_verb_lemmas(pos_rows)
+    tokens = tagging.tag_lines(text, verb_lemmas)
+    by_line: dict = defaultdict(list)
+    for t in tokens:
+        by_line[t.line].append(t)
+
+    for li, line in enumerate(text.splitlines()):
         if not line.strip():
             output_lines.append(line)
             continue
 
-        doc = nlp(line)
-        rebuilt = []
+        edits = []
 
-        for token in doc:
-            if token.pos_ not in CONTENT_POS or token.is_punct or token.is_space:
-                rebuilt.append(token.text_with_ws)
+        for token in by_line[li]:
+            # tag_lines() also yields PROPN (its content-POS set is a superset
+            # of CONTENT_POS) — proper nouns are never replacement targets.
+            if token.pos not in CONTENT_POS:
                 continue
 
             # Skip place-derived adjectives (e.g. битолско, македонски, градска)
-            if token.pos_ == 'ADJ' and token.text.lower().endswith(('ски', 'ска', 'ско', 'ски', 'цки', 'цка', 'цко')):
-                rebuilt.append(token.text_with_ws)
+            if token.pos == 'ADJ' and token.text.endswith(('ски', 'ска', 'ско', 'ски', 'цки', 'цка', 'цко')):
                 continue
 
-            pos = token.pos_
-            lemma = token.lemma_
+            pos = token.pos
+            lemma = token.lemma
             in_tgt_vocab = lemma in tgt_vocab.get(pos, set())
 
             # Eligibility: only replace genuine style markers or words foreign to target
@@ -202,12 +201,10 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
                 or (not in_tgt_vocab)                             # (b)
             )
             if not should_replace:
-                rebuilt.append(token.text_with_ws)
                 continue
 
             candidates = author_vocab.get(target_author, {}).get(pos, [])
             if not candidates:
-                rebuilt.append(token.text_with_ws)
                 continue
 
             max_freq = candidates[0][1]
@@ -218,7 +215,6 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
                 if cand != lemma
             ]
             if not scored:
-                rebuilt.append(token.text_with_ws)
                 continue
 
             scored.sort(key=lambda x: -x[0])
@@ -230,11 +226,11 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
             probs = np.exp(vals) / np.exp(vals).sum()
             best_lemma = top3[np.random.choice(len(top3), p=probs)][1]
 
-            surface = get_surface_morph(target_author, best_lemma, pos, token)
+            surface = get_surface_morph(target_author, best_lemma, pos, token.feats)
             used_count[best_lemma] += 1
-            rebuilt.append(surface + token.whitespace_)
+            edits.append((token.start_char, token.end_char, surface))
 
-        output_lines.append(''.join(rebuilt))
+        output_lines.append(splice(line, edits))
 
     return '\n'.join(output_lines)
 
