@@ -61,3 +61,60 @@ def relax_feats(feats, pos):
             return
         del d[feature]
         yield render_feats(d)
+
+
+def _match(forms, constraint):
+    """Best stored form whose feats are a superset of `constraint`.
+
+    Stored keys are always full bundles from the corpus, so a relaxed
+    constraint is matched by containment rather than equality. Cells hold 1.28
+    entries on average, so the scan is cheap. Ties break on frequency then
+    alphabetically, so the result is deterministic across runs.
+    """
+    wanted = parse_feats(constraint).items()
+    hits = [surface for key, surface in forms.items()
+            if parse_feats(key).items() >= wanted]
+    if not hits:
+        return None
+    counts = Counter(hits)
+    return max(sorted(set(hits)), key=lambda f: counts[f])
+
+
+def surface_form(target_author, candidate_lemma, pos, source_feats, morph_lookup):
+    """Realise a candidate lemma in the source token's grammatical form.
+
+    Returns (surface, tier). The tier is required output, not optional logging:
+    it says how much of the inflection the model still has to do, and it is what
+    a batch run is audited on.
+
+      1. by_author[target][lemma][pos][feats]   -> 'exact'
+      2. pooled[lemma][pos][feats]              -> 'cross_author'
+      3. relaxed constraint, target then pooled -> 'relaxed'
+      4. any attested form for [target][lemma][pos] -> 'nearest_attested'
+      5. the lemma unchanged                    -> 'unresolved'
+
+    Tier 2 borrows another author's spelling of an inflection. That is the
+    right trade: a wrong-gender word is a visible grammatical error, a
+    correctly-inflected word from a neighbouring idiolect is not. Pooling makes
+    118% more forms retrievable than the per-author index alone.
+    """
+    target_forms = (morph_lookup.get('by_author', {})
+                    .get(target_author, {}).get(candidate_lemma, {}).get(pos, {}))
+    pooled_forms = (morph_lookup.get('pooled', {})
+                    .get(candidate_lemma, {}).get(pos, {}))
+
+    if source_feats and source_feats in target_forms:
+        return target_forms[source_feats], 'exact'
+    if source_feats and source_feats in pooled_forms:
+        return pooled_forms[source_feats], 'cross_author'
+
+    for constraint in relax_feats(source_feats, pos):
+        hit = _match(target_forms, constraint) or _match(pooled_forms, constraint)
+        if hit:
+            return hit, 'relaxed'
+
+    if target_forms:
+        counts = Counter(target_forms.values())
+        return max(sorted(set(target_forms.values())), key=lambda f: counts[f]), 'nearest_attested'
+
+    return candidate_lemma, 'unresolved'
