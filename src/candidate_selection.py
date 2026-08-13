@@ -20,8 +20,8 @@ the ungated JSON/CSV sources instead:
 
 Every candidate carries the tier that produced it ('primary', 'relaxed_semantic',
 'cross_author_similar', 'legacy_fallback') and the morph tier that realised its
-surface form ('exact', 'cross_author', 'nearest_attested', 'unresolved'), so a
-batch run can be audited for how often the pipeline is actually grounded.
+surface form ('exact', 'cross_author', 'relaxed', 'nearest_attested', 'unresolved'),
+so a batch run can be audited for how often the pipeline is actually grounded.
 """
 
 import csv
@@ -32,6 +32,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
+
+from morph import surface_form  # noqa: F401 — re-exported for callers and tests
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
@@ -49,7 +51,6 @@ TOP_K = 3
 
 W_TFIDF, W_SEM, W_COOC, W_TRANS = 0.4, 0.35, 0.15, 0.10
 
-SUFFIX_LEN = 3           # matches build_morph_lookup.py
 JACCARD_THRESHOLD = 0.15  # matches enrich_skg.py's author_similarity edges
 MAX_SIMILAR_AUTHORS = 3
 
@@ -112,7 +113,8 @@ def load_pos_transitions() -> dict:
 
 
 def load_morph_lookup() -> dict:
-    """author -> lemma -> pos -> suffix -> surface form."""
+    """{'by_author': author -> lemma -> pos -> feats -> surface form,
+    'pooled': lemma -> pos -> feats -> surface form}."""
     def build():
         with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
             return json.load(f)
@@ -470,61 +472,10 @@ def rank_candidates(
     return results[:top_k]
 
 
-# ── Surface realisation ───────────────────────────────────────────────────────
-
-def _shared_suffix_len(a: str, b: str) -> int:
-    n = 0
-    while n < min(len(a), len(b)) and a[-1 - n] == b[-1 - n]:
-        n += 1
-    return n
-
-
-def surface_form(
-    target_author: str, candidate_lemma: str, pos: str, source_word: str,
-    morph_lookup: dict,
-) -> tuple:
-    """
-    Realise a candidate lemma in the source word's grammatical form.
-
-    Returns (surface_form, tier_used) — the tier is required output, not optional
-    logging, since it says how much of the inflection the model still has to do.
-
-      1. morph_lookup[target][lemma][pos][suffix]                  -> 'exact'
-      2. first other author whose [lemma][pos] has that suffix     -> 'cross_author'
-      3. best attested form for [target][lemma][pos], any suffix   -> 'nearest_attested'
-      4. the lemma unchanged, flagged for model-side inflection    -> 'unresolved'
-
-    morph_lookup.json collapsed its per-suffix counters to one form each, so tier
-    3's "most frequent" is approximated by how many suffixes a form is attested
-    under, tie-broken by longest shared suffix with the source word.
-    """
-    suffix = (source_word[-SUFFIX_LEN:].lower() if len(source_word) >= SUFFIX_LEN
-              else source_word.lower())
-
-    target_forms = morph_lookup.get(target_author, {}).get(candidate_lemma, {}).get(pos, {})
-    if suffix in target_forms:
-        return target_forms[suffix], 'exact'
-
-    for author, lemmas in morph_lookup.items():
-        if author == target_author:
-            continue
-        forms = lemmas.get(candidate_lemma, {}).get(pos, {})
-        if suffix in forms:
-            return forms[suffix], 'cross_author'
-
-    if target_forms:
-        counts = Counter(target_forms.values())
-        forms = sorted(set(target_forms.values()))
-        best = max(forms, key=lambda f: (counts[f], _shared_suffix_len(f, suffix)))
-        return best, 'nearest_attested'
-
-    return candidate_lemma, 'unresolved'
-
-
 # ── Slot assembly ─────────────────────────────────────────────────────────────
 
 def build_slot(
-    source_word: str, source_lemma: str, source_pos: str,
+    source_word: str, source_lemma: str, source_pos: str, source_feats: str,
     prev_pos, next_pos,
     target_author: str, resources: dict,
 ) -> dict:
@@ -544,7 +495,7 @@ def build_slot(
     candidates = []
     for c in ranked:
         surface, morph_tier = surface_form(
-            target_author, c['lemma'], source_pos, source_word,
+            target_author, c['lemma'], source_pos, source_feats,
             resources['morph_lookup'],
         )
         candidates.append({'surface': surface, 'morph_tier': morph_tier, **c})
@@ -553,6 +504,7 @@ def build_slot(
         'source_word': source_word,
         'lemma': source_lemma,
         'pos': source_pos,
+        'feats': source_feats,
         'prev_pos': prev_pos,
         'next_pos': next_pos,
         'candidates': candidates,
@@ -607,16 +559,16 @@ def _align(text: str, tokens: list) -> dict:
 
 
 def _retag(text: str) -> list:
-    """spaCy fallback for a source poem that is not in the corpus (§5)."""
-    import spacy
-    nlp = _cached('spacy', lambda: spacy.load('mk_core_news_lg'))
-    out = []
-    for li, line in enumerate(text.splitlines()):
-        for token in nlp(line):
-            if token.pos_ in KEEP_POS and not token.is_space and not token.is_punct:
-                out.append({'line': li, 'word': token.text.lower(),
-                            'lemma': token.lemma_.lower(), 'pos': token.pos_})
-    return out
+    """classla fallback for a source poem that is not in the corpus (§5).
+
+    Uses the same normalization as the corpus build, so a source 'што' is
+    dropped and a '-јќи' form resolves to the base verb the lookup knows.
+    """
+    import tagging
+    verb_lemmas = _cached('verb_lemmas', lambda: tagging.load_verb_lemmas(load_pos_rows()))
+    return [{'line': t.line, 'word': t.text, 'lemma': t.lemma,
+             'pos': t.pos, 'feats': t.feats}
+            for t in tagging.tag_lines(text, verb_lemmas)]
 
 
 def find_source_poem(text: str, author: str, pos_rows) -> tuple:
@@ -648,7 +600,7 @@ def slot_contexts(text: str, mask_words: list, source_author: str,
     edges — a line-initial word has no incoming transition to score).
 
     Reads the tagging from pos_tagged.csv when the source poem is in the corpus,
-    and re-tags with spaCy when it is not.
+    and re-tags with classla when it is not.
     """
     pos_rows = load_pos_rows() if pos_rows is None else pos_rows
     lines = text.splitlines()
@@ -662,7 +614,7 @@ def slot_contexts(text: str, mask_words: list, source_author: str,
                  source_author, title, coverage)
     else:
         log.info('source poem not found in corpus for %r (best coverage %.2f) — '
-                 're-tagging with spaCy', source_author, coverage)
+                 're-tagging with classla', source_author, coverage)
         retagged = _retag(text)
         by_line = defaultdict(list)
         for t in retagged:
@@ -693,6 +645,7 @@ def slot_contexts(text: str, mask_words: list, source_author: str,
                 'source_word': target,
                 'source_lemma': here['lemma'],
                 'source_pos': here['pos'],
+                'feats': here.get('feats', ''),
                 'prev_pos': tagged[(li, before[-1])]['pos'] if before else None,
                 'next_pos': tagged[(li, after[0])]['pos'] if after else None,
                 'line': li,
@@ -706,7 +659,7 @@ def build_slots(text: str, mask_words: list, source_author: str,
     """Full §5 path: masked surface words in, per-slot candidate structures out."""
     resources = load_resources() if resources is None else resources
     return [
-        build_slot(c['source_word'], c['source_lemma'], c['source_pos'],
+        build_slot(c['source_word'], c['source_lemma'], c['source_pos'], c['feats'],
                    c['prev_pos'], c['next_pos'], target_author, resources)
         for c in slot_contexts(text, mask_words, source_author)
     ]

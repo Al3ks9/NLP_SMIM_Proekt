@@ -23,7 +23,7 @@ STANZA = """Натаму – в поле битолско
 
 MASK_WORDS = ['чемрее', 'проклета', 'незнаен']
 
-MORPH_TIERS = {'exact', 'cross_author', 'nearest_attested', 'unresolved'}
+MORPH_TIERS = {'exact', 'cross_author', 'relaxed', 'nearest_attested', 'unresolved'}
 SEMANTIC_TIERS = {'primary', 'relaxed_semantic', 'cross_author_similar', 'legacy_fallback'}
 
 
@@ -213,36 +213,14 @@ def test_cosine_is_a_plain_dot_product(resources):
     assert cs.cosine(vec, vec) == pytest.approx(1.0, abs=1e-3)
 
 
-# ── surface_form: one test per morph tier ─────────────────────────────────────
+# ── surface_form: re-export from morph ─────────────────────────────────────────
 
-def test_surface_form_exact_tier():
-    # 'проклета'[-3:] == 'ета' -- the suffix key build_morph_lookup.py indexes on.
-    lookup = {'A': {'самотен': {'ADJ': {'ета': 'самотена'}}}}
-    assert cs.surface_form('A', 'самотен', 'ADJ', 'проклета', lookup) == ('самотена', 'exact')
-
-
-def test_surface_form_falls_through_to_another_author():
+def test_surface_form_is_re_exported_from_morph():
     lookup = {
-        'A': {'самотен': {'ADJ': {'тен': 'самотен'}}},
-        'B': {'самотен': {'ADJ': {'ета': 'самотена'}}},
+        'by_author': {'A': {'жена': {'NOUN': {'Case=Nom|Number=Sing': 'жена'}}}},
+        'pooled': {},
     }
-    assert cs.surface_form('A', 'самотен', 'ADJ', 'проклета', lookup) == ('самотена', 'cross_author')
-
-
-def test_surface_form_nearest_attested_prefers_the_closest_suffix():
-    lookup = {'A': {'самотен': {'ADJ': {'тен': 'самотен', 'ото': 'самотното'}}}}
-    form, tier = cs.surface_form('A', 'самотен', 'ADJ', 'проклета', lookup)
-    assert tier == 'nearest_attested'
-    assert form in {'самотен', 'самотното'}
-
-
-def test_surface_form_unresolved_returns_the_lemma():
-    assert cs.surface_form('A', 'самотен', 'ADJ', 'проклета', {}) == ('самотен', 'unresolved')
-
-
-def test_surface_form_short_source_word_uses_the_whole_word():
-    lookup = {'A': {'сон': {'NOUN': {'ме': 'соне'}}}}
-    assert cs.surface_form('A', 'сон', 'NOUN', 'МЕ', lookup) == ('соне', 'exact')
+    assert cs.surface_form('A', 'жена', 'NOUN', 'Case=Nom|Number=Sing', lookup) == ('жена', 'exact')
 
 
 # ── §7: co-occurrence build cost at full corpus scale ─────────────────────────
@@ -274,6 +252,12 @@ def test_slot_contexts_reads_lemma_and_pos_from_the_corpus():
     contexts = cs.slot_contexts(STANZA, MASK_WORDS, RACIN)
     assert [c['source_word'] for c in contexts] == MASK_WORDS
     assert all(c['source_lemma'] and c['source_pos'] in cs.KEEP_POS for c in contexts)
+
+
+def test_slot_contexts_carries_feats(resources):
+    contexts = cs.slot_contexts(STANZA, MASK_WORDS, RACIN)
+    assert all('feats' in c for c in contexts)
+    assert any(c['feats'] for c in contexts), 'no slot carried any morphology'
 
 
 def test_find_source_poem_identifies_the_stanzas_poem():
