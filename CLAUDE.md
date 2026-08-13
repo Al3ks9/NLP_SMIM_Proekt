@@ -9,7 +9,7 @@ Macedonian-language NLP pipeline for stylometric analysis and style transfer. Th
 ## Folder structure
 
 ```
-src/        Python scripts (one per pipeline step)
+src/        Python scripts — pipeline steps and shared tagging/morph modules
 data/       CSV files — corpus input and analysis outputs
 models/     Trained artifacts — classifier.pkl, *.json lookups, skg_final.gexf
 lib/        JS assets used by pyvis when generating skg_visual.html
@@ -17,7 +17,7 @@ lib/        JS assets used by pyvis when generating skg_visual.html
 
 All scripts resolve paths via `pathlib.Path(__file__)` so they work from any working directory.
 
-`src/tagging.py` owns the classla pipeline and the two corrections applied on top of it (relativizer filtering, `-јќи` re-lemmatization). Both `pos_tag_corpus.py` and the inference path import it, so corpus tags and inference tags cannot drift.
+`src/tagging.py` owns the classla pipeline and the three normalizations applied on top of it: hand corrections from `data/pos_corrections.csv`, bare-`Rg` relativizer filtering, and `-јќи` re-lemmatization. Both `pos_tag_corpus.py` and the inference path import it, so corpus tags and inference tags cannot drift.
 
 `src/morph.py` owns feats parsing, the relaxation order, and `surface_form()`.
 
