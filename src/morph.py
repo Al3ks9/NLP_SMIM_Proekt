@@ -50,6 +50,9 @@ def relax_feats(feats, pos):
     """
     d = parse_feats(feats)
     for feature in DROP_ORDER:
+        # Defensive guard: DROP_ORDER and NEVER_DROP are currently disjoint, so
+        # this membership test never fires today. It exists to stop a future edit
+        # from making a never-droppable feature droppable.
         if feature in NEVER_DROP or feature not in d:
             continue
         if feature == 'Gender' and pos not in GENDER_DROPPABLE_POS:

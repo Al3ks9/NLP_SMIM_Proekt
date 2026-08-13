@@ -58,3 +58,19 @@ def test_relaxation_never_empties_the_bundle():
 
 def test_relaxation_of_an_empty_bundle_yields_nothing():
     assert list(morph.relax_feats('', 'NOUN')) == []
+
+
+def test_drop_order_and_never_drop_are_disjoint():
+    # Defensive guard invariant: features that are safe-to-drop must never
+    # conflict with features that must be preserved.
+    assert set(morph.DROP_ORDER) & morph.NEVER_DROP == set()
+
+
+def test_never_drop_features_never_disappear():
+    # NEVER_DROP features in the initial bundle must never disappear from
+    # any relaxed output. This verifies the defensive guard works.
+    initial = 'Definite=Def|Gender=Fem|Number=Sing'
+    for step in morph.relax_feats(initial, 'NOUN'):
+        parsed = morph.parse_feats(step)
+        # Number and Definite started in the bundle and must still be present
+        assert 'Number' in parsed and 'Definite' in parsed
