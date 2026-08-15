@@ -19,7 +19,7 @@ author,song_title,word,lemma,pos,xpos,feats
 Кочо Рацин,Балада за непознатиот,натаму,натаму,ADV,Rgp,Degree=Pos
 Кочо Рацин,Балада за непознатиот,поле,поле,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
 Кочо Рацин,Балада за непознатиот,битолско,битолски,ADJ,Ag-ns-n,Definite=Ind|Gender=Neut|Number=Sing
-Кочо Рацин,Балада за непознатиот,чемрее,чемри,VERB,Vmpii-s-n,Aspect=Prog|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Imp
+Кочо Рацин,Балада за непознатиот,чемрее,чемрее,VERB,Vmpii-s-n,Aspect=Prog|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Imp
 Кочо Рацин,Балада за непознатиот,врба,врба,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
 Кочо Рацин,Балада за непознатиот,проклета,проклет,ADJ,Afpfs-y,Definite=Def|Degree=Pos|Gender=Fem|Number=Sing
 Кочо Рацин,Балада за непознатиот,врбата,врба,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
