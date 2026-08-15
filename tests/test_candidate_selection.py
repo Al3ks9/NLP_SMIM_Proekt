@@ -174,6 +174,7 @@ def test_relaxation_never_drops_below_the_floor(resources):
         resources['cooc_index'], resources['transitions'],
     )
     added = cs.tier_relaxed_semantic(scored, already=set(), needed=99)
+    assert added, 'no relaxed_semantic candidates -- the loop below would run vacuously'
     for c in added:
         assert c['sem_threshold'] >= cs.SEM_FLOOR
 
@@ -297,6 +298,26 @@ def test_slot_contexts_carries_feats(resources):
     contexts = cs.slot_contexts(STANZA, MASK_WORDS, RACIN)
     assert all('feats' in c for c in contexts)
     assert any(c['feats'] for c in contexts), 'no slot carried any morphology'
+
+
+def test_slot_contexts_retag_branch_scans_forward_past_an_unmatched_token(monkeypatch):
+    """The out-of-corpus retag branch used to test only queue[0] rather than
+    scanning forward like _align does. One retagged token whose word never
+    appears as the line's next content word then stalled every later word on
+    that line -- 'гора' here sits second in the retagged stream behind a
+    token that never matches, and must still be found."""
+    text = 'фантом гора шумоли'
+    monkeypatch.setattr(cs, 'find_source_poem', lambda *a, **k: (None, 0.0))
+    monkeypatch.setattr(cs, '_retag', lambda t: [
+        {'line': 0, 'word': 'непостоечки', 'lemma': 'непостоечки', 'pos': 'ADJ', 'feats': ''},
+        {'line': 0, 'word': 'гора', 'lemma': 'гора', 'pos': 'NOUN', 'feats': 'Case=Nom|Number=Sing'},
+    ])
+
+    contexts = cs.slot_contexts(text, ['гора'], 'Јосип Коцев')
+
+    assert len(contexts) == 1
+    assert contexts[0]['source_lemma'] == 'гора'
+    assert contexts[0]['source_pos'] == 'NOUN'
 
 
 def test_find_source_poem_identifies_the_stanzas_poem():

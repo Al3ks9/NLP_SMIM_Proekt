@@ -92,6 +92,31 @@ def test_tag_lines_applies_a_global_hand_correction(monkeypatch):
     assert tokens[0].feats == ''
 
 
+def test_span_returns_none_when_the_surface_form_cannot_be_located():
+    # classla's mk models never populate word.misc with start_char/end_char --
+    # only line.find() locates a span -- and a word whose text is nowhere in
+    # the line (e.g. a tokenizer quirk) must not fall back to a fabricated
+    # (0, 0): that would later splice a replacement in at column 0 instead of
+    # skipping the token.
+    word = _FakeWord('фантом', upos='NOUN', xpos='Ncmsn')
+    assert tagging._span(word, 'ветер удри', cursor=0) is None
+
+
+def test_tag_lines_skips_a_token_whose_span_cannot_be_located(monkeypatch):
+    line = 'ветер удри'
+    words = [
+        _FakeWord('фантом', upos='NOUN', xpos='Ncmsn'),  # not present in `line`
+        _FakeWord('удри', upos='VERB', xpos='Vmm2s-a-n'),
+    ]
+    monkeypatch.setattr(
+        tagging, 'pipeline', lambda: _fake_pipeline({line: words}))
+
+    tokens = tagging.tag_lines(line, Counter())
+
+    assert len(tokens) == 1
+    assert tokens[0].text == 'удри'
+
+
 def test_tag_lines_gives_repeated_words_on_one_line_distinct_offsets(monkeypatch):
     # _span()'s fallback used line.find(), which always returns the first
     # occurrence -- a line repeating a word (common in this poetry corpus)

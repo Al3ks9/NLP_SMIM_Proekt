@@ -115,7 +115,13 @@ def tag_lines(text, verb_lemmas):
         cursor = 0
         for sent in doc.sentences:
             for w in sent.words:
-                start, end = _span(w, line, cursor)
+                span = _span(w, line, cursor)
+                if span is None:
+                    # Surface form not found anywhere in the line -- skip the
+                    # token rather than fabricate an offset. See _span's
+                    # docstring for why (0, 0) would be silent corruption.
+                    continue
+                start, end = span
                 cursor = max(cursor, end)
 
                 pos, xpos = w.upos or '', w.xpos or ''
@@ -152,15 +158,23 @@ def tag_lines(text, verb_lemmas):
 
 
 def _span(word, line, cursor):
-    """Character span of a classla word within its line.
+    """Character span of a classla word within its line, or None if it cannot
+    be located.
 
-    classla exposes offsets as a 'start_char|end_char' string in word.misc on
-    most builds; fall back to locating the surface form when it is absent.
-    `cursor` is how far into the line previous tokens' spans already reached,
-    so the fallback search resumes after the last match instead of always
-    returning the first occurrence -- repeated words are common in this
-    poetry corpus, and a later splice keyed on these offsets would otherwise
-    send every repeat to the same position.
+    Verified live against classla's 'mk' models: word.misc never carries
+    start_char/end_char there, only SpaceAfter=No, so the misc-parsing branch
+    below is dead for this project -- it exists only as a guard for other
+    classla builds that do emit real offsets. The line.find() scan is the
+    primary, and in practice the only, path 'mk' takes. `cursor` is how far
+    into the line previous tokens' spans already reached, so the scan resumes
+    after the last match instead of always returning the first occurrence --
+    repeated words are common in this poetry corpus, and a later splice keyed
+    on these offsets would otherwise send every repeat to the same position.
+
+    Returns None, never a fabricated (0, 0), when the surface form cannot be
+    found anywhere in the line. Callers must skip such a token rather than
+    splice it in at column 0 -- that would silently insert a replacement at
+    the start of the line instead of leaving it untouched.
     """
     misc = getattr(word, 'misc', None) or ''
     start = end = None
@@ -169,10 +183,12 @@ def _span(word, line, cursor):
             start = int(part.split('=', 1)[1])
         elif part.startswith('end_char='):
             end = int(part.split('=', 1)[1])
-    if start is None or end is None:
-        start = line.find(word.text, cursor)
-        if start < 0:
-            start = line.find(word.text)
-        end = start + len(word.text) if start >= 0 else 0
-        start = max(start, 0)
-    return start, end
+    if start is not None and end is not None:
+        return start, end
+
+    start = line.find(word.text, cursor)
+    if start < 0:
+        start = line.find(word.text)
+    if start < 0:
+        return None
+    return start, start + len(word.text)

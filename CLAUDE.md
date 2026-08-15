@@ -73,8 +73,9 @@ ADV   Rgp      R  Type g=general/d=modal/v=verbal  Degree p/c/s
 
 Noun definiteness has four values, not two: `y` = neutral `-от/-та`, `p` = proximal `-ов/-ва`, `d` = distal `-он/-не`. `build_morph_lookup.py` keys on the `feats` column directly — see `docs/superpowers/specs/2026-08-13-feats-morph-lookup-design.md`.
 
-Two corrections `pos_tag_corpus.py` applies on top of classla's output:
+Three corrections `pos_tag_corpus.py` applies on top of classla's output:
 
+- **Hand corrections from `data/pos_corrections.csv`** are applied first — see "Correcting tags by hand" below.
 - **Relativizers are dropped.** classla tags `што`/`кога`/`како`/`колку`/`каде` as ADV, but they are relativizers ("Зборовите **што** ти ги дадов"). They carry bare `xpos=Rg` (no degree slot) where real adverbs get `Rgp`/`Rgc`/`Rgs`, so `is_content()` filters on that. Left in, they were the five most frequent "content" words in the corpus — 1,478 tokens, 19% of all ADV — and swamped every POS ratio built on it.
 - **`-јќи` verbal adverbs (`xpos=Rv`) are re-lemmatized to their base verb.** classla leaves them unlemmatized (`барајќи` → `барајќи`). `gerund_lemma()` rebuilds the verb, resolving the ambiguous `-ејќи` ending (both `велејќи`→`вели` and `знаејќи`→`знае` are possible) against corpus verb-lemma *frequencies* — a bare membership test picks up single mistagged tokens and yields `бране` over `брани`.
 

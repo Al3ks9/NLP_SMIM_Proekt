@@ -12,6 +12,13 @@ wheels/
 # Large generated files
 word_embeddings.json
 
+# Pipeline outputs never tracked (steps 4 and 5 of the pipeline order in CLAUDE.md)
+models/skg.gexf
+models/skg_enriched.gexf
+
+# Diagnostic dump kept on disk on purpose -- never committed
+pipeline_dump.txt
+
 # Backup written by apply_corrections.py (data/pos_corrections.csv is tracked)
 *.csv.bak
 

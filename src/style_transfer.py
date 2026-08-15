@@ -27,17 +27,56 @@ MODELS = ROOT / 'models'
 CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV'}  # PROPN excluded — never replace proper nouns
 
 # ── Load resources ────────────────────────────────────────────────────────────
+#
+# Deferred into a function rather than run at module scope: word_embeddings.json
+# is 260 MB and gitignored, and skg_final.gexf / classifier.pkl are also pipeline
+# outputs that need not exist for every caller. Pure functions like splice() —
+# and tests that only exercise them — must be importable without any of this on
+# disk. The CLI entry point below calls load_resources() before doing anything
+# that needs it.
 
-print("Loading resources...", flush=True)
+G = author_vocab = pos_rows = classifier = word_embeddings = morph_lookup = None
+tfidf_lemmas: dict = {}
 
-G = nx.read_gexf(MODELS / 'skg_final.gexf')
 
-with open(MODELS / 'author_vocab.json', encoding='utf-8') as f:
-    author_vocab = json.load(f)
+def load_resources() -> None:
+    """Load the graph, vocab, classifier, embeddings and morph lookup into
+    module globals. Must run before predict_author/_poem_context_nodes/
+    transfer_style/get_surface_morph are called."""
+    global G, author_vocab, pos_rows, classifier, word_embeddings, morph_lookup, tfidf_lemmas
 
-pos_rows = []
-with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
-    pos_rows = list(csv.DictReader(f))
+    print("Loading resources...", flush=True)
+
+    G = nx.read_gexf(MODELS / 'skg_final.gexf')
+
+    with open(MODELS / 'author_vocab.json', encoding='utf-8') as f:
+        author_vocab = json.load(f)
+
+    with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
+        pos_rows = list(csv.DictReader(f))
+
+    # Map TF-IDF surface words → lemmas
+    word_lemma_counter: dict = defaultdict(Counter)
+    for r in pos_rows:
+        word_lemma_counter[r['word']][r['lemma']] += 1
+    word_to_lemma = {w: c.most_common(1)[0][0] for w, c in word_lemma_counter.items()}
+
+    tfidf_lemmas = defaultdict(set)  # author → set of distinctive lemmas
+    with open(DATA / 'tfidf_results.csv', encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            lemma = word_to_lemma.get(row['word'], row['word'])
+            tfidf_lemmas[row['author']].add(lemma)
+
+    with open(MODELS / 'classifier.pkl', 'rb') as f:
+        classifier = pickle.load(f)
+
+    with open(MODELS / 'word_embeddings.json', encoding='utf-8') as f:
+        word_embeddings = {k: np.array(v) for k, v in json.load(f).items()}
+
+    with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
+        morph_lookup = json.load(f)
+
+    print("Ready.\n")
 
 
 def get_surface_morph(author: str, lemma: str, pos: str, source_feats: str) -> str:
@@ -49,29 +88,6 @@ def get_surface_morph(author: str, lemma: str, pos: str, source_feats: str) -> s
     surface, _tier = surface_form(author, lemma, pos, source_feats, morph_lookup)
     return surface
 
-
-# Map TF-IDF surface words → lemmas
-word_lemma_counter: dict = defaultdict(Counter)
-for r in pos_rows:
-    word_lemma_counter[r['word']][r['lemma']] += 1
-word_to_lemma = {w: c.most_common(1)[0][0] for w, c in word_lemma_counter.items()}
-
-tfidf_lemmas: dict = defaultdict(set)  # author → set of distinctive lemmas
-with open(DATA / 'tfidf_results.csv', encoding='utf-8') as f:
-    for row in csv.DictReader(f):
-        lemma = word_to_lemma.get(row['word'], row['word'])
-        tfidf_lemmas[row['author']].add(lemma)
-
-with open(MODELS / 'classifier.pkl', 'rb') as f:
-    classifier = pickle.load(f)
-
-with open(MODELS / 'word_embeddings.json', encoding='utf-8') as f:
-    word_embeddings: dict = {k: np.array(v) for k, v in json.load(f).items()}
-
-with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
-    morph_lookup: dict = json.load(f)
-
-print("Ready.\n")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -252,6 +268,7 @@ def run(text: str, target_author: str, source_author: str = None) -> None:
 
 
 if __name__ == '__main__':
+    load_resources()
     if len(sys.argv) == 3:
         run(sys.argv[1], sys.argv[2])
     else:

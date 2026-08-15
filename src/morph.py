@@ -35,7 +35,13 @@ def parse_feats(feats):
 
 
 def render_feats(d):
-    """Inverse of parse_feats. Alphabetical, matching classla's own ordering."""
+    """Inverse of parse_feats. Sorts keys alphabetically -- which does NOT
+    match classla's own ordering (e.g. classla emits Number before NumType in
+    193 rows of pos_tagged.csv; alphabetically NumType sorts first). Harmless
+    today because render_feats output only ever goes back through parse_feats
+    for containment matching in _match, never used as a lookup key against
+    corpus-derived feats strings -- but do not start relying on it as one.
+    """
     return '|'.join(f'{k}={v}' for k, v in sorted(d.items()))
 
 
@@ -68,8 +74,10 @@ def _match(forms, constraint):
 
     Stored keys are always full bundles from the corpus, so a relaxed
     constraint is matched by containment rather than equality. Cells hold 1.28
-    entries on average, so the scan is cheap. Ties break on frequency then
-    alphabetically, so the result is deterministic across runs.
+    entries on average, so the scan is cheap. Ties break on how many matching
+    feats bundles produced the same surface form (not corpus token frequency,
+    which this function has no access to) then alphabetically, so the result
+    is deterministic across runs.
     """
     wanted = parse_feats(constraint).items()
     hits = [surface for key, surface in forms.items()

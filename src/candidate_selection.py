@@ -621,10 +621,17 @@ def slot_contexts(text: str, mask_words: list, source_author: str,
             by_line[t['line']].append(t)
         tagged = {}
         for li, line in enumerate(lines):
-            queue = list(by_line.get(li, []))
+            line_tokens = by_line.get(li, [])
+            p = 0
             for wi, word in enumerate(_words(line)):
-                if queue and queue[0]['word'] == word:
-                    tagged[(li, wi)] = queue.pop(0)
+                # Forward scan, same as _align: a stanza's function words have
+                # no content-token match and must not stall every later word
+                # on the line the way a non-advancing queue[0]-only check did.
+                for q in range(p, len(line_tokens)):
+                    if line_tokens[q]['word'] == word:
+                        tagged[(li, wi)] = line_tokens[q]
+                        p = q + 1
+                        break
 
     contexts = []
     for target in mask_words:
