@@ -88,6 +88,38 @@ def _match(forms, constraint):
     return max(sorted(set(hits)), key=lambda f: counts[f])
 
 
+def _nearest(forms, pos, source_feats):
+    """Most common attested form, constrained to agree in gender.
+
+    relax_feats refuses to drop Gender on ADJ and VERB because it is agreement
+    there, not a property of the lemma. Picking the most common attested form
+    across every stored bundle threw that protection away one tier below, which
+    is the 'тивка гроб' error the relaxation order exists to prevent: measured
+    over Конески's top-50 ADJ lemmas against real corpus bundles, this tier
+    fired on 45.3% of slots and returned the wrong gender in 30.1% of gendered
+    ones.
+
+    On NOUN, gender is lexical -- жена is feminine in every form, and the
+    candidate lemma brings its own gender rather than agreeing with anything --
+    so no constraint applies and the tier behaves as it always did.
+
+    Returns None rather than a wrong-gender form, leaving surface_form to
+    report 'unresolved'. The bare lemma is honest about not having been
+    inflected and is audited as such; a masculine form dropped into a feminine
+    slot silently reads as a successful realisation.
+    """
+    if not forms:
+        return None
+    gender = parse_feats(source_feats).get('Gender')
+    if gender and pos not in GENDER_DROPPABLE_POS:
+        forms = {key: surface for key, surface in forms.items()
+                 if parse_feats(key).get('Gender') == gender}
+        if not forms:
+            return None
+    counts = Counter(forms.values())
+    return max(sorted(set(forms.values())), key=lambda f: counts[f])
+
+
 def surface_form(target_author, candidate_lemma, pos, source_feats, morph_lookup):
     """Realise a candidate lemma in the source token's grammatical form.
 
@@ -98,13 +130,15 @@ def surface_form(target_author, candidate_lemma, pos, source_feats, morph_lookup
       1. by_author[target][lemma][pos][feats]   -> 'exact'
       2. pooled[lemma][pos][feats]              -> 'cross_author'
       3. relaxed constraint, target then pooled -> 'relaxed'
-      4. any attested form for [target][lemma][pos] -> 'nearest_attested'
+      4. gender-agreeing attested form, target then pooled -> 'nearest_attested'
       5. the lemma unchanged                    -> 'unresolved'
 
     Tier 2 borrows another author's spelling of an inflection. That is the
     right trade: a wrong-gender word is a visible grammatical error, a
     correctly-inflected word from a neighbouring idiolect is not. Pooling makes
-    118% more forms retrievable than the per-author index alone.
+    118% more forms retrievable than the per-author index alone. Tier 4 makes
+    the same trade for the same reason — see _nearest, which is also where the
+    gender constraint that keeps tier 4 from undoing tier 3 lives.
     """
     target_forms = (morph_lookup.get('by_author', {})
                     .get(target_author, {}).get(candidate_lemma, {}).get(pos, {}))
@@ -121,8 +155,9 @@ def surface_form(target_author, candidate_lemma, pos, source_feats, morph_lookup
         if hit:
             return hit, 'relaxed'
 
-    if target_forms:
-        counts = Counter(target_forms.values())
-        return max(sorted(set(target_forms.values())), key=lambda f: counts[f]), 'nearest_attested'
+    hit = (_nearest(target_forms, pos, source_feats)
+           or _nearest(pooled_forms, pos, source_feats))
+    if hit:
+        return hit, 'nearest_attested'
 
     return candidate_lemma, 'unresolved'

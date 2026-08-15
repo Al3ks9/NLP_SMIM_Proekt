@@ -136,6 +136,81 @@ def test_nearest_attested_when_nothing_matches():
     assert (form, tier) == ('жената', 'nearest_attested')
 
 
+# --- nearest_attested must not undo the gender protection relax_feats gives ---
+#
+# relax_feats refuses to drop Gender on ADJ/VERB because it is agreement there.
+# The fallback tier below it used to pick the most common attested form across
+# every stored bundle, which threw that protection away: measured over Конески's
+# top-50 ADJ lemmas against real corpus bundles, nearest_attested fired on 45.3%
+# of slots and returned the wrong gender in 30.1% of gendered ones.
+
+ADJ_MASC_SG_IND = 'Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing'
+ADJ_MASC_SG_DEF = 'Definite=Def|Degree=Pos|Gender=Masc|Number=Sing'
+ADJ_FEM_SG_IND = 'Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing'
+ADJ_FEM_SG_DEF = 'Definite=Def|Degree=Pos|Gender=Fem|Number=Sing'
+
+VERB_LFORM_MASC = 'Aspect=Perf|Gender=Masc|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Past'
+VERB_LFORM_FEM = 'Aspect=Perf|Gender=Fem|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Past'
+
+
+def test_nearest_attested_prefers_the_agreeing_gender_on_an_adjective():
+    # 'тивок' is stored twice and 'тивка' once, so picking on raw frequency
+    # alone hands a masculine form to a feminine slot — 'тивок ноќ'.
+    lookup = {'by_author': {'A': {'тивок': {'ADJ': {
+        ADJ_MASC_SG_IND: 'тивок',
+        ADJ_MASC_SG_DEF: 'тивок',
+        ADJ_FEM_SG_IND: 'тивка',
+    }}}}, 'pooled': {}}
+    form, tier = morph.surface_form('A', 'тивок', 'ADJ', ADJ_FEM_SG_DEF, lookup)
+    assert (form, tier) == ('тивка', 'nearest_attested')
+
+
+def test_no_agreeing_verb_form_is_unresolved_rather_than_the_wrong_gender():
+    # Gender on a verb is the л-form agreeing with its subject, not lexical.
+    # Relaxation can never reach a masculine form from a feminine query — it
+    # refuses to drop Gender — so only the fallback could hand back 'дошол'.
+    lookup = {'by_author': {'A': {'дојде': {'VERB': {VERB_LFORM_MASC: 'дошол'}}}},
+              'pooled': {}}
+    assert morph.surface_form('A', 'дојде', 'VERB', VERB_LFORM_FEM, lookup) == \
+        ('дојде', 'unresolved')
+
+
+def test_nearest_attested_ignores_gender_on_a_noun():
+    # Gender is lexical on nouns — жена is feminine in every form, and there is
+    # nothing for it to agree with. Constraining here would strand the lemma.
+    lookup = {'by_author': {'A': {'жена': {'NOUN': {FEM_SG_DEF: 'жената'}}}}, 'pooled': {}}
+    masc = 'Case=Nom|Definite=Ind|Gender=Masc|Number=Plur'
+    assert morph.surface_form('A', 'жена', 'NOUN', masc, lookup) == ('жената', 'nearest_attested')
+
+
+def test_no_agreeing_form_is_unresolved_rather_than_the_wrong_gender():
+    # Returning the bare lemma says 'not inflected' and is audited as such;
+    # returning a masculine form into a feminine slot silently reads as correct.
+    lookup = {'by_author': {'A': {'тивок': {'ADJ': {ADJ_MASC_SG_DEF: 'тивкиот'}}}},
+              'pooled': {}}
+    assert morph.surface_form('A', 'тивок', 'ADJ', ADJ_FEM_SG_DEF, lookup) == \
+        ('тивок', 'unresolved')
+
+
+def test_nearest_attested_borrows_an_agreeing_form_from_pooled():
+    # Same trade the cross_author tier already makes: a correctly inflected form
+    # from a neighbouring idiolect beats a wrong-gender one from the target.
+    lookup = {
+        'by_author': {'A': {'тивок': {'ADJ': {ADJ_MASC_SG_DEF: 'тивкиот'}}}},
+        'pooled': {'тивок': {'ADJ': {ADJ_FEM_SG_IND: 'тивка'}}},
+    }
+    form, tier = morph.surface_form('A', 'тивок', 'ADJ', ADJ_FEM_SG_DEF, lookup)
+    assert (form, tier) == ('тивка', 'nearest_attested')
+
+
+def test_featless_query_still_reaches_nearest_attested_on_an_adjective():
+    # No Gender to agree with means no constraint to apply — not zero matches.
+    lookup = {'by_author': {'A': {'тивок': {'ADJ': {ADJ_MASC_SG_DEF: 'тивкиот'}}}},
+              'pooled': {}}
+    assert morph.surface_form('A', 'тивок', 'ADJ', '', lookup) == \
+        ('тивкиот', 'nearest_attested')
+
+
 def test_unresolved_returns_the_bare_lemma():
     empty = {'by_author': {}, 'pooled': {}}
     assert morph.surface_form('A', 'жена', 'NOUN', FEM_SG_DEF, empty) == ('жена', 'unresolved')
