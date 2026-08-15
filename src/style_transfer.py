@@ -7,18 +7,15 @@ Usage:
 """
 
 import csv
-import json
 import pickle
 import sys
-import random
 from collections import defaultdict, Counter
 from pathlib import Path
 
 import numpy as np
-import networkx as nx
 
+import candidate_selection
 import tagging
-from morph import surface_form
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
@@ -28,34 +25,36 @@ CONTENT_POS = {'NOUN', 'VERB', 'ADJ', 'ADV'}  # PROPN excluded — never replace
 
 # ── Load resources ────────────────────────────────────────────────────────────
 #
-# Deferred into a function rather than run at module scope: word_embeddings.json
-# is 260 MB and gitignored, and skg_final.gexf / classifier.pkl are also pipeline
-# outputs that need not exist for every caller. Pure functions like splice() —
-# and tests that only exercise them — must be importable without any of this on
-# disk. The CLI entry point below calls load_resources() before doing anything
-# that needs it.
+# Deferred into a function rather than run at module scope: candidate_selection's
+# resources include word_embeddings.json (299 MB, gitignored), and classifier.pkl
+# is also a pipeline output that need not exist for every caller. Pure functions
+# like splice() — and tests that only exercise them — must be importable without
+# any of this on disk. The CLI entry point below calls load_resources() before
+# doing anything that needs it.
 
-G = author_vocab = pos_rows = classifier = word_embeddings = morph_lookup = None
+author_vocab = pos_rows = classifier = None
+resources: dict = {}
 tfidf_lemmas: dict = {}
 
 
 def load_resources() -> None:
-    """Load the graph, vocab, classifier, embeddings and morph lookup into
-    module globals. Must run before predict_author/_poem_context_nodes/
-    transfer_style/get_surface_morph are called."""
-    global G, author_vocab, pos_rows, classifier, word_embeddings, morph_lookup, tfidf_lemmas
+    """Load the classifier and candidate_selection's resource bundle into module
+    globals. Must run before predict_author/transfer_style are called.
+
+    author_vocab and pos_rows come from candidate_selection's cache rather than
+    being read again here, so both modules are guaranteed to rank against the
+    same vocabulary and the same tagging.
+    """
+    global author_vocab, pos_rows, classifier, resources, tfidf_lemmas
 
     print("Loading resources...", flush=True)
 
-    G = nx.read_gexf(MODELS / 'skg_final.gexf')
+    resources = candidate_selection.load_resources()
+    author_vocab = resources['author_vocab']
+    pos_rows = candidate_selection.load_pos_rows()
 
-    with open(MODELS / 'author_vocab.json', encoding='utf-8') as f:
-        author_vocab = json.load(f)
-
-    with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:
-        pos_rows = list(csv.DictReader(f))
-
-    # Map TF-IDF surface words → lemmas
+    # Map TF-IDF surface words → lemmas. tfidf_results.csv is keyed on surface
+    # words, but should_replace() below compares lemmas.
     word_lemma_counter: dict = defaultdict(Counter)
     for r in pos_rows:
         word_lemma_counter[r['word']][r['lemma']] += 1
@@ -70,23 +69,7 @@ def load_resources() -> None:
     with open(MODELS / 'classifier.pkl', 'rb') as f:
         classifier = pickle.load(f)
 
-    with open(MODELS / 'word_embeddings.json', encoding='utf-8') as f:
-        word_embeddings = {k: np.array(v) for k, v in json.load(f).items()}
-
-    with open(MODELS / 'morph_lookup.json', encoding='utf-8') as f:
-        morph_lookup = json.load(f)
-
     print("Ready.\n")
-
-
-def get_surface_morph(author: str, lemma: str, pos: str, source_feats: str) -> str:
-    """Surface form of (lemma, pos) for author, in the source token's morphology.
-
-    Delegates to morph.surface_form and keeps only the form — callers here do
-    not audit tiers; candidate_selection.py does.
-    """
-    surface, _tier = surface_form(author, lemma, pos, source_feats, morph_lookup)
-    return surface
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -95,20 +78,6 @@ def predict_author(text: str) -> tuple[str, float]:
     proba = classifier.predict_proba([text])[0]
     idx = int(np.argmax(proba))
     return classifier.classes_[idx], round(float(proba[idx]), 4)
-
-
-def _poem_context_nodes(text: str) -> set[str]:
-    """
-    Return all lemma_POS SKG nodes found in the poem.
-    Used to score candidates by how well they fit the poem's semantic space.
-    """
-    verb_lemmas = tagging.load_verb_lemmas(pos_rows)
-    tokens = tagging.tag_lines(text, verb_lemmas)
-    return {
-        f'{token.lemma}_{token.pos}'
-        for token in tokens
-        if token.pos in CONTENT_POS and f'{token.lemma}_{token.pos}' in G
-    }
 
 
 def splice(line: str, edits: list) -> str:
@@ -127,28 +96,19 @@ def splice(line: str, edits: list) -> str:
     return ''.join(out)
 
 
-def _score(candidate_lemma: str, pos: str, target_author: str,
-           orig_lemma: str, freq: float, max_freq: float,
-           context_nodes: set, used_count: Counter) -> float:
-    score = freq / max_freq                                      # normalized frequency [0, 1]
+def _pick(candidates: list, used_count: Counter) -> dict:
+    """Choose one of candidate_selection's ranked candidates for this slot.
 
-    if candidate_lemma in tfidf_lemmas.get(target_author, set()):
-        score += 3.0                                             # target-distinctive bonus
+    Deterministic, unlike the softmax-over-top-3 sampling this replaced. Those
+    probabilities were computed over scores spread across a 0–5 range; on
+    candidate_selection's 0–1 composite the same softmax is close to uniform, so
+    sampling would have amounted to picking at random among the top three.
 
-    # Semantic similarity to the original word via embeddings
-    if orig_lemma in word_embeddings and candidate_lemma in word_embeddings:
-        sim = float(np.dot(word_embeddings[orig_lemma], word_embeddings[candidate_lemma]))
-        score += sim * 2.0                                       # semantic similarity weight
-
-    # Context compatibility via SKG co-occurrence
-    node_id = f'{candidate_lemma}_{pos}'
-    if node_id in G:
-        for ctx in context_nodes:
-            if G.has_edge(node_id, ctx):
-                score += G[node_id][ctx].get('weight', 1) * 0.1
-
-    score -= used_count[candidate_lemma] * 2.0                   # diversity penalty
-    return score
+    The one thing sampling did buy — not repeating a lemma across a poem — is
+    kept explicitly: an unused lemma outranks a used one regardless of score.
+    """
+    return min(candidates,
+               key=lambda c: (used_count[c['lemma']], -c['score'], c['lemma']))
 
 
 # ── Core transfer function ────────────────────────────────────────────────────
@@ -163,8 +123,11 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
       (b) Its lemma is completely absent from target's vocabulary for that POS
           → the target simply never uses this word
 
-    Replacements use the target author's most common surface form of the chosen
-    lemma, so the output is morphologically natural rather than bare lemmas.
+    Ranking and inflection are candidate_selection.build_slot()'s job, not this
+    module's: the same per-slot scoring and the same relaxation tiers that build
+    the LLM probe's candidate lists decide the replacement here. This module owns
+    only *which* tokens are eligible (above) and *which* of the ranked candidates
+    to take (_pick).
     """
     if target_author not in author_vocab:
         raise ValueError(
@@ -180,7 +143,6 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
         for pos, words in author_vocab.get(target_author, {}).items()
     }
 
-    context_nodes = _poem_context_nodes(text)
     used_count: Counter = Counter()
     output_lines = []
 
@@ -197,7 +159,12 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
 
         edits = []
 
-        for token in by_line[li]:
+        # by_line holds only content tokens, so the neighbours of a slot are its
+        # neighbouring *content* tokens — which is what pos_transitions.json was
+        # counted over, and what candidate_selection.slot_contexts() feeds it.
+        line_tokens = by_line[li]
+
+        for i, token in enumerate(line_tokens):
             # tag_lines() also yields PROPN (its content-POS set is a superset
             # of CONTENT_POS) — proper nouns are never replacement targets.
             if token.pos not in CONTENT_POS:
@@ -219,32 +186,18 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
             if not should_replace:
                 continue
 
-            candidates = author_vocab.get(target_author, {}).get(pos, [])
-            if not candidates:
+            slot = candidate_selection.build_slot(
+                token.text, lemma, pos, token.feats,
+                line_tokens[i - 1].pos if i > 0 else None,
+                line_tokens[i + 1].pos if i + 1 < len(line_tokens) else None,
+                target_author, resources,
+            )
+            if not slot['candidates']:
                 continue
 
-            max_freq = candidates[0][1]
-            scored = [
-                (_score(cand, pos, target_author, lemma, freq, max_freq,
-                        context_nodes, used_count), cand)
-                for cand, freq in candidates
-                if cand != lemma
-            ]
-            if not scored:
-                continue
-
-            scored.sort(key=lambda x: -x[0])
-            top3 = scored[:3]
-
-            # Softmax over top-3 for natural variety
-            vals = np.array([s for s, _ in top3], dtype=float)
-            vals -= vals.max()
-            probs = np.exp(vals) / np.exp(vals).sum()
-            best_lemma = top3[np.random.choice(len(top3), p=probs)][1]
-
-            surface = get_surface_morph(target_author, best_lemma, pos, token.feats)
-            used_count[best_lemma] += 1
-            edits.append((token.start_char, token.end_char, surface))
+            chosen = _pick(slot['candidates'], used_count)
+            used_count[chosen['lemma']] += 1
+            edits.append((token.start_char, token.end_char, chosen['surface']))
 
         output_lines.append(splice(line, edits))
 
