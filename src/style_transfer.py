@@ -96,6 +96,49 @@ def splice(line: str, edits: list) -> str:
     return ''.join(out)
 
 
+# Criterion (b) — "the target author never uses this word" — applies only here.
+# NOUN is excluded on purpose, for two independent reasons:
+#
+#   Content. The criterion asks whether a lemma is missing from the target's
+#   vocabulary for its POS. On an adjective that is a statement about how the
+#   author qualifies things; on a noun it is a statement about what he wrote
+#   about. Конески's NOUN vocabulary is 1,297 lemmas, so leaving NOUN in meant
+#   replacing every noun outside those 1,297 — which is how врба and војник,
+#   the subject of the Рацин stanza, became вик and сокол.
+#
+#   Agreement. Gender is inflection on ADJ/ADV/VERB and lexical on NOUN (26% of
+#   ADJ lemmas are attested in more than one gender against 3% of NOUN lemmas),
+#   so morph.surface_form can realise a replacement adjective into the slot's
+#   own gender but can never do that for a noun. 25.2% of noun tokens sit beside
+#   an agreeing adjective, and a replacement drawn from Конески's 43/38/19
+#   Fem/Masc/Neut noun vocabulary keeps the source gender only 36.4% of the
+#   time — so ~64% of those replacements break agreement with an adjective this
+#   module never touched and therefore cannot repair.
+#
+# Per-token the loss is small: author-identification accuracy per 100 tokens is
+# 2.79 for ADJ and 4.58 for ADV against 1.85 for NOUN (5-fold CV, 24 authors,
+# 1,169 poems, 0.145 baseline). Nouns lead on raw accuracy only through volume.
+#
+# Nouns remain reachable through criterion (a), which is what carries the real
+# noun transfers — the dialect variants огин/оган and раца/рака.
+B_ELIGIBLE_POS = {'ADJ', 'ADV', 'VERB'}
+
+
+def should_replace(lemma: str, pos: str, src_tfidf: set,
+                   tgt_tfidf: set, tgt_vocab: dict) -> bool:
+    """Is this token a replacement target?
+
+      (a) Its lemma is distinctive to the source and not to the target
+          → swapping a measured source style-marker for a target one.
+      (b) Its lemma is absent from the target's vocabulary for that POS, and
+          that POS is one where absence means style rather than subject matter
+          → see B_ELIGIBLE_POS.
+    """
+    if lemma in src_tfidf and lemma not in tgt_tfidf:                 # (a)
+        return True
+    return pos in B_ELIGIBLE_POS and lemma not in tgt_vocab.get(pos, set())  # (b)
+
+
 def _pick(candidates: list, used_count: Counter) -> dict:
     """Choose one of candidate_selection's ranked candidates for this slot.
 
@@ -117,17 +160,11 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
     """
     Rewrite text in target_author's style.
 
-    Eligibility to replace a token:
-      (a) Its lemma is in source TF-IDF top-20 AND not in target TF-IDF top-20
-          → swapping a true source style-marker for a target one
-      (b) Its lemma is completely absent from target's vocabulary for that POS
-          → the target simply never uses this word
-
     Ranking and inflection are candidate_selection.build_slot()'s job, not this
     module's: the same per-slot scoring and the same relaxation tiers that build
     the LLM probe's candidate lists decide the replacement here. This module owns
-    only *which* tokens are eligible (above) and *which* of the ranked candidates
-    to take (_pick).
+    only *which* tokens are eligible (should_replace) and *which* of the ranked
+    candidates to take (_pick).
     """
     if target_author not in author_vocab:
         raise ValueError(
@@ -176,14 +213,8 @@ def transfer_style(text: str, target_author: str, source_author: str = None) -> 
 
             pos = token.pos
             lemma = token.lemma
-            in_tgt_vocab = lemma in tgt_vocab.get(pos, set())
 
-            # Eligibility: only replace genuine style markers or words foreign to target
-            should_replace = (
-                (lemma in src_tfidf and lemma not in tgt_tfidf)  # (a)
-                or (not in_tgt_vocab)                             # (b)
-            )
-            if not should_replace:
+            if not should_replace(lemma, pos, src_tfidf, tgt_tfidf, tgt_vocab):
                 continue
 
             slot = candidate_selection.build_slot(
