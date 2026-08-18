@@ -403,13 +403,12 @@ def tier_legacy_fallback(source_lemma, source_pos, target_author, prev_pos,
     """
     # Imported here, not at module scope: llm_probe imports this module, so a
     # top-level import would be circular.
-    from llm_probe import TARGET_AUTHOR, load_target_words
+    from llm_probe import load_target_words
 
-    words = load_target_words()
-    if target_author != TARGET_AUTHOR:
-        log.warning('tier=legacy_fallback load_target_words() is hardcoded to %r, '
-                    'but this slot targets %r — words are not the requested author\'s',
-                    TARGET_AUTHOR, target_author)
+    words = load_target_words(author=target_author)
+    if not words:
+        log.warning('tier=legacy_fallback no TF-IDF words found for author=%r — '
+                    'this tier has nothing to fall back to', target_author)
 
     pool = [(w, 0) for w in words if w != source_lemma]
     scored = score_pool(pool, source_lemma, source_pos, target_author,

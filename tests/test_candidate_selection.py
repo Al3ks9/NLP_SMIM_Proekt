@@ -207,23 +207,35 @@ def test_legacy_fallback_fires_only_as_last_resort_and_warns(resources, caplog):
             resources['author_vocab'], resources['tfidf'], resources['embeddings'],
             resources['cooc_index'], resources['transitions'],
         )
-    assert ranked
-    assert all(c['tier'] == 'legacy_fallback' for c in ranked)
-    # Every earlier tier must have been attempted before falling back.
+    # A wholly nonexistent author has no data in any tier, including the
+    # legacy fallback's own TF-IDF words — every tier is attempted and
+    # exhausted, and the result is empty rather than silently borrowing
+    # another author's vocabulary.
+    assert ranked == []
     for tier in ('tier=primary', 'tier=relaxed_semantic', 'tier=cross_author_similar'):
         assert tier in caplog.text
     assert any(r.levelno >= logging.WARNING for r in caplog.records), 'fallback was silent'
 
 
-def test_legacy_fallback_uses_load_target_words(resources):
+def test_legacy_fallback_uses_the_target_authors_own_words(resources):
+    """Regression test: tier_legacy_fallback must key load_target_words() off
+    the target_author it was actually called with, not llm_probe's hardcoded
+    TARGET_AUTHOR demo constant. Конески and Рацин have disjoint top-15 TF-IDF
+    vocabularies, so this fails loudly if the tier silently reuses the wrong
+    author's words."""
     from llm_probe import load_target_words
 
     ranked = cs.tier_legacy_fallback(
-        'вардар', 'PROPN', KONESKI, None, None,
+        'вардар', 'PROPN', RACIN, None, None,
         resources['tfidf'], resources['embeddings'],
         resources['cooc_index'], resources['transitions'],
     )
-    assert {c['lemma'] for c in ranked} <= set(load_target_words())
+    racin_words = set(load_target_words(author=RACIN))
+    koneski_words = set(load_target_words(author=KONESKI))
+    lemmas = {c['lemma'] for c in ranked}
+    assert lemmas
+    assert lemmas <= racin_words
+    assert lemmas.isdisjoint(koneski_words)
 
 
 # ── §7: embeddings degrade gracefully ─────────────────────────────────────────

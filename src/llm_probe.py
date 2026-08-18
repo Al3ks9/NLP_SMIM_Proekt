@@ -219,16 +219,20 @@ def load_stanza() -> str:
     return FALLBACK_STANZA
 
 
-def load_target_words(n: int = 15) -> list[str]:
-    """Target author's distinctive vocabulary from our TF-IDF output."""
+def load_target_words(n: int = 15, author: str | None = None) -> list[str]:
+    """Author's distinctive vocabulary from our TF-IDF output. Defaults to
+    TARGET_AUTHOR (this module's single-author demo) when no author is given —
+    callers doing multi-author work (candidate_selection.tier_legacy_fallback)
+    must pass one explicitly, or every target silently gets Конески's words."""
     import csv
+    author = author or TARGET_AUTHOR
     path = DATA / 'tfidf_results.csv'
     if not path.exists():
         return ['вик', 'мрачен', 'сокол', 'младост', 'самотен', 'тивка']
     words = []
     with open(path, encoding='utf-8') as f:
         for row in csv.DictReader(f):
-            if row['author'] == TARGET_AUTHOR and int(row['rank']) <= n:
+            if row['author'] == author and int(row['rank']) <= n:
                 words.append(row['word'])
     return words
 
