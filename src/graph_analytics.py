@@ -33,8 +33,28 @@ for author, deg, _ in author_degree:
     print(f"  {author:35s}  weighted_degree={deg:.2f}")
 
 # --- Community detection (Louvain) ---
-# Run on the full graph (undirected, already is)
-partition = community_louvain.best_partition(G, weight='weight', random_state=42)
+# Run on word-mediated edges only (cooccurrence, semantic_similarity,
+# distinctive) — author_similarity edges are excluded from the partitioning
+# graph. Those edges are a direct author<->author Jaccard-vocabulary-overlap
+# signal (enrich_skg.py, threshold 0.15), not evidence mediated by anything
+# either author actually wrote, and leaving them in let Louvain cluster
+# authors together on vocabulary overlap alone with no word-level support
+# behind it: 13 of 24 authors landed in one "community" built on 2 surviving
+# word nodes, purely because those authors' weighted degree happened to be
+# 40-70% author_similarity edges versus 86-100% word-mediated for everyone
+# else. author_similarity is still a real signal — it's just used directly
+# (not through this graph) as an auxiliary/fallback source in
+# candidate_selection.author_similarity() for tier_cross_author_similar,
+# not as something that should define a community on its own.
+#
+# PageRank and weighted_degree above are intentionally left on the full
+# graph G — author_similarity edges are legitimate there (centrality and
+# degree are not claims about shared vocabulary the way a community is).
+G_community = G.copy()
+G_community.remove_edges_from(
+    (u, v) for u, v, d in G.edges(data=True) if d.get('edge_type') == 'author_similarity'
+)
+partition = community_louvain.best_partition(G_community, weight='weight', random_state=42)
 
 # Group by community
 communities = {}
