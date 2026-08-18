@@ -49,6 +49,10 @@ Run scripts in this order to rebuild all artifacts from scratch:
 9. `src/build_morph_lookup.py` → `models/morph_lookup.json`
 10. `src/style_transfer.py` — interactive demo, requires all of the above
 
+## Thesis report
+
+`data/report.tex` is the thesis-facing write-up of pipeline methodology and validation findings (tagger migration, correctness bugs found and fixed, metric changes, community-detection stability, and similar). **Whenever you make a significant change to the pipeline** — swapping a model/tagger, changing a scoring or graph-construction method, fixing a bug that affects reported numbers, adding or redefining a metric — **check whether `data/report.tex` needs a corresponding update**, and update it if so. Compile with `xelatex report.tex` (not `pdflatex` — the document needs native Cyrillic via `fontspec`/`polyglossia`, and `T1`/`T2A` font-encoding setups aren't fully installed in this environment).
+
 ## Data quality context
 
 Latin and Greek character artifacts exist inside Macedonian (Cyrillic) text — 231 rows affected out of 2,711. These are single characters (e.g. Latin `a`, `e`, `j`, `c`) that visually resemble Cyrillic letters but are the wrong Unicode codepoint.

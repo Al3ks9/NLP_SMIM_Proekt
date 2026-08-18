@@ -1,0 +1,449 @@
+% !TEX program = xelatex
+%
+% Pipeline validation notes: POS-tagger migration and related correctness
+% fixes. Requires XeLaTeX (for native Cyrillic via fontspec/polyglossia) —
+% compile with `xelatex report.tex`, not pdflatex.
+%
+% TODO(author): fold this into the thesis's main document — merge the
+% preamble below with the thesis's own, or convert this file to an
+% \input{}-able fragment (\section{...} only, drop \documentclass/\begin/\end)
+% once a master .tex file exists. Title, author, and institution fields are
+% placeholders.
+\documentclass[11pt]{article}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{english}
+\setotherlanguage{macedonian}
+\setmainfont{Times New Roman}
+\setmonofont{Courier New}
+\newfontfamily\cyrillicfont{Times New Roman}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\title{Pipeline Validation: POS-Tagger Migration and Associated Fixes}
+\author{TODO: author name}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note documents a validation pass performed on the Macedonian-language
+stylometric pipeline after its part-of-speech tagger was migrated from spaCy
+(\texttt{mk\_core\_news\_lg}) to CLASSLA-Stanza. It covers (i) how much the
+downstream Louvain community structure on the semantic knowledge graph (SKG)
+changed as a result of the tagger switch, separated from ordinary
+seed-to-seed algorithmic noise, including the diagnosis and subsequent fix
+of a community-detection artifact (author-similarity edges alone defining a
+13-author community with almost no word support) and the seed-stability
+tradeoff that fix introduces; (ii) two correctness bugs found and fixed
+during the pass, one in rhyme-ending extraction and one in the style-transfer
+candidate-selection fallback tier; and (iii) two metric additions — a
+length-normalized lexical-diversity measure and stanza-level structural
+features — added to the per-author style profiles.
+\end{abstract}
+
+\section{Background: the tagger migration}
+
+The pipeline originally tagged the corpus (2{,}711 Macedonian poems and song
+lyrics, 24 authors after the $\geq 5$-poem eligibility filter) with spaCy's
+\texttt{mk\_core\_news\_lg} model. This was replaced with CLASSLA-Stanza,
+which lemmatizes inflection correctly and additionally exposes MULTEXT-East
+\texttt{xpos}/\texttt{feats} morphology, enabling the feats-keyed
+morphological lookup used by style transfer. The full pipeline — POS
+tagging, TF-IDF profiling, SKG construction and enrichment, embeddings, and
+graph analytics — was rerun end to end against the new tags. This note asks:
+how much did that rebuild actually change the pipeline's outputs, and were
+any of those changes symptoms of pre-existing bugs rather than the tagger
+switch itself?
+
+\section{Louvain community stability under the tagger switch}
+\label{sec:louvain}
+
+\subsection{Setup}
+
+Author-similarity communities are computed by
+\texttt{graph\_analytics.py} via \texttt{community.best\_partition(G,\allowbreak
+weight='weight',\allowbreak random\_state=42)} on the SKG
+(\texttt{skg\_final.gexf}). Both the pre-switch (spaCy) and post-switch
+(CLASSLA) versions of \texttt{graph\_analytics.py} call Louvain with these
+exact same parameters, so a direct diff of the two partitions is a fair
+comparison, not confounded by a methodology change alongside the tagger
+change. The pre-switch graph and analytics output were recoverable from git
+history (\texttt{git} commit \texttt{5f03983}, carried forward unchanged by
+the pure file-reorganization commit \texttt{363009a}); the post-switch
+version is the current repository state (commit \texttt{41bb49e} onward).
+
+\subsection{Direct diff against the pre-switch partition}
+
+Both partitions cover the same 24 authors and both settle on 6 communities.
+Comparing author community labels directly (after optimal label alignment)
+gives:
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Metric & Value \\
+\midrule
+Adjusted Rand Index (ARI) & 0.221 \\
+Normalized Mutual Information (NMI) & 0.483 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+An ARI of $1$ would mean the partitions are identical (up to relabeling); an
+ARI near $0$ means the agreement is no better than chance. 0.221 indicates a
+substantial reshuffling — but Louvain is itself stochastic in the order it
+visits nodes, so this number alone cannot distinguish ``the tagger switch
+changed the graph structure'' from ``Louvain would have landed somewhere
+this different anyway, even on an unchanged graph, under a different run.''
+
+\subsection{Establishing a noise floor}
+
+To separate the two, Louvain was re-run 30 times on the \emph{current}
+(post-switch) graph with \texttt{random\_state} $\in \{0, \dots, 29\}$,
+holding the graph itself fixed. Each run was compared to the documented
+\texttt{random\_state=42} reference partition:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Comparison & Min & Mean & Median \\
+\midrule
+Each of 30 seeds vs.\ the $\text{seed}=42$ reference (ARI) & 0.515 & 0.877 & 0.906 \\
+All pairs among the 30 seeds (ARI, 60 sampled pairs) & 0.469 & 0.819 & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The number of communities Louvain settles on also varies by seed alone (4,
+5, or 6 communities across the 30 runs).
+
+\subsection{Conclusion: a real change, not just seed noise}
+
+Seed-only variability on a fixed graph floors at ARI $\approx 0.47$--$0.5$ in
+the worst observed case. The pre/post-switch ARI (0.221) sits
+\emph{below} that floor. The tagger switch therefore produced a partition
+shift larger than ordinary Louvain run-to-run noise would account for — a
+genuine, if partial, structural change, not an artifact of re-running the
+algorithm once.
+
+The change is concentrated among the ``word-driven'' authors (see
+\S\ref{sec:community0} for the exception). Three of the six pre-switch
+communities (covering 14 of the 24 authors) dissolved and redistributed
+across different post-switch communities — e.g.\ the pre-switch cluster
+\{Рацин, Поповски, Коцев, Линдро, Лазаров\} split into four different
+post-switch communities. This is the expected effect of a tagger change:
+different lemmatization directly perturbs the TF-IDF and co-occurrence edges
+those communities are built from.
+
+\subsection{Diagnosis: Community 0, a stable but low-information clique}
+\label{sec:community0}
+
+The current partition's largest community (``Community 0'') groups 13 of
+the 24 authors around only 2 surviving word nodes:
+
+\begin{quote}
+\small
+Петре М. Андреевски, Влада Урошевиќ, Блаже Конески, Славко Јаневски, Ацо
+Шопов, Матеја Матевски, Богомил Ѓузел, Адем Гајтани, Веле Смилевски, Пијан
+Славеј, Ефтим Клетников, Ристо Лазаров, Ива Петреска
+\end{quote}
+
+\paragraph{Seed stability.} All $\binom{13}{2} = 78$ pairs of these authors
+co-clustered together in \emph{every one} of the 30 seed runs described
+above — the single most reproducible feature of the entire partition, far
+above the general seed-noise floor.
+
+\paragraph{Why it forms.} Breaking down each author's SKG weighted degree by
+edge type shows why: every Community-0 author draws 40--70\% of its
+weighted degree from direct \texttt{author\_similarity} edges (author
+$\leftrightarrow$ author Jaccard-vocabulary-overlap edges), versus
+86--100\% from word-mediated (\texttt{distinctive}/\texttt{cooccurrence})
+edges for every author outside the community. Community 0 is not a set of
+authors Louvain found to write alike through shared vocabulary; it is the
+set of authors whose word nodes did not survive strongly into the graph
+(consistent with the SKG's frequency floors and node cap), leaving the
+direct author-similarity edges as the dominant signal available to place
+them by.
+
+\paragraph{Not new to the tagger switch.} The same phenomenon already
+existed pre-switch, with a 9-author core — Андреевски, Урошевиќ, Конески,
+Јаневски, Ѓузел, Гајтани, Славеј, Клетников, Петреска — all a subset of
+today's 13, each already showing 13--47\% author-similarity weight share
+before the tagger changed. The switch grew this core from 9 to 13 authors
+(adding Шопов, Матевски, Смилевски, Лазаров), it did not create it.
+
+\paragraph{Interpretation.} Community 0 should be read as ``authors the
+graph has too little word-level signal to place elsewhere,'' not as
+evidence of shared literary style — and, as described next, was subsequently
+removed by changing what Louvain is allowed to see.
+
+\subsection{Fix: excluding \texttt{author\_similarity} edges from the
+partitioning graph}
+\label{sec:community0fix}
+
+\texttt{graph\_analytics.py} now runs Louvain on a copy of the SKG with
+every \texttt{author\_similarity} edge removed, keeping
+\texttt{cooccurrence}, \texttt{semantic\_similarity}, and
+\texttt{distinctive} edges — i.e.\ only edges mediated by an actual word —
+as the partitioning signal. \texttt{author\_similarity} edges are still
+computed and still present in \texttt{skg\_final.gexf} for every other
+purpose (PageRank, weighted degree, visualization); they are excluded only
+from the graph Louvain sees, since \S\ref{sec:community0} showed they were
+sufficient on their own to define a community with no word-level support
+behind it. The direct author-similarity signal remains available where it
+was always meant to be used as an auxiliary/fallback source — in
+\texttt{candidate\_selection.author\_similarity()}, which already computed
+it independently of the graph, for \texttt{tier\_cross\_author\_similar}.
+
+\paragraph{Result.} Community 0 no longer exists. Louvain on the restricted
+graph settles on 5 communities instead of 6, and every one now has
+substantial word support (49--102 word nodes each, versus the old Community
+0's 2). The 13 authors previously grouped by author-similarity edges alone
+are now distributed across all 5 communities on genuine vocabulary evidence:
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+Former Community-0 author & New community (by word evidence) \\
+\midrule
+Блаже Конески, Славко Јаневски, Ацо Шопов & Community 2 (with Кочо Рацин) \\
+Влада Урошевиќ, Пијан Славеј, Ефтим Клетников & Community 1 \\
+Петре М. Андреевски, Богомил Ѓузел, Ристо Лазаров, Ива Петреска & Community 3 \\
+Адем Гајтани, Веле Смилевски & Community 4 \\
+Матеја Матевски & Community 0 (new, unrelated to the old one) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Cost: the new partition is less seed-stable.} Repeating the
+30-seed sweep from \S\ref{sec:louvain} on the restricted graph gives a
+markedly lower stability floor than the full graph had:
+
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+Graph & Min ARI & Mean ARI & Median ARI \\
+\midrule
+Full graph (incl.\ \texttt{author\_similarity}), \S\ref{sec:louvain} & 0.515 & 0.877 & 0.906 \\
+Restricted graph (word-mediated only) & 0.300 & 0.581 & 0.541 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+This is the expected price of the fix, not a sign it is wrong: the
+author-similarity edges were direct, high-weight author$\leftrightarrow$author
+connections that gave Louvain unambiguous structure to lock onto: precisely
+the ``glue'' that made Community 0 so artificially stable
+(\S\ref{sec:community0}). Without it, the remaining word-mediated graph is
+sparser, and Louvain's well-known sensitivity to node-visit order shows up
+more. Per-community confidence is uneven: averaging pairwise co-clustering
+across the 30 seeds by the $\text{seed}=42$ community gives 0.88 for
+Community 4 and 0.74 for Community 3 (high confidence) down to 0.49 for
+Community 2 and 0.27 for the 3-author Community 0 (Матевски, Линдро,
+Цветкоски — low confidence, on par with a coin flip for some pairs).
+
+\paragraph{Recommendation.} Treat the 5-community, word-mediated partition
+as the current best estimate of stylistic community structure, but do not
+read the exact $\text{random\_state}=42$ assignment as ground truth for the
+weaker communities (2 and the new 0) the way one might have been tempted to
+for the old, artifactually-stable Community 0. A seed-ensemble/consensus
+partition would give a more defensible per-pair confidence than any single
+seed and is a natural next step if community membership starts being used
+for a downstream decision (e.g.\ cluster-based candidate pooling) rather
+than reported descriptively.
+
+\section{Correctness fixes found during validation}
+
+Two bugs, unrelated to the tagger switch, were found and fixed while
+validating pipeline outputs.
+
+\subsection{Rhyme-ending extraction}
+
+\texttt{style\_profiler.py}'s \texttt{top\_rhyme\_endings} field took the
+literal last three characters of each line's last whitespace-split token,
+with no punctuation stripping. Macedonian poetry in this corpus frequently
+ends lines on a standalone em/en dash (a caesura marker) or on punctuation
+glued to the last word, so every one of the 24 authors' top-5 rhyme endings
+were contaminated with punctuation artifacts — e.g.\ Блаже Конески's were
+\texttt{--|на,|на.|ам.|ат.} and Кочо Рацин's were
+\texttt{--|---|ата|ите|ни,}. This was corpus-wide, not an isolated case.
+
+The fix extracts a genuine line-final syllable: it walks backward past
+trailing pure-punctuation tokens, strips edge punctuation from the real
+last word, and returns the substring from the onset of the final vowel's
+syllable (the character after the second-to-last vowel) through the end of
+the word. After the fix, no author's top rhyme endings contain punctuation,
+and the endings reflect real Macedonian grammatical suffixes (\texttt{-та},
+\texttt{-те}, \texttt{-на}, \texttt{-ва}, and similar).
+
+\subsection{Style-transfer legacy-fallback tier}
+
+\texttt{candidate\_selection.py}'s last-resort candidate tier
+(\texttt{tier\_legacy\_fallback}) imported a hardcoded
+\texttt{TARGET\_AUTHOR} constant from \texttt{llm\_probe.py} instead of
+using the \texttt{target\_author} parameter it was already given, so
+whenever this tier fired for any author other than that hardcoded default,
+it silently supplied \emph{that other author's} TF-IDF vocabulary as
+replacement candidates. The fix threads \texttt{target\_author} through to
+\texttt{load\_target\_words()}, which now accepts an explicit author rather
+than reading the module constant.
+
+To measure real-world impact, \texttt{style\_transfer.transfer\_style()}
+was re-run over 960 sampled (source poem, target author) pairs spanning all
+24 authors, instrumented to record which tier produced each of the 20{,}940
+replacement slots evaluated:
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Tier of the candidate chosen in the output & Share of slots \\
+\midrule
+\texttt{primary} & 94.20\% \\
+\texttt{relaxed\_semantic} & 5.73\% \\
+\texttt{legacy\_fallback} & 0.062\% (13 slots) \\
+\texttt{cross\_author\_similar} & 0.014\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The bug was real wherever it fired, but it fired rarely — 13 of 20{,}940
+slots, concentrated in a handful of sparse-vocabulary authors (8 of the 13
+for a single author, Јосип Коцев). It was corrupting a rare edge case, not a
+meaningful share of style-transfer output.
+
+\section{Metric additions to the author style profiles}
+
+\subsection{Length-normalized lexical diversity}
+
+Plain type-token ratio (TTR) in \texttt{author\_style\_profiles.csv} is not
+length-normalized, and per-author corpus size varies 37-fold across the 24
+authors (232 to 8{,}538 content tokens). On this corpus, plain TTR
+correlates with token count at Pearson $r = -0.76$ ($p = 1.7\times10^{-5}$)
+— the expected artifact of TTR mechanically falling as a corpus grows,
+rather than a signal of authorial lexical richness. A Moving-Average
+Type-Token Ratio (MATTR; Covington and McFall, 2010) column was added,
+averaging the TTR of every 200-token sliding window over each author's
+lemma sequence (window size chosen to fit inside the smallest eligible
+author's 232-token corpus). MATTR against token count: $r = -0.037$
+($p = 0.86$) — no residual length dependence. The original \texttt{type\_
+token\_ratio} column is retained for reference but is now documented as
+diagnostic-only; \texttt{mattr} is the column to use for cross-author
+comparison.
+
+\subsection{Stanza-level structure}
+
+\texttt{author\_style\_profiles.csv} previously had no stanza-level
+features. Poem text in \texttt{stripped\_songs.csv} uses blank-line-delimited
+stanzas (the same convention already relied on elsewhere in the pipeline for
+stanza extraction). Two fields were added, computed per author from that
+delimiting: \texttt{avg\_stanzas\_per\_poem} and
+\texttt{avg\_lines\_per\_stanza}. Values are plausible and vary
+meaningfully across authors — e.g.\ Ристо Лазаров averages 7.23
+stanzas/poem at 2.95 lines/stanza (short, couplet-like stanzas), while
+Лилјана Дирјан averages 1.14 stanzas/poem at 15.62 lines/stanza (long,
+largely unbroken poems).
+
+\section{Worked example: style transfer after the fixes}
+\label{sec:example}
+
+As a concrete illustration of where the pipeline stands after the fixes in
+this note, this section walks through one full style-transfer run on the
+current (post-fix) pipeline state: Кочо Рацин's ``Балада за непознатиот''
+(``Ballad of the Unknown [Soldier]''), rewritten in Блаже Конески's style
+via \texttt{style\_transfer.transfer\_style(text, `Блаже Конески')}. This is
+a real, reproducible pipeline run, not a hand-picked or edited example — it
+was independently regenerated against the current corpus and model files
+and diffs byte-identical (modulo typographic quote-mark style) to the run
+quoted below.
+
+\begin{quote}
+\small
+\ttfamily
+Натаму – в поле битолско\\
+чемрее врба проклета –\\
+под врбата незнаен гроб,\\
+в гроб лежи војник непознат.\\[0.3em]
+Лежи од војна света,\\
+лежи — и веќе земјосал —\\
+силно го тага гласи\\
+мрзне тука загинал.\\[0.3em]
+Никој крај него немаше –\\
+вишното небе врз него,\\
+земјата скришна под него,\\
+над гробот врба спремам.\\[0.3em]
+{\normalfont(\dots)}\\[0.3em]
+И од ним – самовилите\\
+една по една идеа –\\
+од гроб до гроб го мрзне\\
+јунак до јунак – на оро.\\[0.3em]
+{\normalfont(\dots)}
+\end{quote}
+
+(Full output omitted here for space; see the corpus entry for the source
+text and re-run \texttt{style\_transfer.transfer\_style} for the complete
+transferred poem.)
+
+\paragraph{What this demonstrates, and what it doesn't.} This call did not
+pass \texttt{source\_author}, so only replacement criterion (b) — a lemma
+absent from the target's vocabulary for a POS in
+\texttt{B\_ELIGIBLE\_POS} $=\{$ADJ, ADV, VERB$\}$ — is active; criterion (a)
+(source-distinctive/target-absent, any content POS) needs a source author
+and did not fire here. This is visible directly in the output: NOUN tokens
+like \texttt{гроб} (`grave') and \texttt{гробишта} (`graveyard') are
+preserved verbatim throughout, exactly as \texttt{style\_transfer.py}'s own
+design comment (labelled ``Criterion (b)'') intends — nouns carry subject
+matter, not style, and are deliberately left alone under this criterion. Adjectives and verbs are substituted where
+Конески's own vocabulary lacks the Рацин original: \texttt{војна
+световна} (`worldly/mundane war') becomes \texttt{војна света} (`holy
+war'), and \texttt{тага изела} (`grief consumed [him]') becomes
+\texttt{тага гласи} (`grief speaks/sounds'), each drawing a real
+Конески-attested word of the same POS into the same grammatical slot.
+
+\paragraph{Two honest limitations visible in this same output.} First,
+\texttt{задека} (`because') — a conjunction — is itself replaced (with
+\texttt{мрзне}, `freezes'), which looks wrong until you check the tagging:
+CLASSLA tags this token \texttt{VERB} in this context
+(\texttt{Aspect=Perf|Tense=Past}), not \texttt{CONJ}/\texttt{SCONJ}, so it
+passes through \texttt{CONTENT\_POS} and becomes a legitimate replacement
+target under the (mistaken) tag. This is the same category of tagging
+error \texttt{pos\_flags.csv}'s \texttt{upos\_xpos\_clash}/\texttt{unstable\_
+tag} reasons are built to catch for common cases — \texttt{задека} was not
+one already in \texttt{data/pos\_corrections.csv} at the time of this run,
+so it slipped through uncorrected. Second, \texttt{дигаа} (`they raised',
+\texttt{Number=Plur}, 3rd-person imperfect) is replaced by \texttt{мрзне},
+which surfaces in an unmarked/singular-present-looking form — the
+morphological lookup evidently had no attested Конески plural-imperfect
+form of that lemma to realise into, and fell back to a lower morph tier
+(\texttt{nearest\_attested} or \texttt{unresolved}) rather than the
+requested agreement. Neither of these breaks the pipeline, and neither is
+new to this session's fixes — they are exactly the kind of residual,
+low-frequency noise the tier/morph-tier logging in
+\texttt{candidate\_selection.py} exists to make visible and auditable,
+rather than silent.
+
+\section{Reproducibility}
+
+Figures in \S\ref{sec:louvain}--\S\ref{sec:community0} (the diagnosis) were
+produced against \texttt{skg\_final.gexf} and \texttt{graph\_analytics.csv}
+as of commit \texttt{41bb49e} (or later, up to the fix below, on branch
+\texttt{feats-morph-lookup}), and against the pre-switch versions recoverable
+at commit \texttt{5f03983}/\texttt{363009a}. Figures in
+\S\ref{sec:community0fix} (the fix) were produced against
+\texttt{src/graph\_analytics.py}'s current working-tree state on that same
+branch, which restricts Louvain's input graph to word-mediated edges; commit
+this change alongside the CSV it produces to keep the two in sync. The
+Louvain seed-stability sweeps and the tier-frequency measurements were
+produced by one-off scripts run against the live pipeline rather than
+checked-in tests, since they characterize algorithmic stability and
+empirical tier frequency rather than fixed expected behavior.
+
+\end{document}
