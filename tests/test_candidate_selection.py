@@ -298,6 +298,25 @@ def test_cooccurrence_index_is_not_capped_to_skg_nodes():
     assert len(index) > 10_000
 
 
+def test_cooccurrence_index_keeps_same_titled_poems_separate():
+    """Two distinct poems sharing a title must not have their tokens merged
+    into one co-occurrence pool -- (author, song_title) is not a unique poem
+    key in this corpus (~15 shared titles; see CLAUDE.md's Data quality
+    context)."""
+    pos_rows = [
+        {'poem_id': '1', 'author': 'А', 'song_title': 'Иста Песна', 'lemma': 'сокол', 'pos': 'NOUN'},
+        {'poem_id': '1', 'author': 'А', 'song_title': 'Иста Песна', 'lemma': 'небо', 'pos': 'NOUN'},
+        {'poem_id': '2', 'author': 'А', 'song_title': 'Иста Песна', 'lemma': 'камен', 'pos': 'NOUN'},
+        {'poem_id': '2', 'author': 'А', 'song_title': 'Иста Песна', 'lemma': 'река', 'pos': 'NOUN'},
+    ]
+    index = cs.build_cooccurrence_index(pos_rows)
+    assert index[('сокол', 'NOUN')][('небо', 'NOUN')] == 1
+    assert index[('камен', 'NOUN')][('река', 'NOUN')] == 1
+    # сокол and камен never share a poem_id -- must NOT show as co-occurring,
+    # which is exactly what merging by (author, song_title) alone would cause.
+    assert index[('сокол', 'NOUN')][('камен', 'NOUN')] == 0
+
+
 # ── §5 integration: source-side context lookup ────────────────────────────────
 
 def test_slot_contexts_reads_lemma_and_pos_from_the_corpus():

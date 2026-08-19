@@ -138,11 +138,16 @@ def build_cooccurrence_index(pos_rows) -> dict:
     lookup by ANY lemma rather than filtered to graph-node membership. Built
     once per process and reused across all slot queries.
 
-    ~1s and ~300 MB at full corpus scale (1,169 poems, 4.3M pairs).
+    Grouped by poem_id, not (author, song_title) -- ~15 (author, song_title)
+    pairs in this corpus are shared by multiple distinct poems (see CLAUDE.md's
+    Data quality context), and grouping by title alone would count words from
+    different physical poems as co-occurring just because they share a title.
+
+    ~1s and ~300 MB at full corpus scale (1,207 poems, 4.3M pairs).
     """
     poem_tokens = defaultdict(set)
     for r in pos_rows:
-        poem_tokens[(r['author'], r['song_title'])].add((r['lemma'], r['pos']))
+        poem_tokens[r['poem_id']].add((r['lemma'], r['pos']))
 
     index = defaultdict(Counter)
     for tokens in poem_tokens.values():
