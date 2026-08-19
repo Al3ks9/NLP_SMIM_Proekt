@@ -100,7 +100,7 @@ nlp = pipeline()
 # needs the tokens KEEP_POS throws away — unknown_tag fires almost entirely on
 # tokens that never reach pos_tagged.csv — and unstable_tag needs each form's
 # corpus-wide tag distribution, which is only known once every poem is tagged.
-tokens = []       # (author, title, word, lemma, pos, xpos, feats, sentence_id)
+tokens = []       # (poem_id, author, title, word, lemma, pos, xpos, feats, sentence_id)
 sentences = []    # sentence text, indexed by sentence_id
 
 for i, row in enumerate(poems):
@@ -110,7 +110,7 @@ for i, row in enumerate(poems):
         sid = len(sentences) - 1
         for w in sent.words:
             tokens.append((
-                row['author'], row['song_title'], w.text, w.lemma or '',
+                row['poem_id'], row['author'], row['song_title'], w.text, w.lemma or '',
                 w.upos or '', w.xpos or '', w.feats or '', sid,
             ))
     if (i + 1) % 250 == 0:
@@ -124,16 +124,16 @@ print(f"Tagged {len(tokens)} tokens across {len(sentences)} sentences")
 table = C.load()
 if table:
     corrected, changed, removed = [], 0, 0
-    for author, title, word, lemma, pos, xpos, feats, sid in tokens:
+    for poem_id, author, title, word, lemma, pos, xpos, feats, sid in tokens:
         result = C.apply_to(table, word, pos, lemma, xpos, feats,
-                            author, title, sentences[sid])
+                            poem_id, sentences[sid])
         if result is None:
             removed += 1
             continue
         if (result[0], result[1]) != (pos, lemma):
             changed += 1
         pos, lemma, xpos, feats = result
-        corrected.append((author, title, word, lemma, pos, xpos, feats, sid))
+        corrected.append((poem_id, author, title, word, lemma, pos, xpos, feats, sid))
     print(f"Applied {len(table)} hand corrections from {C.CORRECTIONS_CSV.name}: "
           f"{changed} tokens retagged, {removed} dropped")
     tokens = corrected
@@ -143,7 +143,7 @@ if table:
 # stems against the verb lemmas classla produced anywhere in the corpus.
 tag_dists = defaultdict(Counter)   # lowercase form -> Counter of content tags
 verb_lemmas = Counter()            # verb lemma -> how often classla produced it
-for _, _, word, lemma, pos, xpos, _, _ in tokens:
+for _, _, _, word, lemma, pos, xpos, _, _ in tokens:
     if is_content(pos, xpos):
         tag_dists[word.lower()][pos] += 1
     if pos == 'VERB' and lemma:
@@ -154,7 +154,7 @@ flags = []
 dropped_relativizers = 0
 gerunds_relemmatised = 0
 gerunds_guessed = 0
-for author, title, word, lemma, pos, xpos, feats, sid in tokens:
+for poem_id, author, title, word, lemma, pos, xpos, feats, sid in tokens:
     if pos in KEEP_POS and xpos == RELATIVIZER_XPOS:
         dropped_relativizers += 1
     if is_content(pos, xpos):
@@ -164,6 +164,7 @@ for author, title, word, lemma, pos, xpos, feats, sid in tokens:
             gerunds_relemmatised += known
             gerunds_guessed += not known
         results.append({
+            'poem_id': poem_id,
             'author': author,
             'song_title': title,
             'word': word.lower(),
@@ -186,6 +187,7 @@ for author, title, word, lemma, pos, xpos, feats, sid in tokens:
             'scope': '',
             'xpos': xpos,
             'detail': detail,
+            'poem_id': poem_id,
             'author': author,
             'song_title': title,
             'context': sentences[sid],
@@ -193,7 +195,7 @@ for author, title, word, lemma, pos, xpos, feats, sid in tokens:
 
 with open(DATA / 'pos_tagged.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.DictWriter(
-        f, fieldnames=['author', 'song_title', 'word', 'lemma', 'pos', 'xpos', 'feats'])
+        f, fieldnames=['poem_id', 'author', 'song_title', 'word', 'lemma', 'pos', 'xpos', 'feats'])
     writer.writeheader()
     writer.writerows(results)
 
@@ -203,7 +205,7 @@ with open(DATA / 'pos_flags.csv', 'w', newline='', encoding='utf-8') as f:
     writer = csv.DictWriter(
         f, fieldnames=['reason', 'word', 'lemma', 'pos',
                        'correction', 'lemma_fix', 'scope',
-                       'xpos', 'detail', 'author', 'song_title', 'context'])
+                       'xpos', 'detail', 'poem_id', 'author', 'song_title', 'context'])
     writer.writeheader()
     writer.writerows(flags)
 
