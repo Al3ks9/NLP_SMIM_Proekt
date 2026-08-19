@@ -154,7 +154,7 @@ def test_vocabulary_palette_falls_back_to_tfidf_order_when_keywords_unembeddable
 def _stub_components(monkeypatch):
     monkeypatch.setattr(lst, 'summarize_poem', lambda text, **kw: 'Песна за пролетта.')
     monkeypatch.setattr(poem_tfidf, 'top_content_words',
-                        lambda author, title, n=10: ['пролет', 'цвет'])
+                        lambda poem_id, n=10: ['пролет', 'цвет'])
     monkeypatch.setattr(style_narrator, 'describe_style',
                         lambda author: f'{author} пишува кратки стихови.')
     monkeypatch.setattr(lst, 'vocabulary_palette',
@@ -171,7 +171,7 @@ def _stub_components(monkeypatch):
 
 def test_assemble_prompt_includes_every_component(monkeypatch):
     _stub_components(monkeypatch)
-    result = lst.assemble_prompt('изворен текст', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
+    result = lst.assemble_prompt('изворен текст', '0', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
 
     assert 'Песна за пролетта.' in result['prompt']
     assert 'пролет' in result['prompt'] and 'цвет' in result['prompt']
@@ -183,13 +183,13 @@ def test_assemble_prompt_includes_every_component(monkeypatch):
 
 def test_assemble_prompt_strips_poem_attribution_from_exemplar_lines(monkeypatch):
     _stub_components(monkeypatch)
-    result = lst.assemble_prompt('изворен текст', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
+    result = lst.assemble_prompt('изворен текст', '0', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
     assert 'ТАЈНА ПЕСНА' not in result['prompt']
 
 
 def test_assemble_prompt_returns_components_for_logging(monkeypatch):
     _stub_components(monkeypatch)
-    result = lst.assemble_prompt('изворен текст', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
+    result = lst.assemble_prompt('изворен текст', '0', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
     assert result['summary'] == 'Песна за пролетта.'
     assert result['content_keywords'] == ['пролет', 'цвет']
     assert result['vocab_palette'] == ['сон', 'изгрев']
@@ -198,7 +198,7 @@ def test_assemble_prompt_returns_components_for_logging(monkeypatch):
 
 # ── step 9: run_transfer + logging ──────────────────────────────────────────────
 
-# ── load_poem_text: (author, song_title) is not a unique key in the corpus ──────
+# ── load_poem_text / load_poem_text_by_id / resolve_poem_id ────────────────────
 
 def test_load_poem_text_returns_the_poem_for_an_unambiguous_title():
     text = lst.load_poem_text(KONESKI, 'Разделба')
@@ -210,6 +210,27 @@ def test_load_poem_text_raises_on_a_real_duplicated_title():
     # 'ПЕСНА'. Silently returning one would be a plausible-looking wrong poem.
     with pytest.raises(ValueError):
         lst.load_poem_text(KONESKI, 'ПЕСНА')
+
+
+def test_resolve_poem_id_error_lists_the_candidate_ids():
+    with pytest.raises(ValueError, match=r'--source-poem-id'):
+        lst.resolve_poem_id(KONESKI, 'ПЕСНА')
+
+
+def test_load_poem_text_by_id_resolves_one_of_the_duplicated_pesna_poems():
+    import csv
+    with open(lst.DATA / 'stripped_songs.csv', encoding='utf-8') as f:
+        pesna_ids = [r['poem_id'] for r in csv.DictReader(f)
+                    if r['author'] == KONESKI and r['song_title'] == 'ПЕСНА']
+    assert len(pesna_ids) > 1, 'fixture assumption: Конески has >1 poem titled ПЕСНА'
+
+    text = lst.load_poem_text_by_id(pesna_ids[0])
+    assert isinstance(text, str) and text.strip()
+
+
+def test_load_poem_text_by_id_raises_for_an_unknown_id():
+    with pytest.raises(KeyError):
+        lst.load_poem_text_by_id('999999')
 
 
 def test_log_run_writes_a_json_file_with_the_full_record(tmp_path, monkeypatch):
@@ -227,7 +248,10 @@ def test_log_run_writes_a_json_file_with_the_full_record(tmp_path, monkeypatch):
 
 def test_run_transfer_orchestrates_the_full_chain(monkeypatch, tmp_path):
     monkeypatch.setattr(lst, 'LOG_DIR', tmp_path)
-    monkeypatch.setattr(lst, 'load_poem_text', lambda author, title: 'изворен текст')
+    monkeypatch.setattr(lst, 'load_poem_text_by_id', lambda poem_id: 'изворен текст')
+    monkeypatch.setattr(lst, '_load_stripped_songs_indexed', lambda: {
+        '7': {'author': 'Извор Автор', 'song_title': 'Извор Наслов', 'song_text': 'изворен текст'},
+    })
     monkeypatch.setattr(lst, 'assemble_prompt', lambda *a, **kw: {
         'prompt': 'составен промпт', 'summary': 'резиме', 'content_keywords': ['зб'],
         'style_text': 'стил', 'vocab_palette': ['palette'], 'exemplars': [],
@@ -236,11 +260,12 @@ def test_run_transfer_orchestrates_the_full_chain(monkeypatch, tmp_path):
     })
     monkeypatch.setattr(lst, 'generate_poem', lambda prompt, **kw: 'нова\nпесна')
 
-    result = lst.run_transfer('Извор Автор', 'Извор Наслов', 'Целен Автор')
+    result = lst.run_transfer('Извор Автор', 'Извор Наслов', 'Целен Автор', source_poem_id='7')
 
     assert result['generated_poem'] == 'нова\nпесна'
     assert result['structural_fit']['actual_lines'] == 2
     assert result['source_author'] == 'Извор Автор'
+    assert result['source_poem_id'] == '7'
     assert result['target_author'] == 'Целен Автор'
     logged = list(tmp_path.glob('*.json'))
     assert len(logged) == 1
