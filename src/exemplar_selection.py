@@ -133,7 +133,7 @@ def qualifying_lines(target_author: str, wanted_words: set,
         if row['author'] != target_author:
             continue
         title = row['song_title']
-        poem_tokens = corpus_token_stream(target_author, title, pos_rows)
+        poem_tokens = corpus_token_stream(row['poem_id'], pos_rows)
         taken = 0
         for line in row['song_text'].splitlines():
             if not line.strip() or taken >= max_lines_per_poem:
