@@ -90,7 +90,7 @@ for row in tagged:
     before = (row['pos'], row['lemma'])
     result = C.apply_to(
         table, row['word'], row['pos'], row['lemma'], row['xpos'], row['feats'],
-        row['author'], row['song_title'], '')
+        row['poem_id'], '')
     if result is None:
         dropped += 1
         touched.add((row['word'].lower(), before[0]))
