@@ -128,14 +128,15 @@ def tag_lines(text, verb_lemmas):
                 lemma, feats = w.lemma or '', w.feats or ''
                 # corrections.lookup() tries row scope, then poem scope, then
                 # the bare (word.lower(), pos) global key. Inference has no
-                # corpus poem_id/context, so passing poem_id='0' simply fails to
-                # match the narrow scopes and falls through to the global key --
-                # which is correct, since poem/row-scoped fixes are corpus-position
-                # -specific and must not fire on arbitrary input. All 86
-                # corrections in pos_corrections.csv are global scope, so all
-                # 86 apply here, same as in pos_tag_corpus.py.
+                # corpus poem_id/context, so passing poem_id='-1' structurally
+                # cannot match a real poem/row-scoped key (poem_id is always
+                # nonnegative, assigned by row position in stripped_songs.csv).
+                # This guarantees inference always falls through to the global
+                # scope, the same structural guarantee the old empty-string
+                # author/title placeholders provided. poem/row-scoped fixes are
+                # corpus-position-specific and must not fire on arbitrary input.
                 result = corrections.apply_to(
-                    table, w.text, pos, lemma, xpos, feats, '0', '')
+                    table, w.text, pos, lemma, xpos, feats, '-1', '')
                 if result is None:
                     continue
                 pos, lemma, xpos, feats = result
