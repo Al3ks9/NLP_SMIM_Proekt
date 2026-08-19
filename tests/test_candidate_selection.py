@@ -319,7 +319,7 @@ def test_slot_contexts_retag_branch_scans_forward_past_an_unmatched_token(monkey
     that line -- 'гора' here sits second in the retagged stream behind a
     token that never matches, and must still be found."""
     text = 'фантом гора шумоли'
-    monkeypatch.setattr(cs, 'find_source_poem', lambda *a, **k: (None, 0.0))
+    monkeypatch.setattr(cs, 'find_source_poem', lambda *a, **k: (None, None, 0.0))
     monkeypatch.setattr(cs, '_retag', lambda t: [
         {'line': 0, 'word': 'непостоечки', 'lemma': 'непостоечки', 'pos': 'ADJ', 'feats': ''},
         {'line': 0, 'word': 'гора', 'lemma': 'гора', 'pos': 'NOUN', 'feats': 'Case=Nom|Number=Sing'},
@@ -333,8 +333,28 @@ def test_slot_contexts_retag_branch_scans_forward_past_an_unmatched_token(monkey
 
 
 def test_find_source_poem_identifies_the_stanzas_poem():
-    title, coverage = cs.find_source_poem(STANZA, RACIN, cs.load_pos_rows())
+    poem_id, title, coverage = cs.find_source_poem(STANZA, RACIN, cs.load_pos_rows())
     assert title == 'Балада за непознатиот'
+    assert poem_id is not None
+    assert coverage > 0.5
+
+
+def test_find_source_poem_resolves_a_duplicated_title_to_the_right_poem():
+    # Confirmed in stripped_songs.csv: 4 distinct poems by Конески are titled
+    # 'ПЕСНА'. Aligning against one specific poem's own text must resolve to its
+    # own poem_id, not silently merge with the other 3 sharing the title.
+    import csv
+    with open(cs.DATA / 'stripped_songs.csv', encoding='utf-8') as f:
+        pesna_poems = [r for r in csv.DictReader(f)
+                      if r['author'] == KONESKI and r['song_title'] == 'ПЕСНА']
+    assert len(pesna_poems) > 1, 'fixture assumption: Конески has >1 poem titled ПЕСНА'
+
+    target = pesna_poems[0]
+    stanza = '\n'.join(target['song_text'].strip().splitlines()[:4])
+
+    poem_id, title, coverage = cs.find_source_poem(stanza, KONESKI, cs.load_pos_rows())
+
+    assert poem_id == target['poem_id']
     assert coverage > 0.5
 
 

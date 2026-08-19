@@ -532,10 +532,15 @@ def _words(text: str) -> list:
     return re.findall(r'\w+', text.lower())
 
 
-def corpus_token_stream(author: str, song_title: str, pos_rows) -> list:
-    """The ordered content-token stream of one poem, as tagged in pos_tagged.csv."""
-    return [r for r in pos_rows
-            if r['author'] == author and r['song_title'] == song_title]
+def corpus_token_stream(poem_id, pos_rows) -> list:
+    """The ordered content-token stream of one poem, as tagged in pos_tagged.csv.
+
+    Keyed on poem_id, not (author, song_title) -- ~15 (author, song_title) pairs
+    in this corpus are shared by multiple distinct poems (see CLAUDE.md's Data
+    quality context), so title alone can't identify one.
+    """
+    poem_id = str(poem_id)
+    return [r for r in pos_rows if r['poem_id'] == poem_id]
 
 
 def _align(text: str, tokens: list) -> dict:
@@ -575,20 +580,24 @@ def find_source_poem(text: str, author: str, pos_rows) -> tuple:
     Locate the poem a stanza came from, by picking the poem of that author whose
     token stream the stanza aligns into most completely.
 
-    Returns (song_title, coverage) or (None, 0.0).
+    Iterates the author's distinct poem_ids, not distinct titles -- titles alone
+    would silently collapse same-titled poems into one alignment candidate.
+
+    Returns (poem_id, song_title, coverage) or (None, None, 0.0).
     """
     wanted = [w for line in text.splitlines() for w in _words(line)]
     if not wanted:
-        return None, 0.0
+        return None, None, 0.0
 
-    titles = {r['song_title'] for r in pos_rows if r['author'] == author}
-    best, best_cov = None, 0.0
-    for title in sorted(titles):
-        tokens = corpus_token_stream(author, title, pos_rows)
+    poem_ids = sorted({r['poem_id'] for r in pos_rows if r['author'] == author}, key=int)
+    best_id, best_title, best_cov = None, None, 0.0
+    for pid in poem_ids:
+        tokens = corpus_token_stream(pid, pos_rows)
+        title = tokens[0]['song_title'] if tokens else None
         cov = len(_align(text, tokens)) / len(wanted)
         if cov > best_cov:
-            best, best_cov = title, cov
-    return best, best_cov
+            best_id, best_title, best_cov = pid, title, cov
+    return best_id, best_title, best_cov
 
 
 def slot_contexts(text: str, mask_words: list, source_author: str,
@@ -604,13 +613,13 @@ def slot_contexts(text: str, mask_words: list, source_author: str,
     pos_rows = load_pos_rows() if pos_rows is None else pos_rows
     lines = text.splitlines()
 
-    title, coverage = find_source_poem(text, source_author, pos_rows)
-    if title is not None and coverage >= min_coverage:
-        tokens = corpus_token_stream(source_author, title, pos_rows)
+    poem_id, title, coverage = find_source_poem(text, source_author, pos_rows)
+    if poem_id is not None and coverage >= min_coverage:
+        tokens = corpus_token_stream(poem_id, pos_rows)
         mapping = _align(text, tokens)
         tagged = {(li, wi): tokens[ti] for (li, wi), ti in mapping.items()}
-        log.info('source context from pos_tagged.csv: author=%s poem=%r coverage=%.2f',
-                 source_author, title, coverage)
+        log.info('source context from pos_tagged.csv: author=%s poem=%r poem_id=%s coverage=%.2f',
+                 source_author, title, poem_id, coverage)
     else:
         log.info('source poem not found in corpus for %r (best coverage %.2f) — '
                  're-tagging with classla', source_author, coverage)
