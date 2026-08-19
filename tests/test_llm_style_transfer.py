@@ -260,11 +260,15 @@ def test_run_transfer_orchestrates_the_full_chain(monkeypatch, tmp_path):
     })
     monkeypatch.setattr(lst, 'generate_poem', lambda prompt, **kw: 'нова\nпесна')
 
-    result = lst.run_transfer('Извор Автор', 'Извор Наслов', 'Целен Автор', source_poem_id='7')
+    # Pass deliberately WRONG author/title alongside source_poem_id='7' — if run_transfer
+    # doesn't overwrite them from the resolved poem's own record, this assertion catches it.
+    result = lst.run_transfer('ПОГРЕШЕН Автор', 'ПОГРЕШЕН Наслов', 'Целен Автор',
+                              source_poem_id='7')
 
     assert result['generated_poem'] == 'нова\nпесна'
     assert result['structural_fit']['actual_lines'] == 2
-    assert result['source_author'] == 'Извор Автор'
+    assert result['source_author'] == 'Извор Автор'  # overwritten from the record, not the arg
+    assert result['source_title'] == 'Извор Наслов'  # overwritten from the record, not the arg
     assert result['source_poem_id'] == '7'
     assert result['target_author'] == 'Целен Автор'
     logged = list(tmp_path.glob('*.json'))
