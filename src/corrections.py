@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 CORRECTIONS_CSV = DATA / 'pos_corrections.csv'
 
-FIELDS = ['word', 'pos', 'correction', 'lemma_fix', 'scope',
+FIELDS = ['word', 'pos', 'correction', 'lemma_fix', 'scope', 'poem_id',
           'author', 'song_title', 'context']
 
 DROP = 'DROP'
@@ -42,13 +42,16 @@ def key_for(row, scope):
     """Key a correction at the requested precision.
 
     Keys are tuples of different lengths, so one dict holds all three scopes and
-    a longer (more specific) key never collides with a shorter one.
+    a longer (more specific) key never collides with a shorter one. poem_id
+    disambiguates scope='poem'/'row' -- (author, song_title) is not a unique poem
+    key in this corpus (~15 pairs share a title); see CLAUDE.md's Data quality
+    context.
     """
     base = (row['word'].lower(), row['pos'])
     if scope == 'poem':
-        return base + (row['author'], row['song_title'])
+        return base + (int(row['poem_id']),)
     if scope == 'row':
-        return base + (row['author'], row['song_title'], row['context'])
+        return base + (int(row['poem_id']), row['context'])
     return base
 
 
@@ -80,23 +83,24 @@ def load(path=CORRECTIONS_CSV):
     return table
 
 
-def lookup(table, word, pos, author, title, context):
+def lookup(table, word, pos, poem_id, context):
     """Most specific scope wins: row, then poem, then global."""
     base = (word.lower(), pos)
-    for k in (base + (author, title, context), base + (author, title), base):
+    pid = int(poem_id)
+    for k in (base + (pid, context), base + (pid,), base):
         if k in table:
             return table[k]
     return None
 
 
-def apply_to(table, word, pos, lemma, xpos, feats, author, title, context):
+def apply_to(table, word, pos, lemma, xpos, feats, poem_id, context):
     """Return the corrected (pos, lemma, xpos, feats), or None to drop the token.
 
     A hand-corrected POS invalidates the morphology classla derived alongside
     the old tag, so xpos and feats are cleared rather than left contradicting
     the new reading. An empty xpos in pos_tagged.csv means "corrected by hand".
     """
-    fix = lookup(table, word, pos, author, title, context)
+    fix = lookup(table, word, pos, poem_id, context)
     if fix is None:
         return pos, lemma, xpos, feats
     new_pos, new_lemma = fix

@@ -127,16 +127,15 @@ def tag_lines(text, verb_lemmas):
                 pos, xpos = w.upos or '', w.xpos or ''
                 lemma, feats = w.lemma or '', w.feats or ''
                 # corrections.lookup() tries row scope, then poem scope, then
-                # the bare (word.lower(), pos) global key (src/corrections.py
-                # :83-89). Inference has no corpus author/title/position, so
-                # passing '' for author and title simply fails to match the
-                # narrow scopes and falls through to the global key -- which
-                # is correct, since poem/row-scoped fixes are corpus-position
+                # the bare (word.lower(), pos) global key. Inference has no
+                # corpus poem_id/context, so passing poem_id='0' simply fails to
+                # match the narrow scopes and falls through to the global key --
+                # which is correct, since poem/row-scoped fixes are corpus-position
                 # -specific and must not fire on arbitrary input. All 86
                 # corrections in pos_corrections.csv are global scope, so all
                 # 86 apply here, same as in pos_tag_corpus.py.
                 result = corrections.apply_to(
-                    table, w.text, pos, lemma, xpos, feats, '', '', line)
+                    table, w.text, pos, lemma, xpos, feats, '0', '')
                 if result is None:
                     continue
                 pos, lemma, xpos, feats = result
