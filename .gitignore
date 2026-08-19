@@ -25,5 +25,8 @@ pipeline_dump.txt
 # Secrets
 .env
 
+# Per-run audit logs from llm_style_transfer.py (reproducible from a run)
+data/llm_transfer_logs/
+
 # Subagent-driven development scratch
 .superpowers/

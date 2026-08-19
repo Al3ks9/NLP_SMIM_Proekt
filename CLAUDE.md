@@ -49,6 +49,27 @@ Run scripts in this order to rebuild all artifacts from scratch:
 9. `src/build_morph_lookup.py` → `models/morph_lookup.json`
 10. `src/style_transfer.py` — interactive demo, requires all of the above
 
+## LLM-based generative style transfer (separate pipeline)
+
+A second, independent style-transfer approach alongside the token-substitution
+pipeline above (`candidate_selection.py` / `style_transfer.py`): instead of
+splicing candidate words into masked slots, it sends one LLM prompt combining
+an LLM-written summary of a source poem, its content keywords, the target
+author's style profile in prose, a relevance-filtered vocabulary palette, tone
+exemplar lines, and explicit structural targets, and asks the model to write a
+new poem from scratch. Requires steps 1-3 above (`pos_tagged.csv`,
+`tfidf_results.csv`, `author_style_profiles.csv`) plus `models/word_embeddings.json`.
+
+1. `src/llm_client.py` — shared Ollama/OpenRouter call wrapper (`call()`), also used by `src/llm_probe.py`
+2. `src/poem_tfidf.py` → `data/poem_tfidf_results.csv` — per-poem TF-IDF (distinct from `tfidf_results.csv`'s author-level, surface-word TF-IDF: this one's document is a single poem and its tokens are `pos_tagged.csv` lemmas)
+3. `src/style_narrator.py` — `describe_style(author)`: turns a profile row into corpus-relative prose (percentile rank per numeric column, binned into tertiles, plus `top_pos_bigrams`/`top_rhyme_endings` translated to sentences)
+4. `src/exemplar_selection.py` — `select_exemplars(author)`: k-means over line-embedding centroids of TF-IDF-qualifying lines, capped 2 lines/poem, returns the lines closest to each cluster centroid
+5. `src/llm_style_transfer.py` — prompt assembly, generation, and structural-fit validation; entry point:
+   ```bash
+   uv run python src/llm_style_transfer.py --source-author "..." --source-title "..." --target-author "..."
+   ```
+   Poem summaries are cached in `data/poem_summary_cache.json` (tracked — deterministic per model+prompt-version+text). Per-run audit records (prompt, generated poem, structural fit, metadata) are written to `data/llm_transfer_logs/*.json` (gitignored — reproducible from a run, not meant to accumulate in git history).
+
 ## Thesis report
 
 `data/report.tex` is the thesis-facing write-up of pipeline methodology and validation findings (tagger migration, correctness bugs found and fixed, metric changes, community-detection stability, and similar). **Whenever you make a significant change to the pipeline** — swapping a model/tagger, changing a scoring or graph-construction method, fixing a bug that affects reported numbers, adding or redefining a metric — **check whether `data/report.tex` needs a corresponding update**, and update it if so. Compile with `xelatex report.tex` (not `pdflatex` — the document needs native Cyrillic via `fontspec`/`polyglossia`, and `T1`/`T2A` font-encoding setups aren't fully installed in this environment).
@@ -56,6 +77,8 @@ Run scripts in this order to rebuild all artifacts from scratch:
 ## Data quality context
 
 Latin and Greek character artifacts exist inside Macedonian (Cyrillic) text — 231 rows affected out of 2,711. These are single characters (e.g. Latin `a`, `e`, `j`, `c`) that visually resemble Cyrillic letters but are the wrong Unicode codepoint.
+
+`(author, song_title)` is not a unique poem key. ~15 pairs (e.g. Блаже Конески has 4 distinct poems titled `ПЕСНА`) are shared by multiple physical poems, and `pos_tagged.csv` carries no finer-grained id — this is `pos_tag_corpus.py`'s schema, inherited by every downstream file keyed the same way (`tfidf_authors.py`, `style_profiler.py`, `candidate_selection.py`'s `corpus_token_stream`, `poem_tfidf.py`). Consumers that need one specific poem (`llm_style_transfer.py`'s `load_poem_text`) raise on an ambiguous title rather than silently picking one; consumers that aggregate per-poem tokens (`poem_tfidf.py`) silently blend the duplicates' vocabulary together for those ~15 pairs. A real fix needs a poem-level id threaded through `pos_tag_corpus.py` and every script that consumes its output.
 
 When writing data-cleaning or preprocessing scripts, distinguish between:
 - **Intentional Latin/Greek** (foreign words, author names, titles that legitimately use Latin script)
