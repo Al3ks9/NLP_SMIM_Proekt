@@ -22,11 +22,17 @@ with open(in_file, encoding='utf-8') as f:
 # Filter out rows with missing required fields (data quality issues in raw file)
 # Also remove None key which can appear in malformed CSV rows
 valid_rows = []
+skipped_malformed = 0
+skipped_missing_fields = 0
+
 for r in rows:
     if None in r:  # Skip rows with extra/malformed columns
+        skipped_malformed += 1
         continue
     if r.get('author') and r.get('song_title') and r.get('song_text'):
         valid_rows.append(r)
+    else:
+        skipped_missing_fields += 1
 
 for poem_id, row in enumerate(valid_rows):
     row['author'] = row['author'].strip()
@@ -41,4 +47,10 @@ with open(out_file, 'w', newline='', encoding='utf-8') as f:
     writer.writeheader()
     writer.writerows(valid_rows)
 
+# Report filtering statistics
+total_rows = len(rows)
+skipped_total = skipped_malformed + skipped_missing_fields
+if skipped_total > 0:
+    print(f'Skipped {skipped_total} rows: {skipped_malformed} malformed CSV, '
+          f'{skipped_missing_fields} missing required fields')
 print(f'Wrote {len(valid_rows)} poems to {out_file}')
