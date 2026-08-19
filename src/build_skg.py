@@ -31,10 +31,9 @@ for r in pos_rows:
 lemmapos_freq = Counter((r['lemma'], r['pos']) for r in pos_rows)
 
 # Build co-occurrence: per poem, collect all (lemma, pos) pairs, then pair them up
-poem_tokens = defaultdict(set)  # (author, song_title) -> set of (lemma, pos)
+poem_tokens = defaultdict(set)  # poem_id -> set of (lemma, pos)
 for r in pos_rows:
-    key = (r['author'], r['song_title'])
-    poem_tokens[key].add((r['lemma'], r['pos']))
+    poem_tokens[r['poem_id']].add((r['lemma'], r['pos']))
 
 cooccurrence = Counter()
 for tokens in poem_tokens.values():

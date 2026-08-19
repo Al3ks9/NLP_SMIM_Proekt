@@ -22,11 +22,11 @@ with open(DATA / 'tfidf_results.csv') as f:
         tfidf[row['author']][row['word']] = float(row['tfidf_score'])
 
 # Filter to eligible authors
-author_poem_counts = Counter((r['author'], r['song_title']) for r in pos_rows)
+author_poem_counts = Counter((r['author'], r['poem_id']) for r in pos_rows)
 author_counts = Counter(r['author'] for r in pos_rows)
 eligible_authors = {
     author for author in author_counts
-    if len({(r['author'], r['song_title']) for r in pos_rows if r['author'] == author}) >= MIN_POEMS
+    if len({r['poem_id'] for r in pos_rows if r['author'] == author}) >= MIN_POEMS
 }
 
 # --- Build per-author vocabulary: author -> POS -> [(lemma, freq)] ---
@@ -60,7 +60,7 @@ poem_pos_seqs = defaultdict(list)
 for r in pos_rows:
     if r['author'] not in eligible_authors:
         continue
-    poem_pos_seqs[(r['author'], r['song_title'])].append(r['pos'])
+    poem_pos_seqs[(r['author'], r['poem_id'])].append(r['pos'])
 
 author_bigrams = defaultdict(lambda: defaultdict(Counter))
 for (author, _), seq in poem_pos_seqs.items():

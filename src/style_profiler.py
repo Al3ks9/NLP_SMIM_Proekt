@@ -127,11 +127,11 @@ for row in pos_rows:
     author_words[row['author']].append(row['word'])
 
 # POS sequences per poem (for bigrams)
-poem_token_map = defaultdict(list)  # (author, song_title) -> list of pos tags
+poem_token_map = defaultdict(list)  # (author, poem_id) -> list of pos tags
 for row in pos_rows:
     if row['author'] not in eligible_authors:
         continue
-    poem_token_map[(row['author'], row['song_title'])].append(row['pos'])
+    poem_token_map[(row['author'], row['poem_id'])].append(row['pos'])
 
 # Build per-author profiles
 profiles = []
