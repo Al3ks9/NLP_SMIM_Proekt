@@ -28,5 +28,10 @@ pipeline_dump.txt
 # Per-run audit logs from llm_style_transfer.py (reproducible from a run)
 data/llm_transfer_logs/
 
+# xelatex build byproducts (report.pdf is the tracked artifact)
+data/report.aux
+data/report.log
+data/report.out
+
 # Subagent-driven development scratch
 .superpowers/

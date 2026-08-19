@@ -261,6 +261,29 @@ seed and is a natural next step if community membership starts being used
 for a downstream decision (e.g.\ cluster-based candidate pooling) rather
 than reported descriptively.
 
+\paragraph{Addendum (poem-id migration).} The table above and its seed=42
+assignments were computed before a later fix gave every poem a stable
+\texttt{poem\_id}, correcting $\sim$15 \texttt{(author, song\_title)} pairs
+in the corpus that had been sharing a title across distinct physical poems
+(see \texttt{CLAUDE.md}'s Data quality context). That fix nudges
+\texttt{pos\_transitions.json} and the SKG's edge weights by a small,
+legitimate amount for the affected authors — among them Блаже Конески,
+Ефтим Клетников, Влада Урошевиќ, and Пијан Славеј. Re-running
+\texttt{graph\_analytics.py} after the fix shows this small a perturbation
+is enough to move Конески out of his former group with Јаневски/Шопов/Рацин
+and into the group with Гајтани/Смилевски instead, while Урошевиќ/Славеј/
+Клетников and Андреевски/Ѓузел/Лазаров/Петреска remain grouped together
+(under new community numbers — Louvain's own labels are not stable across
+runs and carry no meaning by themselves). This is not a contradiction of
+this section's finding; it is a further, unplanned demonstration of it:
+this restricted graph's community structure is sensitive enough that even a
+small, targeted correctness fix elsewhere in the pipeline reshuffles the
+weaker communities. Properly updating the table above would mean repeating
+the full 30-seed sweep on the corrected graph, not just swapping in one new
+run's numbers — that re-verification is out of scope for the poem-id
+migration and is a natural next step before this section's exact figures
+are relied on again.
+
 \section{Correctness fixes found during validation}
 
 Two bugs, unrelated to the tagger switch, were found and fixed while
