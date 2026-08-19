@@ -6,33 +6,42 @@ import poem_tfidf as pt
 
 
 def test_word_unique_to_one_poem_ranks_above_a_word_common_to_all():
-    # 'сокол' only appears in poem A; 'нива' appears in every poem, so its idf
-    # is near zero. TF-IDF should rank the distinctive word first in A.
     documents = {
-        ('Автор1', 'Песна А'): ['нива', 'сокол', 'сокол', 'нива'],
-        ('Автор1', 'Песна Б'): ['нива', 'река', 'нива'],
-        ('Автор2', 'Песна В'): ['нива', 'облак'],
+        '0': ['нива', 'сокол', 'сокол', 'нива'],
+        '1': ['нива', 'река', 'нива'],
+        '2': ['нива', 'облак'],
     }
     scores = pt.compute_tfidf(documents)
-    top_word_a = scores[('Автор1', 'Песна А')][0][0]
+    top_word_a = scores['0'][0][0]
     assert top_word_a == 'сокол'
 
 
 def test_scores_within_a_document_are_sorted_descending():
     documents = {
-        ('А', 'X'): ['алфа', 'алфа', 'бета', 'гама'],
-        ('Б', 'Y'): ['делта', 'делта', 'делта'],
+        '0': ['алфа', 'алфа', 'бета', 'гама'],
+        '1': ['делта', 'делта', 'делта'],
     }
     scores = pt.compute_tfidf(documents)
-    doc_scores = [s for _, s in scores[('А', 'X')]]
+    doc_scores = [s for _, s in scores['0']]
     assert doc_scores == sorted(doc_scores, reverse=True)
 
 
 def test_a_word_absent_from_a_document_does_not_appear_in_its_results():
     documents = {
-        ('А', 'X'): ['алфа', 'бета'],
-        ('Б', 'Y'): ['гама'],
+        '0': ['алфа', 'бета'],
+        '1': ['гама'],
     }
     scores = pt.compute_tfidf(documents)
-    words_in_x = {w for w, _ in scores[('А', 'X')]}
-    assert 'гама' not in words_in_x
+    words_in_0 = {w for w, _ in scores['0']}
+    assert 'гама' not in words_in_0
+
+
+def test_build_documents_keeps_same_titled_poems_separate():
+    # The whole point: two distinct poems sharing a title must not blend their
+    # vocabulary into one TF-IDF document.
+    pos_rows = [
+        {'poem_id': '1', 'pos': 'NOUN', 'lemma': 'сокол'},
+        {'poem_id': '2', 'pos': 'NOUN', 'lemma': 'камен'},
+    ]
+    documents = pt.build_documents(pos_rows)
+    assert documents == {'1': ['сокол'], '2': ['камен']}
