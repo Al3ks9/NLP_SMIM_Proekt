@@ -60,14 +60,18 @@ exemplar lines, and explicit structural targets, and asks the model to write a
 new poem from scratch. Requires steps 1-3 above (`pos_tagged.csv`,
 `tfidf_results.csv`, `author_style_profiles.csv`) plus `models/word_embeddings.json`.
 
-1. `src/llm_client.py` — shared Ollama/OpenRouter call wrapper (`call()`), also used by `src/llm_probe.py`
+1. `src/llm_client.py` — shared call wrapper (`call()`) over three backends, also used by `src/llm_probe.py`:
+   - `google` — Gemini API direct, needs `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) in the environment or `.env`. **The default.** Gemma 4 always reasons and can't be stopped (`thinkingBudget` is a 400), so `call_google` filters the `thought=true` response part, requests the full 32,768-token output ceiling, and retries once when thinking starves the answer — thinking length swings between ~2k and ~16k tokens for the same prompt.
+   - `openrouter` — needs `OPENROUTER_API_KEY`. Every `:free` Gemma route currently 429s from a shared upstream pool, which is why `google` exists.
+   - `ollama` — local, no key. `--backend ollama --model qwen3:14b` reproduces the pre-Gemma logs.
 2. `src/poem_tfidf.py` → `data/poem_tfidf_results.csv` — per-poem TF-IDF (distinct from `tfidf_results.csv`'s author-level, surface-word TF-IDF: this one's document is a single poem and its tokens are `pos_tagged.csv` lemmas)
 3. `src/style_narrator.py` — `describe_style(author)`: turns a profile row into corpus-relative prose (percentile rank per numeric column, binned into tertiles, plus `top_pos_bigrams`/`top_rhyme_endings` translated to sentences)
-4. `src/exemplar_selection.py` — `select_exemplars(author)`: k-means over line-embedding centroids of TF-IDF-qualifying lines, capped 2 lines/poem, returns the lines closest to each cluster centroid
+4. `src/exemplar_selection.py` — `select_exemplars(author)`: k-means over line-embedding centroids of TF-IDF-qualifying lines, returns the lines closest to each cluster centroid. Line texts are de-duplicated author-wide (refrains and the corpus's near-duplicate poems otherwise put the same line in the prompt twice), and the final selection takes at most one line per source poem, globally across clusters
 5. `src/llm_style_transfer.py` — prompt assembly, generation, and structural-fit validation; entry point:
    ```bash
    uv run python src/llm_style_transfer.py --source-author "..." --source-title "..." --target-author "..."
    ```
+   Defaults to `gemma-4-31b-it` on the `google` backend. `--source-poem-id` is the only way to reach a poem whose (author, title) pair is ambiguous; `--source-author`/`--source-title` are overwritten from the poem's own record when it is given.
    Poem summaries are cached in `data/poem_summary_cache.json` (tracked — deterministic per model+prompt-version+text). Per-run audit records (prompt, generated poem, structural fit, metadata) are written to `data/llm_transfer_logs/*.json` (gitignored — reproducible from a run, not meant to accumulate in git history).
 
 ## Thesis report
@@ -119,6 +123,8 @@ uv run python src/pos_tag_corpus.py
 ```
 
 `correction` takes a POS tag or `DROP` (removes the token — for junk like `01:47`, `navigare`, bare Greek letters that no tag fits). `lemma_fix` sets the lemma. `scope` is blank for corpus-wide, or `poem` / `row` to narrow it.
+
+Either column alone is enough. A **lemma-only fix** (blank `correction`, `lemma_fix` set) is the path for a bad lemma under a correct tag — `apply_to` then leaves `xpos`/`feats` intact, since no POS judgement was overruled. No flag rule catches lemma instability, so these have to be added to `pos_corrections.csv` by hand rather than harvested from `pos_flags.csv`; `apply_corrections.py` picks them up on its next run regardless. Example: classla lemmatizes `петлите` to `петлин` while getting `петел`/`петелот`/`петли` right, splitting one lemma across two spellings.
 
 A correction keys on the word **and the tag that was wrong**, so it only touches tokens tagged the way you judged incorrect — correctly-tagged occurrences of the same word are never rewritten. Global scope is the default because the flags collapse hard: 1,969 flag rows are only 1,291 distinct (word, wrong-tag) pairs, and `гора`/PROPN alone is 30 rows. Use `row` for the context-dependent `unstable_tag` cases, where the same form is legitimately a noun in one line and a verb in another.
 

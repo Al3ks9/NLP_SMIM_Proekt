@@ -108,6 +108,18 @@ def test_summarize_poem_cache_persists_to_disk(monkeypatch, tmp_path):
     assert list(saved.values())[0]['summary'] == 'Резиме.'
 
 
+def test_summary_cache_records_the_prompt_version(monkeypatch, tmp_path):
+    # The cache is tracked in git and keyed by a hash that folds the version in,
+    # so a version bump orphans its entries — this makes the orphans legible.
+    monkeypatch.setattr(lst, 'CACHE_PATH', tmp_path / 'cache.json')
+    monkeypatch.setattr(lst, '_summary_cache', None)
+    monkeypatch.setattr(lst, 'call', lambda model, prompt, backend, **kw: 'Summary.')
+
+    lst.summarize_poem('текст', author='А', title='Т')
+    entry = list(lst._load_summary_cache().values())[0]
+    assert entry['prompt_version'] == lst.SUMMARY_PROMPT_VERSION
+
+
 # ── step 5: vocabulary palette ──────────────────────────────────────────────────
 
 def test_surface_to_lemma_picks_the_most_common_association():
@@ -194,6 +206,38 @@ def test_assemble_prompt_returns_components_for_logging(monkeypatch):
     assert result['content_keywords'] == ['пролет', 'цвет']
     assert result['vocab_palette'] == ['сон', 'изгрев']
     assert len(result['exemplars']) == 1
+
+
+def test_summary_prompt_asks_for_an_english_summary():
+    # qwen3:14b's Macedonian generation is weak — the logged summary read
+    # "Песната приказува..." (прикажува), "го тага неговото загињување".
+    # Its Macedonian comprehension is fine, so the summary is taken in English
+    # and only the generated poem stays Macedonian.
+    assert 'English' in lst.SUMMARY_PROMPT
+    assert 'Macedonian poem' in lst.SUMMARY_PROMPT
+
+
+def test_summary_cache_key_changes_when_the_prompt_version_bumps(monkeypatch):
+    before = lst._summary_cache_key('m', 'текст')
+    monkeypatch.setattr(lst, 'SUMMARY_PROMPT_VERSION', lst.SUMMARY_PROMPT_VERSION + 1)
+    assert lst._summary_cache_key('m', 'текст') != before
+
+
+def test_assemble_prompt_instructs_the_model_to_write_in_macedonian(monkeypatch):
+    # With the summary now in English, nothing else in the prompt implies the
+    # output language — it has to be stated.
+    _stub_components(monkeypatch)
+    result = lst.assemble_prompt('изворен текст', '0', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
+    assert 'Macedonian' in result['prompt']
+    assert 'Cyrillic' in result['prompt']
+
+
+def test_assemble_prompt_marks_the_summary_as_english(monkeypatch):
+    # Labelled so the model reads it as source material, not as a style cue
+    # to mirror.
+    _stub_components(monkeypatch)
+    result = lst.assemble_prompt('изворен текст', '0', 'Извор Автор', 'Извор Наслов', 'Целен Автор')
+    assert 'in English' in result['prompt']
 
 
 # ── step 9: run_transfer + logging ──────────────────────────────────────────────

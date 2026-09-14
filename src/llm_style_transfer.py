@@ -37,6 +37,7 @@ import exemplar_selection
 import poem_tfidf
 import style_narrator
 from candidate_selection import load_pos_rows, load_tfidf, load_word_embeddings
+import llm_client
 from llm_client import call
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -44,16 +45,26 @@ DATA = ROOT / 'data'
 
 log = logging.getLogger('llm_style_transfer')
 
-DEFAULT_MODEL = 'qwen3:14b'
-DEFAULT_BACKEND = 'ollama'
+# gemma-4-31b-it via Google's API directly, not qwen3:14b via local Ollama.
+# qwen3's Macedonian was the pipeline's binding constraint: it wrote
+# ungrammatical summaries, repeated whole stanzas, and produced non-words
+# ('кое се вик', 'каде се вод'). Same prompt, same source poem, gemma-4-31b
+# hits the structural targets near-exactly and writes grammatical verse.
+# OpenRouter's :free Gemma routes all 429 from a shared upstream pool, hence
+# the direct backend. Ollama remains available: --backend ollama --model qwen3:14b.
+DEFAULT_MODEL = 'gemma-4-31b-it'
+DEFAULT_BACKEND = 'google'
 DEFAULT_INSTR_LANG = 'en'  # English instructions measured better than Macedonian
-                            # ones in llm_probe's own testing; poem content stays
-                            # Macedonian throughout regardless of this setting.
+                            # ones in llm_probe's own testing. The scaffolding
+                            # (instructions, source-poem summary) is English; the
+                            # lexical material handed to the model — content
+                            # keywords, vocabulary palette, exemplar lines — and
+                            # the generated poem itself stay Macedonian.
 
 CACHE_PATH = DATA / 'poem_summary_cache.json'
 LOG_DIR = DATA / 'llm_transfer_logs'
 
-SUMMARY_PROMPT_VERSION = 1
+SUMMARY_PROMPT_VERSION = 2  # v2: summaries are taken in English, see SUMMARY_PROMPT
 N_CONTENT_KEYWORDS = 10
 N_VOCAB_PALETTE = 8
 N_EXEMPLAR_CLUSTERS = 5
@@ -95,10 +106,17 @@ def _summary_cache_key(model: str, poem_text: str) -> str:
     return hashlib.sha256(payload.encode('utf-8')).hexdigest()
 
 
+# The summary is asked for in English, not Macedonian. qwen3:14b reads
+# Macedonian well but writes it poorly, and the summary is scaffolding rather
+# than output: v1 produced "Песната приказува..." (прикажува), "го тага неговото
+# загињување", "го поседуваат несигурниот смисол" — grammatical noise that the
+# generation step then had to work from. English keeps the content faithful and
+# leaves Macedonian generation to the one place it belongs, the poem itself.
 SUMMARY_PROMPT = (
     'Summarize the content, imagery, and theme of the following Macedonian poem '
-    'in 2-3 sentences. Describe WHAT the poem is about, not its style, form, or '
-    'word choice. Reply in Macedonian, with the summary only, no explanation.\n\n'
+    'in 2-3 sentences. Describe WHAT the poem is about — its subject, its '
+    'concrete images, and its mood — not its style, form, or word choice. '
+    'Reply in English, with the summary only, no explanation.\n\n'
     '{poem_text}'
 )
 
@@ -121,7 +139,8 @@ def summarize_poem(poem_text: str, author: str = None, title: str = None,
 
     cache[key] = {
         'summary': summary, 'author': author, 'title': title,
-        'model': model, 'generated_at': datetime.now(timezone.utc).isoformat(),
+        'model': model, 'prompt_version': SUMMARY_PROMPT_VERSION,
+        'generated_at': datetime.now(timezone.utc).isoformat(),
     }
     _save_summary_cache()
     return summary
@@ -244,10 +263,16 @@ def vocabulary_palette(target_author: str, content_keywords: list,
 
 # ── step 7: prompt assembly ──────────────────────────────────────────────────────
 
+# The output-language instruction is not decorative. Every Macedonian block in
+# this prompt is lexical material (keywords, palette, exemplars); with the
+# summary now in English, nothing else states what language the poem should come
+# back in. v1 got Macedonian output by accident, because the summary was the
+# largest Cyrillic block in the prompt.
 PROMPT_TEMPLATE = {
     'en': (
         'Rewrite this poem\'s content in another poet\'s style.\n\n'
-        'Source poem summary: {summary}\n\n'
+        'Source poem summary (in English; the source poem itself is '
+        'Macedonian): {summary}\n\n'
         'Key content/imagery to preserve: {content_keywords}\n\n'
         'Target author: {target_author}\n\n'
         'Style profile: {style_text}\n\n'
@@ -256,8 +281,9 @@ PROMPT_TEMPLATE = {
         "Example lines in {target_author}'s voice (tone/rhythm reference only — "
         'do not reuse their imagery or specific phrasing):\n{exemplar_lines}\n\n'
         f"Instruction: Write a new poem conveying the content above, in "
-        "{target_author}'s style as described. Do not reuse the example lines "
-        'or their specific images. Aim for {structural_instruction}.'
+        "{target_author}'s style as described. Write the poem in Macedonian, in "
+        'Cyrillic script. Do not reuse the example lines or their specific '
+        'images. Aim for {structural_instruction}.'
     ),
 }
 
@@ -443,9 +469,12 @@ if __name__ == '__main__':
     parser.add_argument('--source-poem-id', default=None)
     parser.add_argument('--target-author', default='Блаже Конески')
     parser.add_argument('--model', default=DEFAULT_MODEL)
-    parser.add_argument('--backend', default=DEFAULT_BACKEND, choices=['ollama', 'openrouter'])
-    parser.add_argument('--lang', default=DEFAULT_INSTR_LANG, choices=['en', 'mk'],
-                       dest='instr_lang')
+    parser.add_argument('--backend', default=DEFAULT_BACKEND,
+                       choices=sorted(llm_client.BACKENDS))
+    # 'en' only: PROMPT_TEMPLATE has no 'mk' entry, so --lang mk raised KeyError
+    # deep in assemble_prompt. Add a template there before widening this back.
+    parser.add_argument('--lang', default=DEFAULT_INSTR_LANG,
+                       choices=sorted(PROMPT_TEMPLATE), dest='instr_lang')
     args = parser.parse_args()
 
     if args.source_poem_id is None and not args.source_title:

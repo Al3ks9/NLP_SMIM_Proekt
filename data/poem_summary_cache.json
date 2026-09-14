@@ -1,0 +1,18 @@
+{
+  "041ffad11e2cf35c4370c50fc46742386c708ed575b4c4aea9ea0922de96395b": {
+    "summary": "The poem depicts a lonely soldier buried under a cursed poplar in the Bitola field, mourning his unknown death and questioning the meaning of his sacrifice. Vivid images include the silent grave, the weeping poplar, and the solemn gathering of fallen heroes in the green hills, all under a sorrowful night sky. The mood is somber and reflective, emphasizing the tragedy and futility of war, as well as the enduring memory of those who died for their homeland.",
+    "author": "Кочо Рацин",
+    "title": "Балада за непознатиот",
+    "model": "qwen3:14b",
+    "prompt_version": 2,
+    "generated_at": "2026-08-31T18:31:23.326639+00:00"
+  },
+  "d3441a6d9e8f9a2ff643ff1e445b4fa259b89941a9b97eab9c9d6d276db2df1a": {
+    "summary": "An unknown soldier lies forgotten in a lonely grave under a weeping willow, consumed by the sorrow of a meaningless death. He is visited by the spirits of national heroes and mystical samovili dancing the *oro*, but he refuses to join them because he lacks the honor and memory granted to those who died for their homeland. The poem concludes with a mood of profound isolation as the celebratory spirits depart, leaving the soldier alone in the bleak dawn.",
+    "author": "Кочо Рацин",
+    "title": "Балада за непознатиот",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-08-31T19:32:57.213678+00:00"
+  }
+}

@@ -71,7 +71,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1,Кочо Рацин,Балада за непознатиот,силна,силен,ADJ,Afpfs-n,Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,светлина,светлина,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,светеа,свети,VERB,Vmpii3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Imp
-1,Кочо Рацин,Балада за непознатиот,самовилите,самовил,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,самовилите,самовила,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,една,еден,ADJ,Ag-fs-n,Definite=Ind|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,една,еден,ADJ,Ag-fs-n,Definite=Ind|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,идеа,идеа,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
@@ -93,10 +93,10 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1,Кочо Рацин,Балада за непознатиот,море,море,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,јабанец,јабанец,PROPN,I,
 1,Кочо Рацин,Балада за непознатиот,оро,оро,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
-1,Кочо Рацин,Балада за непознатиот,самовили,самовил,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,самовили,самовила,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,зора,зора,PROPN,Npfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,зори,зори,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=3|Polarity=Pos|Tense=Pres
-1,Кочо Рацин,Балада за непознатиот,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,скоро,скоро,ADV,Rgp,Degree=Pos
 1,Кочо Рацин,Балада за непознатиот,село,село,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,пропеат,пропее,VERB,Vmeip3p-n,Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
@@ -150,18 +150,18 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1,Кочо Рацин,Балада за непознатиот,глави,глава,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,веднеа,ведне,VERB,Vmeia3p-n,Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Past
 1,Кочо Рацин,Балада за непознатиот,немеа,неми,VERB,Vmpii3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Imp
-1,Кочо Рацин,Балада за непознатиот,самовилите,самовил,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,самовилите,самовила,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,тешко,тешко,ADV,Rgp,Degree=Pos
 1,Кочо Рацин,Балада за непознатиот,тија,тие,NOUN,Ncmtnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,горко,горко,ADV,Rgp,Degree=Pos
 1,Кочо Рацин,Балада за непознатиот,гинат,гине,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 1,Кочо Рацин,Балада за непознатиот,војна,војна,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,немеа,немеа,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
-1,Кочо Рацин,Балада за непознатиот,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,селото,село,NOUN,Ncnsny,Case=Nom|Definite=Def|Gender=Neut|Number=Sing
 1,Кочо Рацин,Балада за непознатиот,веднаш,веднаш,ADV,Rgp,Degree=Pos
 1,Кочо Рацин,Балада за непознатиот,писнаа,писне,VERB,Vmeia3p-n,Aspect=Perf|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Past
-1,Кочо Рацин,Балада за непознатиот,самовилите,самовил,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+1,Кочо Рацин,Балада за непознатиот,самовилите,самовила,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,горите,гора,NOUN,Ncfpny,Case=Nom|Definite=Def|Gender=Fem|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,делии,делија,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
 1,Кочо Рацин,Балада за непознатиот,раци,раца,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
@@ -12752,7 +12752,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 215,Адем Гајтани,Ρека,бранат,брани,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 215,Адем Гајтани,Ρека,црната,црн,ADJ,Afpfs-y,Definite=Def|Degree=Pos|Gender=Fem|Number=Sing
 215,Адем Гајтани,Ρека,смрт,смрт,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
-215,Адем Гајтани,Ρека,самовилите,самовил,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+215,Адем Гајтани,Ρека,самовилите,самовила,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 215,Адем Гајтани,Ρека,еден,еден,ADJ,Ag-ms-n,Definite=Ind|Gender=Masc|Number=Sing
 215,Адем Гајтани,Ρека,ден,ден,NOUN,Ncmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
 215,Адем Гајтани,Ρека,летен,летен,ADJ,Afpms-n,Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing
@@ -14975,7 +14975,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 251,Адем Гајтани,Бохинско езеро,мртва,мртов,ADJ,Afpfs-n,Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing
 251,Адем Гајтани,Бохинско езеро,умора,умора,NOUN,Ncmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
 251,Адем Гајтани,Бохинско езеро,секавица,секавица,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing
-251,Адем Гајтани,Бохинско езеро,самовили,самовил,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
+251,Адем Гајтани,Бохинско езеро,самовили,самовила,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
 251,Адем Гајтани,Бохинско езеро,водите,вода,NOUN,Ncfpny,Case=Nom|Definite=Def|Gender=Fem|Number=Plur
 251,Адем Гајтани,Бохинско езеро,хранат,храни,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 251,Адем Гајтани,Бохинско езеро,пливаш,плива,VERB,Vmpip2s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=2|Polarity=Pos|Tense=Pres
@@ -15133,7 +15133,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 252,Адем Гајтани,Весна и јас,чисто,чист,ADJ,Afpns-n,Definite=Ind|Degree=Pos|Gender=Neut|Number=Sing
 252,Адем Гајтани,Весна и јас,бело,бел,ADJ,Afpns-n,Definite=Ind|Degree=Pos|Gender=Neut|Number=Sing
 252,Адем Гајтани,Весна и јас,езерото,езеро,NOUN,Ncnsny,Case=Nom|Definite=Def|Gender=Neut|Number=Sing
-252,Адем Гајтани,Весна и јас,самовилите,самовил,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+252,Адем Гајтани,Весна и јас,самовилите,самовила,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 252,Адем Гајтани,Весна и јас,маглата,магла,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
 252,Адем Гајтани,Весна и јас,мијат,мие,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 252,Адем Гајтани,Весна и јас,метеж,метеж,NOUN,Ncmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
@@ -33624,7 +33624,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 477,Милош Линдро,Енох на четвртото небо II,птици,птица,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
 477,Милош Линдро,Енох на четвртото небо II,плескаат,плеска,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 477,Милош Линдро,Енох на четвртото небо II,крилјата,крило,NOUN,Ncnpny,Case=Nom|Definite=Def|Gender=Neut|Number=Plur
-477,Милош Линдро,Енох на четвртото небо II,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+477,Милош Линдро,Енох на четвртото небо II,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 477,Милош Линдро,Енох на четвртото небо II,кукуригаат,кукурига,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 477,Милош Линдро,Енох на четвртото небо II,радувајќи,радува,ADV,Rv,VerbForm=Conv
 477,Милош Линдро,Енох на четвртото небо II,светлото,светло,NOUN,Ncnsny,Case=Nom|Definite=Def|Gender=Neut|Number=Sing
@@ -33633,7 +33633,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 477,Милош Линдро,Енох на четвртото небо II,сè,сè,ADV,Rgp,Degree=Pos
 477,Милош Линдро,Енох на четвртото небо II,светот,свет,NOUN,Ncmsny,Case=Nom|Definite=Def|Gender=Masc|Number=Sing
 477,Милош Линдро,Енох на четвртото небо II,опфаќа,опфаќа,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=3|Polarity=Pos|Tense=Pres
-477,Милош Линдро,Енох на четвртото небо II,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+477,Милош Линдро,Енох на четвртото небо II,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 477,Милош Линдро,Енох на четвртото небо II,неуморно,неуморно,ADV,Rap,Degree=Pos
 477,Милош Линдро,Енох на четвртото небо II,утро,утро,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
 477,Милош Линдро,Енох на четвртото небо II,зори,зора,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
@@ -53126,7 +53126,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,зори,зор,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,црна,црн,ADJ,Afpfs-n,Definite=Ind|Degree=Pos|Gender=Fem|Number=Sing
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,песната,песна,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
-929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,проголта,проголта,VERB,Vmeia-s-n,Aspect=Perf|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Past
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,мракот,мрак,NOUN,Ncmsny,Case=Nom|Definite=Def|Gender=Masc|Number=Sing
 929,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ -1,куќата,куќа,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
@@ -53260,7 +53260,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,вее,вее,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=3|Polarity=Pos|Tense=Pres
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,цутјето,цутје,NOUN,Ncnsny,Case=Nom|Definite=Def|Gender=Neut|Number=Sing
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,песната,песна,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
-932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,петлите,петлин,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
+932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,петлите,петел,NOUN,Ncmpny,Case=Nom|Definite=Def|Gender=Masc|Number=Plur
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,отвораат,отвора,VERB,Vmpip3p-n,Aspect=Prog|Mood=Ind|Number=Plur|Person=3|Polarity=Pos|Tense=Pres
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,зората,зора,NOUN,Ncfsny,Case=Nom|Definite=Def|Gender=Fem|Number=Sing
 932,Ефтим Клетников,НАСТАН ВО ЗИМСКАТА НОЌ - 4,негрево,негрево,PROPN,Npmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
@@ -65170,7 +65170,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1173,Ристо Лазаров,ТРОЦВЕТ,жили,жили,NOUN,I,
 1173,Ристо Лазаров,ТРОЦВЕТ,оро,оро,NOUN,Ncnsnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Sing
 1173,Ристо Лазаров,ТРОЦВЕТ,фатени,фатен,ADJ,Ap--p-n,Definite=Ind|Number=Plur|VerbForm=Part
-1173,Ристо Лазаров,ТРОЦВЕТ,самовили,самовил,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
+1173,Ристо Лазаров,ТРОЦВЕТ,самовили,самовила,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
 1173,Ристо Лазаров,ТРОЦВЕТ,откоси,откоси,VERB,Vmeia-s-n,Aspect=Perf|Mood=Ind|Number=Sing|Polarity=Pos|Tense=Past
 1173,Ристо Лазаров,ТРОЦВЕТ,песни,песна,NOUN,Ncfpnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Plur
 1173,Ристо Лазаров,ТРОЦВЕТ,вили,вил,NOUN,Ncmpnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Plur
@@ -70489,7 +70489,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",нов,нов,ADJ,Afpms-n,Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",поредок,поредок,NOUN,Ncmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",трчам,трча,VERB,Vmpip1s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=1|Polarity=Pos|Tense=Pres
-1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",брцам,брце,VERB,Vmpip1s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=1|Polarity=Pos|Tense=Pres
+1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",брцам,брца,VERB,Vmpip1s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=1|Polarity=Pos|Tense=Pres
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",скриени,скриен,ADJ,Ap--p-n,Definite=Ind|Number=Plur|VerbForm=Part
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",богатства,богатство,NOUN,Ncnpnn,Case=Nom|Definite=Ind|Gender=Neut|Number=Plur
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",лакомо,лакомо,ADV,Rgp,Degree=Pos
@@ -70526,7 +70526,7 @@ poem_id,author,song_title,word,lemma,pos,xpos,feats
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",сакаш,сака,VERB,Vopip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=3|Polarity=Pos|Tense=Pres
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",постојано,постојано,ADV,Rgp,Degree=Pos
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",буден,буден,ADJ,Afpms-n,Definite=Ind|Degree=Pos|Gender=Masc|Number=Sing
-1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",ловиш,ловише,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=2|Polarity=Pos|Tense=Pres
+1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",ловиш,лови,VERB,Vmpip3s-n,Aspect=Prog|Mood=Ind|Number=Sing|Person=2|Polarity=Pos|Tense=Pres
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",момент,момент,NOUN,Ncmsnn,Case=Nom|Definite=Ind|Gender=Masc|Number=Sing
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",минливата,минлив,ADJ,Afpfs-y,Definite=Def|Degree=Pos|Gender=Fem|Number=Sing
 1238,Ива Петреска,"Надмена тврдоглавост (лесна рима, длабока содржина)",среќа,среќа,NOUN,Ncfsnn,Case=Nom|Definite=Ind|Gender=Fem|Number=Sing

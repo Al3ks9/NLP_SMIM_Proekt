@@ -453,6 +453,186 @@ low-frequency noise the tier/morph-tier logging in
 \texttt{candidate\_selection.py} exists to make visible and auditable,
 rather than silent.
 
+\section{Prompt-construction fixes in the LLM style-transfer
+  pipeline}\label{sec:llmprompt}
+
+A second, independent style-transfer approach (\texttt{llm\_style\_transfer.py})
+sends a single LLM prompt — an LLM-written summary of the source poem, its
+content keywords, the target author's style profile in prose, a
+relevance-filtered vocabulary palette, tone exemplar lines, and structural
+targets — and asks the model to write a new poem, rather than substituting
+tokens into masked slots. Auditing the per-run records it writes to
+\texttt{data/llm\_transfer\_logs/} surfaced three defects in how that prompt
+was assembled. None of them raised an error; all of them degraded the prompt
+silently.
+
+\subsection{Duplicate exemplar lines}
+
+The tone-exemplar block repeated lines verbatim. In a Ацо Шопов run, four of
+nine exemplars were two duplicated pairs (\texttt{Треба да бидеме подобри.}
+and \texttt{Вечер е тиха, дремлива,}), and a further two came from a single
+poem. The block is introduced to the model as a rhythm reference, so a
+verbatim repeat inside it is an instruction to repeat; the generated poem
+duplicated whole stanzas and repeated single lines three times.
+
+Duplicates entered by two routes. First, \texttt{exemplar\_selection.py}'s
+\texttt{qualifying\_lines()} capped candidates at two lines per poem but did
+not check whether they were the same text, so a refrain spent the entire
+quota on one line — \texttt{Треба да бидеме подобри} opens with that line
+twice (\texttt{poem\_id} 88), and \texttt{Партизанска колона} repeats
+\texttt{Вечер е тиха, дремлива,} at lines 2 and 21 (\texttt{poem\_id} 50).
+Because identical text yields an identical line embedding, both copies always
+landed in the same k-means cluster and the two-per-cluster rule selected both.
+Second, the corpus's near-duplicate poems each contributed the same line
+independently: Блаже Конески's \texttt{Бура} (\texttt{poem\_id} 13) and
+\texttt{БУРА} (\texttt{poem\_id} 566) are one poem under two title casings,
+and 24 such author/lowercased-title groups exist.
+
+The fix de-duplicates normalized line text (case-folded, whitespace-collapsed)
+author-wide rather than per-poem, which closes both routes; a repeat is
+skipped without consuming a per-poem slot, so a refrain poem still contributes
+two distinct lines. Separately, \texttt{cluster\_and\_select()} now enforces
+one line per source poem globally across clusters rather than within them,
+and processes clusters smallest-first so that a constrained cluster claims its
+poem before a roomier one takes it. Across the corpus's 38 authors this costs
+7 exemplar lines in total (218 to 211) and no author falls below 5. Exemplar
+records now carry \texttt{poem\_id} alongside \texttt{song\_title}, since the
+title alone cannot distinguish \texttt{Бура} from \texttt{БУРА} in a run log.
+
+\subsection{Summary language}
+
+Summaries were requested in Macedonian and returned ungrammatical: the logged
+summary for Кочо Рацин's \texttt{Балада за непознатиот} opened
+\texttt{Песната приказува} (for \texttt{прикажува}), and continued
+\texttt{го тага неговото загињување} and \texttt{го поседуваат несигурниот
+смисол на нивната смрт} — text that conveys the gist but is not well-formed
+Macedonian. The local model in use (\texttt{qwen3:14b}) reads Macedonian
+considerably better than it writes it, and the summary is scaffolding
+consumed by the generation step, not output shown to a reader.
+
+Summaries are therefore now taken in English. The prompt's lexical material —
+content keywords, vocabulary palette, exemplar lines — and the generated poem
+itself remain Macedonian; only the description of the source poem's content
+changes language. This matches the existing choice to phrase instructions in
+English (\texttt{DEFAULT\_INSTR\_LANG}). \texttt{SUMMARY\_PROMPT\_VERSION} was
+bumped to 2, which invalidates cached v1 summaries via the cache key.
+
+\subsection{Unstated output language}
+
+The prompt never instructed the model which language to write in. Under v1
+this went unnoticed because the Macedonian summary was the largest
+Cyrillic block in the prompt and the model followed it by example. Moving the
+summary to English removed that implicit cue, so the instruction is now
+explicit (\emph{``Write the poem in Macedonian, in Cyrillic script''}). The
+same audit found that \texttt{--lang mk} was an advertised CLI choice with no
+corresponding entry in \texttt{PROMPT\_TEMPLATE}, so it raised
+\texttt{KeyError} during prompt assembly; the choices are now derived from the
+templates that actually exist.
+
+\subsection{A lemmatization error surfaced by the prompt}
+
+Reading the assembled prompts also caught a tagging error that no flag rule
+raises. The content keywords for Кочо Рацин's \texttt{Балада за непознатиот}
+included \texttt{петлин}, which is not a Macedonian word: classla lemmatizes
+the definite plural \texttt{петлите} to \texttt{петлин} rather than
+\texttt{петел} (`rooster'). It gets every other form of the word right —
+\texttt{петел}, \texttt{петелот} and \texttt{петли} all lemmatize to
+\texttt{петел} — so the corpus carried one lemma split across two spellings,
+6 tokens under the wrong one, across three authors (Кочо Рацин, Милош Линдро,
+Ефтим Клетников).
+
+Nothing in \texttt{pos\_flags.csv} catches this: the rules look at tags, not at
+lemma consistency, and the POS and \texttt{xpos} (\texttt{Ncmpny}) were both
+correct here. The fix is a lemma-only entry in
+\texttt{data/pos\_corrections.csv} — blank \texttt{correction}, \texttt{lemma\_
+fix} of \texttt{петел}, corpus-wide scope — which \texttt{corrections.apply\_to}
+applies without clearing \texttt{xpos}/\texttt{feats}, since no POS judgement
+was overruled.
+
+The effect on the prompt is not simply a substituted keyword. Merging the 6
+tokens into \texttt{петел}'s existing count raises that lemma's corpus
+frequency, lowering its IDF, and it consequently drops out of the poem's top-10
+keywords altogether — the previous ranking was inflated by a spurious singleton
+lemma. Lemma-keyed artifacts further downstream (\texttt{word\_embeddings.json},
+the SKG, \texttt{morph\_lookup.json}) still carry a stale \texttt{петлин} entry;
+at 6 tokens in 70{,}531 it was not judged worth a full rebuild, and
+\texttt{петел} already has an embedding, so the keyword remains embeddable.
+
+\subsection{Switching the generation model}\label{sec:gemmaswitch}
+
+All of the prompt work above was developed and logged against
+\texttt{qwen3:14b} running locally under Ollama. With the prompt defects fixed,
+that model was the remaining constraint on output quality. It writes
+Macedonian poorly: generated poems repeated whole stanzas, ran single lines
+three times (\texttt{и се вика: ``Иде, иде, иде, иде, иде.''}), and produced
+non-words and broken agreement (\texttt{кое се вик}, \texttt{каде се вод}).
+
+The pipeline was therefore switched to \texttt{gemma-4-31b-it}, a
+substantially larger model with much stronger Macedonian. It is now the
+default (\texttt{DEFAULT\_MODEL}/\texttt{DEFAULT\_BACKEND} in
+\texttt{llm\_style\_transfer.py}); Ollama and \texttt{qwen3:14b} remain
+reachable through \texttt{--backend ollama --model qwen3:14b}, so the earlier
+logs stay reproducible.
+
+Two practical obstacles shaped how it is reached. First, every OpenRouter
+\texttt{:free} Gemma route answers HTTP 429 from a shared upstream pool at
+Google AI Studio, so the model is called through Google's Generative Language
+API directly, with its own key — a third \texttt{google} backend in
+\texttt{llm\_client.py} alongside \texttt{ollama} and \texttt{openrouter}.
+Second, Gemma~4 always reasons before answering, and cannot be stopped from
+doing so: \texttt{generationConfig.thinkingConfig.thinkingBudget} is rejected
+with \texttt{400 Thinking budget is not supported for this model}. The
+scratchpad returns as a response part flagged \texttt{thought=true} beside the
+answer part, so it has to be filtered out — concatenating every part yields the
+model arguing with itself rather than the poem.
+
+Thinking tokens are charged against \texttt{maxOutputTokens}, and their number
+varies enough between runs of the \emph{same} prompt that no fixed budget is
+safe: observed figures for one style-transfer prompt were 3231 thought tokens
+(305 for the poem), then 15{,}997 with no answer produced at all, then 2075 on
+a re-send. The backend therefore requests the model's full 32{,}768-token
+output ceiling and retries once when a response comes back with thinking but no
+answer part, rather than attempting to budget around the variance.
+
+\subsection{Effect}
+
+Re-running both logged transfers from the same source poem confirmed the
+prompt-level fixes: exemplar blocks now contain no repeated line and no
+repeated source poem (8 lines/8 poems for Ацо Шопов, 10/10 for Блаже Конески),
+and the summary is fluent, accurate English.
+
+The model switch is visible in the structural fit, which was measured but never
+targeted by either change:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Structural target (same prompt, same source poem) & \texttt{qwen3:14b} &
+\texttt{gemma-4-31b-it} \\
+\midrule
+Ацо Шопов, lines (target 20.7) & 16 & 22 \\
+Ацо Шопов, $\Delta$ tokens per line & $+0.99$ & $+0.10$ \\
+Блаже Конески, lines (target 16.4) & 14 & 16 \\
+Блаже Конески, stanzas (target 2.3) & 2 & 2 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The qualitative gap is larger than the table suggests. Gemma places the target
+author's palette words in grammatical context rather than stacking them —
+\texttt{тишината личи на тешка небиднина} uses Шопов's own coinage
+\texttt{небиднина} in a well-formed clause — and for Конески it produced a
+strict $8+8$ poem built on a consistent adjective--adverb--verb line template
+(\texttt{студена коска тесно го стега}, \texttt{чемреена мака бавно го јаде}),
+which is the adjective-before-noun pattern that author's style profile
+describes.
+
+Content preservation improved as well, and traceably so: the English summary
+identifies that the dead soldier \emph{refuses} to join the heroes' oro because
+he lacks their honour. That refusal is the source poem's central turn, it is
+absent from the Macedonian v1 summary, and it appears in both regenerated
+poems.
+
 \section{Reproducibility}
 
 Figures in \S\ref{sec:louvain}--\S\ref{sec:community0} (the diagnosis) were
