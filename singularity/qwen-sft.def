@@ -1,0 +1,94 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+# Container for the Qwen3 LoRA SFT pipeline (src/make_splits.py,
+# src/generate_synthetic.py, src/train_sft.py, src/generate_validation.py --
+# see CLAUDE.md's "Qwen3 LoRA SFT training pipeline" section) and, since the
+# environment is built straight from pyproject.toml/uv.lock, every other
+# script in this repo too.
+#
+# No CUDA/PyTorch base image needed: PyPI's default Linux `torch` wheel
+# bundles its own CUDA runtime as ordinary pip dependencies
+# (nvidia-cuda-runtime-cu12, nvidia-cudnn-cu12, etc. -- confirmed via
+# `uv sync --dry-run` against this project's actual uv.lock), so a plain
+# python base image plus `uv sync` is sufficient. Only the NVIDIA *driver*
+# has to come from the host, via `singularity run/exec --nv` at run time.
+#
+# Build (run from the repo root; needs --fakeroot or root -- see the cluster
+# note below about redirecting build tmp/cache off the local disk):
+#   singularity build --fakeroot singularity/qwen-sft.sif singularity/qwen-sft.def
+#
+# Run, e.g. from slurm/train_sft.slurm:
+#   singularity exec --nv singularity/qwen-sft.sif \
+#       python src/train_sft.py --num-train-epochs 3 ...
+#
+# This cluster's local disk under /tmp is small (a few GB free) and the
+# pulled layers plus the synced venv (torch + CUDA libs alone are several GB)
+# will not fit there -- point SINGULARITY_TMPDIR/SINGULARITY_CACHEDIR at the
+# large NFS-backed home filesystem before building, e.g.:
+#   export SINGULARITY_TMPDIR=$PWD/singularity/.build_tmp
+#   export SINGULARITY_CACHEDIR=$PWD/singularity/.build_cache
+#   mkdir -p "$SINGULARITY_TMPDIR" "$SINGULARITY_CACHEDIR"
+
+%files
+    pyproject.toml /opt/build/pyproject.toml
+    uv.lock /opt/build/uv.lock
+
+%post
+    set -eux
+
+    apt-get update
+    # build-essential: a few transitive deps (e.g. sentencepiece pulled in by
+    # tokenizers/classla) don't always ship a manylinux wheel for every
+    # platform -- keep a compiler available rather than hoping one isn't
+    # needed. git: uv needs it if any resolved dependency is a VCS source.
+    apt-get install -y --no-install-recommends build-essential git ca-certificates
+    rm -rf /var/lib/apt/lists/*
+
+    pip install --no-cache-dir uv
+
+    cd /opt/build
+    # --frozen: install exactly what uv.lock records, no re-resolution --
+    # the lock is the single source of truth this project already commits to
+    # (see CLAUDE.md); if the build fails here, `uv lock` is out of sync with
+    # pyproject.toml and needs regenerating first, not patching around here.
+    UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen --python 3.11
+
+    # Sanity check baked in at build time -- fails the build loudly instead of
+    # producing an image that only breaks once someone actually runs it on a GPU.
+    /opt/venv/bin/python -c "
+import torch, transformers, trl, peft, accelerate, datasets
+print('torch', torch.__version__, 'cuda build', torch.version.cuda)
+print('transformers', transformers.__version__)
+print('trl', trl.__version__)
+print('peft', peft.__version__)
+print('accelerate', accelerate.__version__)
+print('datasets', datasets.__version__)
+assert torch.version.cuda is not None, 'torch was resolved without a CUDA build'
+"
+
+%environment
+    export PATH=/opt/venv/bin:$PATH
+    export PYTHONUNBUFFERED=1
+    export TOKENIZERS_PARALLELISM=false
+    # Set by the caller at runtime, not baked in, since it names a real
+    # cluster-specific writable path: HF_HOME (model/dataset cache).
+
+%runscript
+    exec python "$@"
+
+%labels
+    Project NLP_SMIM_Proekt
+    Component qwen3-lora-sft
+    PythonVersion 3.11
+
+%help
+    Qwen3 LoRA SFT pipeline environment for NLP_SMIM_Proekt, built from this
+    repo's own pyproject.toml/uv.lock (uv sync --frozen at build time), so it
+    stays in sync with the same dependency set `uv run` uses outside a
+    container. Needs the NVIDIA driver from the host: run with --nv.
+
+    Examples:
+        singularity exec --nv qwen-sft.sif python src/make_splits.py
+        singularity exec --nv qwen-sft.sif python src/train_sft.py --num-train-epochs 3
+        singularity run --nv qwen-sft.sif src/generate_validation.py --split val

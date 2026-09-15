@@ -35,3 +35,20 @@ data/report.out
 
 # Subagent-driven development scratch
 .superpowers/
+
+# Qwen3 SFT pipeline (src/train_sft.py): trained LoRA adapter weights and
+# checkpoints -- large, regenerate via slurm/train_sft.slurm.
+# data/synthetic/synthetic_dataset.csv and data/validation_generations/ ARE
+# tracked -- they're curated, quota-expensive-to-regenerate LLM outputs, not
+# build byproducts (same reasoning as poem_summary_cache.json).
+models/qwen3-lora-sft/
+data/synthetic/synthetic_errors.csv
+
+# Slurm job stdout/stderr (slurm/train_sft.slurm)
+logs/
+
+# Singularity image + build scratch (singularity/qwen-sft.def, build.sh) --
+# large binary artifact, rebuild with ./singularity/build.sh
+singularity/*.sif
+singularity/.build_tmp/
+singularity/.build_cache/
