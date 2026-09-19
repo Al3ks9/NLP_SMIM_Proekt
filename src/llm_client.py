@@ -13,8 +13,10 @@ probe battery) to itself.
 import json
 import logging
 import os
+import random
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -27,19 +29,38 @@ OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 OLLAMA_URL = os.environ.get('OLLAMA_HOST', 'http://localhost:11434') + '/api/chat'
 GOOGLE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+# 408/429/5xx are transient (rate limit, upstream overload, timeout) and worth
+# retrying; other 4xx (400 bad request, 403 bad key) mean every retry would
+# fail identically, so those raise immediately instead of burning quota.
+RETRYABLE_STATUSES = {408, 429, 500, 502, 503, 504}
+MAX_RETRIES = 5
+BASE_DELAY = 1.0  # seconds; doubles each attempt, so 1/2/4/8/16 before jitter
 
-def _post(url: str, body: dict, headers: dict, timeout: int) -> dict:
+
+def _post(url: str, body: dict, headers: dict, timeout: int,
+         max_retries: int = MAX_RETRIES) -> dict:
     req = urllib.request.Request(
         url, data=json.dumps(body).encode('utf-8'),
         headers={'Content-Type': 'application/json', **headers},
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f'HTTP {e.code}: {e.read().decode("utf-8", "replace")[:400]}')
-    except urllib.error.URLError as e:
-        raise RuntimeError(f'Cannot reach {url}: {e.reason}')
+    for attempt in range(max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as e:
+            detail = f'HTTP {e.code}: {e.read().decode("utf-8", "replace")[:400]}'
+            if e.code not in RETRYABLE_STATUSES or attempt == max_retries:
+                raise RuntimeError(detail)
+        except urllib.error.URLError as e:
+            detail = f'Cannot reach {url}: {e.reason}'
+            if attempt == max_retries:
+                raise RuntimeError(detail)
+
+        # Exponential backoff with jitter so concurrent callers don't retry in lockstep.
+        delay = BASE_DELAY * (2 ** attempt) + random.uniform(0, BASE_DELAY)
+        log.warning('%s -- retrying in %.1fs (attempt %d/%d)',
+                   detail, delay, attempt + 1, max_retries)
+        time.sleep(delay)
 
 
 def _strip_think(text: str) -> str:

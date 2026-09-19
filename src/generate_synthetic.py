@@ -213,6 +213,12 @@ if __name__ == '__main__':
     parser.add_argument('--model', default=lst.DEFAULT_MODEL)
     parser.add_argument('--backend', default=lst.DEFAULT_BACKEND,
                        choices=sorted(lst.llm_client.BACKENDS))
+    parser.add_argument('--output-path', type=Path, default=OUTPUT_PATH,
+                       help='dataset CSV to append to -- override so parallel '
+                            'per-author invocations (see scripts/generate_synthetic_parallel.sh) '
+                            'write to separate files instead of racing on one')
+    parser.add_argument('--errors-path', type=Path, default=ERRORS_PATH,
+                       help='errors CSV to append to -- same override as --output-path')
     args = parser.parse_args()
 
     try:
@@ -220,6 +226,7 @@ if __name__ == '__main__':
                 poems_per_author=args.poems_per_author,
                 samples_per_pair=args.samples_per_pair, seed=args.seed,
                 target_authors=args.target_authors, model=args.model,
-                backend=args.backend)
+                backend=args.backend, output_path=args.output_path,
+                errors_path=args.errors_path)
     except (KeyError, ValueError) as e:
         sys.exit(str(e))

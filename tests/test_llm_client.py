@@ -1,5 +1,8 @@
 """The shared Ollama/OpenRouter call wrapper — dispatch only, no live network calls."""
 
+import io
+import json
+
 import pytest
 
 import llm_client as lc
@@ -167,3 +170,95 @@ def test_call_google_does_not_retry_a_genuinely_empty_candidate(monkeypatch):
 def test_call_google_budget_matches_the_model_output_ceiling():
     import inspect
     assert inspect.signature(lc.call_google).parameters['max_tokens'].default == 32768
+
+
+# ── _post: retry on transient HTTP errors ──────────────────────────────────────
+#
+# call_google was hitting Gemini's own 500s/503s ("high demand") with no retry
+# at all -- a single transient blip failed the whole pair in generate_synthetic.py.
+# Retries live in _post (shared by all three backends) rather than per-backend.
+
+def _http_error(code, body=b'error'):
+    return lc.urllib.error.HTTPError('http://x', code, 'msg', {}, io.BytesIO(body))
+
+
+def _ok_response(payload):
+    return io.BytesIO(json.dumps(payload).encode('utf-8'))
+
+
+def test_post_retries_a_503_then_succeeds(monkeypatch):
+    monkeypatch.setattr(lc.time, 'sleep', lambda s: None)
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        if len(calls) == 1:
+            raise _http_error(503)
+        return _ok_response({'ok': True})
+
+    monkeypatch.setattr(lc.urllib.request, 'urlopen', fake_urlopen)
+    result = lc._post('http://x', {}, {}, timeout=10)
+    assert result == {'ok': True}
+    assert len(calls) == 2
+
+
+def test_post_does_not_retry_a_client_error(monkeypatch):
+    # 400/403 mean a bad request or bad key -- every retry would fail the same
+    # way, so this must not sleep or call urlopen a second time.
+    monkeypatch.setattr(lc.time, 'sleep', lambda s: pytest.fail('should not retry'))
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        raise _http_error(400)
+
+    monkeypatch.setattr(lc.urllib.request, 'urlopen', fake_urlopen)
+    with pytest.raises(RuntimeError, match='HTTP 400'):
+        lc._post('http://x', {}, {}, timeout=10)
+    assert len(calls) == 1
+
+
+def test_post_gives_up_after_max_retries(monkeypatch):
+    monkeypatch.setattr(lc.time, 'sleep', lambda s: None)
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        raise _http_error(503)
+
+    monkeypatch.setattr(lc.urllib.request, 'urlopen', fake_urlopen)
+    with pytest.raises(RuntimeError, match='HTTP 503'):
+        lc._post('http://x', {}, {}, timeout=10, max_retries=2)
+    assert len(calls) == 3  # initial attempt + 2 retries
+
+
+def test_post_retries_a_429(monkeypatch):
+    monkeypatch.setattr(lc.time, 'sleep', lambda s: None)
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        if len(calls) == 1:
+            raise _http_error(429)
+        return _ok_response({'ok': True})
+
+    monkeypatch.setattr(lc.urllib.request, 'urlopen', fake_urlopen)
+    assert lc._post('http://x', {}, {}, timeout=10) == {'ok': True}
+
+
+def test_post_backoff_grows_exponentially(monkeypatch):
+    # Jitter is a random.uniform(0, BASE_DELAY) add-on -- pin it to 0 so the
+    # sleep sequence is checkable exactly: BASE_DELAY * 2**attempt.
+    monkeypatch.setattr(lc.random, 'uniform', lambda a, b: 0)
+    delays = []
+    monkeypatch.setattr(lc.time, 'sleep', delays.append)
+    calls = []
+
+    def fake_urlopen(req, timeout):
+        calls.append(1)
+        raise _http_error(503)
+
+    monkeypatch.setattr(lc.urllib.request, 'urlopen', fake_urlopen)
+    with pytest.raises(RuntimeError):
+        lc._post('http://x', {}, {}, timeout=10, max_retries=3)
+    assert delays == [lc.BASE_DELAY * 1, lc.BASE_DELAY * 2, lc.BASE_DELAY * 4]

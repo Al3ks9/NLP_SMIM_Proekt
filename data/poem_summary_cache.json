@@ -14,5 +14,197 @@
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
     "generated_at": "2026-08-31T19:32:57.213678+00:00"
+  },
+  "5f8b0d44a35811eed6bc9cdca4e3a060861c66bab85011199d536c22935aa490": {
+    "summary": "The speaker drifts between a dreamlike state and a harsh reality where the world has moved on without him. He observes fragmented images of death, a neighbor painting a house, and unpaid rent, contrasting these mundane worries with a desire for a wild, drunken farewell. The mood is one of disorientation and existential alienation.",
+    "author": "Пијан Славеј",
+    "title": "НЕКОГАШ ЗАПАЃАМ ВО ДЛАБОКА ЛИРИКА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T19:33:52.105453+00:00"
+  },
+  "5c7855c2b6bf6a26078a92ed71595f4577569a241d1a3b85d16b5a737d0590c7": {
+    "summary": "The poem portrays existence and death as a theatrical performance, where souls act as spectators watching their own earthly lives unfold from a distance. It uses concrete imagery of a darkened theater, an usher with a candle, and the tension between artists and prompters to evoke a surreal and melancholic mood. The central theme explores the irony of achieving clarity and a sense of vitality only after entering the \"theater of the dead.\"",
+    "author": "Радован Павловски",
+    "title": "Театар на мртвите",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T20:15:41.761286+00:00"
+  },
+  "3a8673a94e74ed524b86ef5540caed850f9872fc0ba4e042d199b39cf33e57e4": {
+    "summary": "The speaker grapples with the approach of death and a desperate longing to compose a perfect, divinely inspired poem. The poem evokes a mood of urgency and spiritual turmoil through images of a digging hoof, overflowing volcanoes, and shaken champagne. It explores the theme of mortality and the search for ultimate truth beyond human fabrication.",
+    "author": "Катица Ќулавкова",
+    "title": "Исповед",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T20:52:37.077397+00:00"
+  },
+  "67d92e0c14c4bea57f102e75c58cb9fa6740ec0b2f7d25ca4005fe732f04df13": {
+    "summary": "The poem is a spiritual plea to an invisible deity for peace and comfort as the world fades. It features imagery of light over the earth, wings gliding over blue water, and a celestial volcano extinguishing the stars. The mood is mystical and serene, centering on a transition into an opaque, blue mystery.",
+    "author": "Ефтим Клетников",
+    "title": "светлината е огромна тајна",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T21:12:04.149857+00:00"
+  },
+  "e292bd3267808696d66d36f50f2f5c8d22d3f1f6ce908340068ea7ac07bf2291": {
+    "summary": "The poem contrasts the whimsical, mythical dreams of childhood—filled with images of revolutionaries, mermaids, and toy guns by the Vardar river—with the industrial reality of youth. It moves from nostalgic visions of cloud fortresses and folklore to a modern landscape of tractors, tall buildings, and machinery. The overall theme is the evolution of the narrator's homeland from a place of legend into a tangible, progressing society.",
+    "author": "Славко Јаневски",
+    "title": "Две приказни",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T21:39:47.947220+00:00"
+  },
+  "d059da5a1f301c95664dbfd8bf0eebac02c6e56ad5672dd469e33bea042d7f85": {
+    "summary": "A fire-breathing dragon creates a violent storm, darkening the sky and shaking the mountains and trees, to approach a girl named Ilinka. He declares his passionate love and desire for the beautiful maiden amidst the chaotic natural elements. The poem conveys a mood of supernatural intensity and longing.",
+    "author": "Славко Јаневски",
+    "title": "Илинка сончева свршеница - 5",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T22:09:49.967086+00:00"
+  },
+  "3f5525d1caf45a260491939472710191e0f1d45c37c0edd7a444dff6933bd9e2": {
+    "summary": "The poem expresses an intense, surreal longing to merge with a beloved person across both physical and cosmic dimensions. It utilizes imagery of starry scaffolds, peony fields, barefoot angels, and burning bones to blend intimate human experiences with the infinite. The mood is one of passionate yearning and spiritual devotion.",
+    "author": "Веле Смилевски",
+    "title": "Телото на книгата",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T22:33:36.325440+00:00"
+  },
+  "5dd6bffc47111ce0f6416ca180ab1be97edf5152c1f022486491835f5c50ce2c": {
+    "summary": "The poem reflects on the survival and identity of the Macedonian people, using images of the Bistra and Korab mountains and the Vardar and Strumica rivers. It contrasts a history of being viewed as a small, counted minority with a defiant acceptance of their current existence. The mood is one of resilience and patriotic pride.",
+    "author": "Гане Тодоровски",
+    "title": "Нашинска",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T23:01:51.873675+00:00"
+  },
+  "30f865dd4f46bbefd2478bef168c4d814c6f465a7f5f557650b0925eeee06c76": {
+    "summary": "The poem depicts a mystical awakening and spiritual renewal that begins in the midnight darkness and evolves into a state of ecstatic harmony. It uses imagery of fires in the heart, wings, and blossoming gardens to describe a solitary figure overwhelmed by the scent of future fruits. The mood is one of transcendence, as natural abundance is transformed into a deep, creative wealth.",
+    "author": "Ефтим Клетников",
+    "title": "НА ПОЛНОЌ КОГА ПРСКА ЈАТКАТА НА МРАКОТ-4",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-15T23:28:50.160492+00:00"
+  },
+  "4452ac37e5d04860b5203867e27b2418cf3d348d7c46a25f9a872af9426b4b33": {
+    "summary": "The poem describes a profound longing for a loved one, imagining a physical and spiritual rebirth through images of sewing flesh, celestial trees, and the end of solitude. It portrays a fragile, ethereal reunion where two people merge like breath and soap bubbles. The mood is one of vulnerable, transcendental yearning and wonder.",
+    "author": "Јосип Коцев",
+    "title": "Сѐ што ќе создадам, отсега ќе чекори кон тебе",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-16T13:17:52.598700+00:00"
+  },
+  "54ad10055105b78c01493b5aaf6b08de9048bc43445c7e0f7eca9be10dc0bbd6": {
+    "summary": "A speaker descends into a dark, surreal underworld populated by figures such as Dante, Ovid, and a slumbering God. Seeking a way to reclaim their lost night, the speaker desperately pleads for elemental guides and tools, including flame, water, a mountain, and a horse. The mood is one of existential disorientation and longing within a spiritual void.",
+    "author": "Ефтим Клетников",
+    "title": "темно место",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-16T18:11:30.468878+00:00"
+  },
+  "d8cb2ed9d3c7ad7a6ebfb923308cd05ebad24175b0cfdf1e32a6aee0bdb374d1": {
+    "summary": "A mystical entity visits a narrator the night before a child's birth, carrying a baby's swaddle and referencing a natal chart. Set against the imagery of the western mountains and Matka, the poem conveys a prophetic mood regarding fate. The entity predicts that the child will one day return to knock on the window and enter through the main door.",
+    "author": "Пијан Славеј",
+    "title": "ШТРКОТ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T17:18:54.278547+00:00"
+  },
+  "5fbe2d62d234555e0f6f50627938b6e3fd3f41587dca6dc3b73a0330d1fad2fa": {
+    "summary": "The poem depicts the evolving stages of an intimate bond, traversing shared sadness, cosmic longing, and physical passion. It employs images of clear tears, black horses in green meadows, and sweat in a soft bed to evoke a mood that fluctuates between ethereal romance and raw, earthly desire. The narrative concludes with a mixture of renewed fire and a sudden, jarring image of nature.",
+    "author": "Ристо Лазаров",
+    "title": "МУЗА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:07:54.671366+00:00"
+  },
+  "9e0c218a1f871192529c23374c001af00a3badd59a89ea4a47252d435fbc3597": {
+    "summary": "A solitary figure walks through a moonlit, starry night, feeling embraced by the dark blue sky and an echoing song. The speaker expresses a deep, painful longing for a beloved who does not return their affection. The mood is one of melancholic isolation and suffocating grief.",
+    "author": "Блаже Конески",
+    "title": "НОЌНА ПЕСНА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:11:50.192465+00:00"
+  },
+  "3bdb3157fb3933908517f9290b5610b504318c7b44ca536c2f10af2c609ba8f3": {
+    "summary": "The poem addresses a night bird that sleeps through the day, dreaming of the moon and avoiding the blinding daylight. It evokes a surreal, magical atmosphere through images of electric streetlights, red windmills, and black wine. The theme contrasts the quiet wisdom of the morning with the brave, chaotic energy of the night.",
+    "author": "Пијан Славеј",
+    "title": "АБРАКАДАБРА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:24:27.533874+00:00"
+  },
+  "91064b073468275041004cd1657307b98809c4c992c34e262f5e4104b47cc98d": {
+    "summary": "An evening rain washes the rust from hills and rocks, triggering a surreal transformation where stately mountains descend into the depths of volcanoes. As a great eye closes within a nightly fortress, a profound black darkness emerges to illuminate the center of the world. The mood is mystical and somber, centering on themes of purification and cosmic dissolution.",
+    "author": "Бранко Цветкоски",
+    "title": "БОГИНКИ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:35:18.761913+00:00"
+  },
+  "edb3fced12682f416c70e088ba4fed1b6ed026f1a10e9582944a7ce562376bdb": {
+    "summary": "The poem describes a deceptive beauty that masks reality, which only poets can truly perceive to transcend boundaries through their dreams. It contrasts the active, demanding memory of the day, likened to rushing spring waters, with the quiet oblivion and sleep brought by the night.",
+    "author": "Ацо Шопов",
+    "title": "Ноќта",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:39:47.106952+00:00"
+  },
+  "d8c2a7c2b195aadfa37604f552cf6abda83846b7f9a7602adaeb0cf03188cebe": {
+    "summary": "The poem depicts the end of a day and the onset of a lonely, weary night marked by insomnia, alcohol, and a crust of bread. Through images of a closing sky and the creaking bars of the horizon, it evokes a mood of confinement and exhaustion. It concludes with the speaker contemplating their destiny, imagining themselves walking along the lines of their own palm.",
+    "author": "Богомил Ѓузел",
+    "title": "Бдеење",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:50:45.623056+00:00"
+  },
+  "0445aee1e24f57a05068cab03a183eb74bc336b343b894964e8cc49354f73c87": {
+    "summary": "Exhausted, lonely travelers wander toward a shore, seeking rebirth in the dawn while drifting in a small boat of hope. Amidst the restlessness of the night, they struggle against total depletion and the finality of an ending. The mood is one of weary longing and existential desperation.",
+    "author": "Гане Тодоровски",
+    "title": "Ноќ без интерпункција",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T18:54:27.652169+00:00"
+  },
+  "c810e62f2e132a13177b330e90be2a92d04f640deaa2843f50b3658468324913": {
+    "summary": "The poem depicts a state of total spiritual and physical collapse, where people have lost their freedom, identity, and joy. It utilizes images of shadows, forgotten languages, and falling dried leaves to evoke a mood of profound exhaustion and despair. The theme centers on the crushing weight of societal constraints and the resulting silence of a broken existence.",
+    "author": "Катица Ќулавкова",
+    "title": "Скршени, набожни",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T21:37:50.177853+00:00"
+  },
+  "320a6427dfe387499f25c4153ef4faaf412ffa17f26cab7c1d02eeed5ee1651f": {
+    "summary": "The poem describes a book that opens only if its covers are crafted to match the measure of the idea it contains. Using the image of a physical book, it explores the theme of harmony between external form and internal essence in a contemplative mood.",
+    "author": "Веле Смилевски",
+    "title": "Хаику книга",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T21:58:01.132501+00:00"
+  },
+  "58857dcbeda59f67a1f36ac04fc43518907524cd4751eabd03edb77d16b27c23": {
+    "summary": "A group of marginalized, rebellious children form a secret, prophetic society to claim their own independence. They are depicted through images of twilight hallways, school rulers, old black-and-white photographs, and dark forests. The mood is a blend of defiant longing and surreal melancholy.",
+    "author": "Веле Смилевски",
+    "title": "Книгата НИЕ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-17T22:09:03.296186+00:00"
+  },
+  "6fa7b0a020942640239156e6f859dacbc7ac8a396f7edb037f5b9a05935e24d2": {
+    "summary": "Speaking from the perspective of nature, the poem uses images of swaying grass, moonlight shadows, and pruned vines to assert that its existence is driven by a pure desire for beauty. The mood is one of serene isolation, concluding that a deep understanding of the natural world brings a person closer to the earth but further from other people.",
+    "author": "Блаже Конески",
+    "title": "ПЕСНА НА ЛОЗИТЕ ВО ЛОЗЈАТА НА ВОДНО",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-18T15:39:09.351248+00:00"
+  },
+  "6f9e8bbc4ad3d5ffeef326a51b449a6bccb28cc9c49f5bbc667df38ce8d9916b": {
+    "summary": "Young women visit the grave of an anonymous lover, smoking joints and plucking flower petals while recalling legends of his unmatched sexual prowess. The poem contrasts the concrete image of a nameless grave with the mythic status of a man who surpassed figures like Casanova and Don Juan. The mood is a blend of ironic reverence and melancholy.",
+    "author": "Пијан Славеј",
+    "title": "НЕЗНАЈНИОТ ЉУБОВНИК",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-18T15:49:50.832935+00:00"
   }
 }

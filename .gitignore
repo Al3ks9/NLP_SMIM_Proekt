@@ -43,6 +43,7 @@ data/report.out
 # build byproducts (same reasoning as poem_summary_cache.json).
 models/qwen3-lora-sft/
 data/synthetic/synthetic_errors.csv
+data/synthetic/parts/
 
 # Slurm job stdout/stderr (slurm/train_sft.slurm)
 logs/
