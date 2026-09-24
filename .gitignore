@@ -53,3 +53,7 @@ logs/
 singularity/*.sif
 singularity/.build_tmp/
 singularity/.build_cache/
+
+.DS_Store
+data/.DS_Store
+llm/.DS_Store
