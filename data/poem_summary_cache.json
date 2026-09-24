@@ -839,84 +839,124 @@
     "prompt_version": 2,
     "generated_at": "2026-09-24T10:04:01.543037+00:00"
   },
-  "0d2c35524349848068e4151ee08b9ed8f10af39fdbb54b4d9baf1d547fc3de7e": {
-    "summary": "The poem depicts a violent battle for a bridge as fighters attempt to stop retreating German forces amidst smoke, fire, and a river of bullets. The mood is one of desperate chaos and horror, characterized by the sounds of machine guns and explosions. The struggle ends in tragedy when dynamite destroys the bridge, rendering the fighters' efforts futile.",
-    "author": "Блаже Конески",
-    "title": "4.",
+  "c2a3f270c6d38771d0e2dfc28a0da362206acdb6c2aea25a3b21eff54cf0a08f": {
+    "summary": "The poem explores the acceptance of mortality and a predetermined destiny, focusing on the speaker's resolve to love and create until the end of their life. It utilizes images of a glowing skull and a closed old book to evoke a mood of solemn determination and transcendental hope.",
+    "author": "Братислав Ташковски",
+    "title": "До крај",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T10:16:56.625470+00:00"
+    "generated_at": "2026-09-24T13:15:35.127407+00:00"
   },
-  "b8e782aa1110d5b3972247dcb586e09c2ba5dbafbf6ebedaacf34be9f07458fc": {
-    "summary": "The poem contrasts a figure recently liberated from a dark, plastered wall into the light with a beloved image trapped forever within the speaker's chest. While one finds freedom, the other remains an unreachable solace that will vanish upon the speaker's death. The mood is melancholic, juxtaposing the joy of release with the tragedy of eternal internal imprisonment.",
-    "author": "Блаже Конески",
-    "title": "АНГЕЛОТ НА СВЕТА СОФИЈА",
+  "4ebf4207e0a9f0ef73fff8ee4915a666cc3a14f13a264b90e5830bc4f0457a53": {
+    "summary": "While something is gone forever, a seed planted in a furrow grows through time and earth into a future harvest. Using images of soil and granaries, the poem explores the theme of renewal and the persistence of life following loss.",
+    "author": "Ефтим Клетников",
+    "title": "НА ТАТКО МИ МУ ЧИТАМ СКАЗНА НА КРАЈОТ ОД БРАЗДАТА - 4",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T11:25:29.852625+00:00"
+    "generated_at": "2026-09-24T13:19:08.943113+00:00"
+  },
+  "352216ee5c8d13d0db4ba31212cdd9a5fdb29182cd3bad62561bd70f3c36fd4e": {
+    "summary": "A speaker arranges for his own execution by a paid firing squad, positioning himself against the wall of a loved one's home while listening to a Chopin sonata. The imagery of rifles and a trembling command creates a mood of dramatic despair and fatalism. The poem explores the theme of heartbreak, suggesting the speaker is emotionally dead before the physical act of killing occurs.",
+    "author": "Пијан Славеј",
+    "title": "НА ЅИДОТ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T13:45:27.285447+00:00"
   },
   "231d7d8904618ef1553b3dcc3891aae462c45480c462464c70b27c227ffb0e64": {
-    "summary": "The poem depicts a speaker who masters multiple languages through reading, writing, and inconsolable singing, only to realize that this pursuit led to the loss of a loved one. It conveys a melancholic mood, highlighting the theme of emotional disconnection and the futility of intellectual effort in the face of an unchanging heart.",
+    "summary": "A speaker attempts to bridge a gap with a loved one by mastering multiple languages, only to find that these efforts lead to further loss. Through images of studying, writing, and inconsolable singing, the poem evokes a mood of desperation and futility. The central theme is the inability to change another person's fundamental desires regardless of one's own transformations.",
     "author": "Пијан Славеј",
     "title": "ВКУС",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T12:54:01.617866+00:00"
+    "generated_at": "2026-09-24T14:40:58.972789+00:00"
   },
   "6abd8a57ecfb3bbb8ba4f71b431898be95af06f3d8539f64af258467d4b1152f": {
-    "summary": "The poem depicts a man's journey from the innocent joy of a kiss to an awareness of the world's perils and human suffering. It employs imagery of a treacherous sea rift, a hidden spring, and a blooming seed to contrast primordial purity with darkness. The mood is ethereal and romantic, centering on a divine feminine figure who embodies nature and fertility.",
+    "summary": "The poem depicts a man's transition from a state of innocent joy to an encounter with a pure feminine essence, symbolized by a wreath, a ring, and a blossoming seed. This vision of primordial creation is contrasted with the danger of sea rifts and the reality of human suffering. The mood is ethereal and romantic, balancing the fragility of nature with an underlying sense of existential peril.",
     "author": "Ефтим Клетников",
     "title": "ДЕТЕТО И ОКОТО НА ТЕМНИОТ - 1",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T12:58:14.884436+00:00"
+    "generated_at": "2026-09-24T14:45:12.100462+00:00"
+  },
+  "1f6a4c3623cdbf148c4cd1c5d450593aafd682fc2896372c093b09f20f23ed8f": {
+    "summary": "The poem describes the act of writing a love letter on an old, \"transplanted\" typewriter. It blends mechanical imagery—such as clicking keys and a mechanical heart—with biological signs of excitement like a racing pulse and adrenaline. The mood is one of nervous, romantic intensity.",
+    "author": "Пијан Славеј",
+    "title": "АДРЕНАЛИН",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T14:49:53.082893+00:00"
   },
   "eaf054bdc4f13613bb1733a857a67e961743cd71bffd7e475fc40c797e92a48e": {
-    "summary": "The speaker presents a humble confession to God, evoking images of a freshly shaven face, rain-soaked pages, and childhood toys scattered across the Little Dipper constellation. He contrasts the vastness of the divine with the narrow paths and ordinary nature of earthly existence. The mood is one of nostalgic contemplation, culminating in a moment of quiet self-recognition.",
+    "summary": "A man engages in a spiritual confession, contrasting the mundane reality of earthly life with the vast innocence of the heavens and distant memories of childhood. Through images of toys scattered across the stars and a narrow path leading toward a great God, he navigates a mood of humility and longing. The poem culminates in a moment of profound self-recognition.",
     "author": "Веле Смилевски",
     "title": "Книгата препознавање",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T13:03:55.032690+00:00"
-  },
-  "3224141e671f27860fdf6f95653cbff474e7ead2b98af308f964689d9fd00dae": {
-    "summary": "The poem depicts a desolate night where a destructive moon brings loneliness and ruin, yet remains unable to extinguish the purity of a child's smile or the peace of the deceased. This oppressive mood shifts as the \"Dark One\" is defeated by the arrival of dawn, bringing images of a green forest and a swan-like day leaping into a deep blue sky. It explores the theme of renewal and the inevitable triumph of light over darkness.",
-    "author": "Ефтим Клетников",
-    "title": "окото на темниот - 1",
-    "model": "gemma-4-31b-it",
-    "prompt_version": 2,
-    "generated_at": "2026-09-24T13:07:13.045916+00:00"
+    "generated_at": "2026-09-24T14:52:45.632053+00:00"
   },
   "9db590a2832ebf5857ae57260ce9aef37f418a1981b3ef607012aa2317591e81": {
-    "summary": "A humble speaker expresses deep devotion and admiration for a superior figure, admitting a desire to emulate their creative work. Using images of a tiny grain and a plant in a field, the poem conveys a mood of quiet submission and a simple longing for love and light.",
+    "summary": "The poem expresses a speaker's humble devotion to a greater creator, viewing themselves as a small grain or a plant in a vast field. It features images of stolen words and a longing for sunlight and love. The overall mood is one of modest yearning and spiritual submission.",
     "author": "Братислав Ташковски",
     "title": "Јас сум билка",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T13:12:57.637821+00:00"
-  },
-  "d2133274335b2a470a7a8a1e29fc82d05335a58d08c780ee55920e18ebd1e940": {
-    "summary": "The poem depicts a dead body resting in a dim room, capturing the solemn stillness of a final farewell to a father. It evokes a somber mood through images of gray mist, shadows on the walls, and the fading echo of a departing breath. The central theme is the transition from physical existence to a silent, ghostly absence.",
-    "author": "Ефтим Клетников",
-    "title": "requiem 1. просторија со мртво тело",
-    "model": "gemma-4-31b-it",
-    "prompt_version": 2,
-    "generated_at": "2026-09-24T13:16:20.750030+00:00"
+    "generated_at": "2026-09-24T14:58:35.428167+00:00"
   },
   "f76bce4a7da98c8c033922c644cbbaeba428e096adbf07120d38819c8948f640": {
-    "summary": "The speaker describes their long-term care of Pilate's garden, where they water flowers with a specific, unnamed water. They urge another person to release a heavy burden and question their fear of a surrounding empty space. The mood is one of quiet, existential melancholy.",
+    "summary": "The speaker urges someone to release a heavy burden, reflecting on their own long history of tending to Pilate's garden. Through images of watering flowers and a vast empty space, the poem evokes a mood of existential weariness and quiet contemplation.",
     "author": "Ефтим Клетников",
     "title": "***",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T13:19:46.624679+00:00"
+    "generated_at": "2026-09-24T15:04:34.336749+00:00"
   },
   "79180876540eba26eacc853b0c46f87e102aeef977b53ded1b2989b202a99995": {
-    "summary": "A man addresses a woman named Bana, justifying his choice to live as a wandering fighter instead of building a home or marrying. He contrasts traditional images of houses and brides with the imagery of a wide heart, sun-like comrades, and the whistling bullets of war. The mood is solemn and defiant, emphasizing a life of sacrifice for a greater cause.",
+    "summary": "A rebel addresses a woman named Bana, justifying his choice to forsake a traditional home and marriage for a life of struggle and wandering. He contrasts images of high gates and roses with the reality of whistling bullets and a heart open to the world. The mood is solemn and defiant, emphasizing a life of purpose and sacrifice over domestic comfort.",
     "author": "Кочо Рацин",
     "title": "Татунчо",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-24T13:32:23.858306+00:00"
+    "generated_at": "2026-09-24T15:07:41.881828+00:00"
+  },
+  "b6d354f60ce73d8c6fb489d41048db5343491bf9d03774fbc242bae17c2405c3": {
+    "summary": "The poem evokes a bleak, existential mood through images of chewing pages, an empty bed, and a lowered gallows. It explores themes of death and the erasure of identity, depicting a human head mirrored in the final chapter of a book. Ultimately, it portrays the transformation of written history and language into an empty, indecipherable cipher.",
+    "author": "Веле Смилевски",
+    "title": "Заробена книга (3.)",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T15:10:30.279426+00:00"
+  },
+  "7bbe9286ef6b6a50400665c2851f6a93bf0c2d9dcf222b647ac348b9e660bc7b": {
+    "summary": "The poem is about a person who provides the speaker with the strength to endure a bleak, gray existence. Using images of wind, letters, and a flowing river, it conveys a mood of deep emotional dependence and creative liberation. The subject is the transformative power of a muse or loved one who prevents the speaker from fading away.",
+    "author": "Братислав Ташковски",
+    "title": "Сонце мое",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T15:14:09.375899+00:00"
+  },
+  "75418e5a5c597e706a9c4fe67738a27d16a9517caba228d3b4a9adb2712ba402": {
+    "summary": "The poem is an invocation to a celestial \"star\" or divine spirit to awaken and transcend physical limitations to illuminate a dark, ordinary world. It employs images of blinding light, sparks, and storms to contrast the subject's unique power and honesty against a backdrop of shadows and cowardice. The mood is one of intense admiration and spiritual empowerment, casting the subject as a multifaceted guide and a symbol of hope.",
+    "author": "Ива Петреска",
+    "title": "Јас, ти или една ѕвезда",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T15:24:58.157217+00:00"
+  },
+  "577263872511f66067f606c703671af4790f66b872959e145bd70efdf68c6239": {
+    "summary": "The poem depicts a man's profound grief and eternal longing for his deceased lover, Denicija. He perceives her physical beauty in the world around him, comparing her features to concrete images such as sunflowers, wheat, hills, and towers. The mood is melancholic and spiritual, centering on a love that transcends death.",
+    "author": "Петре М. Андреевски",
+    "title": "НА ГРОБОТ ОД ДЕНИЦИЈА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T15:27:51.700244+00:00"
+  },
+  "1760e95245e34f30f7525ce62dbe8692abae402f48c24d998a66fcb7cedd8643": {
+    "summary": "The poem depicts a speaker in a state of surreal transition, floating unborn in the sea and merging with elements like ash, salt, iron, and sunken clouds. This collision between the body and the natural world creates a mood of existential instability and dissolution. The imagery culminates in a shimmering summer heat where the world feels frighteningly loosened and unstable at its roots.",
+    "author": "Влада Урошевиќ",
+    "title": "Нерасонет сонет за морето",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-24T15:39:07.776817+00:00"
   }
 }
