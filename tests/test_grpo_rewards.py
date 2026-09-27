@@ -151,3 +151,8 @@ def test_reward_funcs_score_once_per_batch_and_log(cfg, tmp_path):
     assert 'gate/copy_novelty' in logged and 'group/pos_profile' in logged
     lines = (tmp_path / 'components.jsonl').read_text(encoding='utf-8').splitlines()
     assert len(lines) == 2 and json.loads(lines[0])['target_author'] == AUTHOR
+
+
+def test_validity_gate_does_not_zero_a_real_poem_with_a_dialogue_dash(cfg):
+    row = _score(cfg, 'ветер носи лисје низ поле -\n- мајка чека пред порта')
+    assert row['gate/validity'] == 1.0

@@ -115,6 +115,13 @@ _LATIN_RE = re.compile(r'[A-Za-z]')
 # Chat/markdown scaffolding a model emits when it answers *about* the task
 # instead of just writing the poem -- the base model's characteristic failure.
 _MARKUP_RE = re.compile(r'(\*\*|^#{1,6}\s|^\s*[-*]\s|^\s*\d+\.\s|```)', re.MULTILINE)
+# The subset of _MARKUP_RE that never occurs in real poetry -- the GRPO
+# validity gate's test. Bullet/numbered-line patterns also fire on 49 of the
+# corpus's 1,239 real poems (a dialogue line opening with "- ", a numbered
+# stanza) while adding only 5 catches over bold/heading/fence on the untuned
+# base model's 468 val outputs; as a hard reward gate they would zero real
+# poems and teach the policy to avoid dialogue dashes.
+_CHAT_MARKUP_RE = re.compile(r'(\*\*|^#{1,6}\s|```)', re.MULTILINE)
 
 
 def language_metrics(text: str) -> dict:
@@ -128,6 +135,7 @@ def language_metrics(text: str) -> dict:
         'cyrillic_ratio': round(cyr / letters, 4) if letters else 0.0,
         'is_cyrillic': 1.0 if letters and cyr / letters >= 0.95 else 0.0,
         'no_markup': 0.0 if _MARKUP_RE.search(text) else 1.0,
+        'no_chat_markup': 0.0 if _CHAT_MARKUP_RE.search(text) else 1.0,
         'is_nonempty': 1.0 if lines(text) else 0.0,
     }
 

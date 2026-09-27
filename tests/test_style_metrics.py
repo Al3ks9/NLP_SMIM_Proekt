@@ -23,3 +23,14 @@ def test_copy_novelty_short_lines_need_an_exact_match():
 
 def test_copy_novelty_empty_generation_is_zero():
     assert sm.copy_novelty(SRC, '') == 0.0
+
+
+def test_no_chat_markup_allows_poetic_dashes_and_numbers():
+    poem = 'Но, пишувањето е страст -\n- ако не се разголиш нема ни стих\n1. песна за мајка'
+    assert sm.language_metrics(poem)['no_chat_markup'] == 1.0
+    assert sm.language_metrics(poem)['no_markup'] == 0.0      # reported metric unchanged
+
+
+def test_no_chat_markup_catches_chat_scaffolding():
+    for text in ('**Песна**\nсонце грее', '### Песна\nсонце грее', '```\nсонце\n```'):
+        assert sm.language_metrics(text)['no_chat_markup'] == 0.0

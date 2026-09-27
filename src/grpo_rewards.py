@@ -10,8 +10,8 @@ For one generated poem, given the source poem and the target author:
   weighted mean over feature groups.
 - content: line-level embedding F1 against the SOURCE poem (never the Gemma
   output), rescaled so unrelated poems score 0.
-- gates (multiplicative, style_metrics): validity = cyrillic * no markup *
-  non-empty on both; line_uniqueness on style; copy_novelty on content.
+- gates (multiplicative, style_metrics): validity = cyrillic * no chat
+  markup (bold/heading/code fence -- not dashes or numbers) * non-empty on both; line_uniqueness on style; copy_novelty on content.
 
 R = style_weight * R_style_g + content_weight * R_content_g. Every component
 is returned (and, during training, logged) separately. See
@@ -157,9 +157,9 @@ def gates(source: str, text: str, cfg: RewardConfig) -> dict:
     lang = sm.language_metrics(text)
     return {
         'gate/is_cyrillic': lang['is_cyrillic'],
-        'gate/no_markup': lang['no_markup'],
+        'gate/no_chat_markup': lang['no_chat_markup'],
         'gate/is_nonempty': lang['is_nonempty'],
-        'gate/validity': lang['is_cyrillic'] * lang['no_markup'] * lang['is_nonempty'],
+        'gate/validity': lang['is_cyrillic'] * lang['no_chat_markup'] * lang['is_nonempty'],
         'gate/line_uniqueness': sm.repetition_metrics(text)['line_uniqueness'],
         'gate/copy_novelty': sm.copy_novelty(source, text, cfg.copy_overlap_threshold),
     }
