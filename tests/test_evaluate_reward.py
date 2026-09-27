@@ -35,3 +35,11 @@ def test_fixtures_pass_with_the_real_reward():
     embedder, real calibration. A failure here is a finding to report, not a
     threshold to loosen."""
     assert er.main(['--fixtures']) == 0
+
+
+def test_summarise_groups_separates_within_and_between_spread():
+    groups = [[{'R': 0.1}, {'R': 0.3}], [{'R': 0.5}, {'R': 0.7}]]
+    s = er.summarise_groups(groups, ['R'])['R']
+    assert s['mean'] == pytest.approx(0.4)
+    assert s['within_group_std'] == pytest.approx(0.1)
+    assert s['between_prompt_std'] == pytest.approx(0.2)

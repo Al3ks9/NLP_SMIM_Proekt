@@ -21,6 +21,8 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+
 import grpo_rewards as gr
 from make_splits import load_stripped_songs
 
@@ -30,6 +32,11 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 FIXTURES_PATH = ROOT / 'tests' / 'fixtures' / 'reward_cases.json'
 SYNTHETIC_PATH = DATA / 'synthetic' / 'synthetic_dataset.csv'
+
+GROUP_KEYS = ['R', 'R_style_g', 'R_content_g', 'R_style', 'R_content'] + \
+    [f'group/{g}' for g in gr.STYLE_GROUPS] + \
+    ['gate/validity', 'gate/line_uniqueness', 'gate/copy_novelty']
+DEFAULT_GROUPS_OUT = DATA / 'grpo' / 'reward_groups.csv'
 
 MARKDOWN_ENGLISH = ('**Here is the poem rewritten in the requested style:**\n\n'
                     '- The sun rises over the mountain\n- A bird sings in the forest')
@@ -150,6 +157,55 @@ def run_single(args, cfg: gr.RewardConfig) -> int:
     return 0
 
 
+def summarise_groups(rows_by_prompt: list, keys: list) -> dict:
+    """Under GRPO's per-group advantage normalisation, what decides which
+    component drives the update is its spread *within* a group of samples for
+    one prompt, not its mean -- so that is what alpha/beta are set from."""
+    out = {}
+    for k in keys:
+        per_group = [[r[k] for r in rows] for rows in rows_by_prompt]
+        out[k] = {
+            'mean': float(np.mean([v for g in per_group for v in g])),
+            'within_group_std': float(np.mean([np.std(g) for g in per_group])),
+            'between_prompt_std': float(np.std([np.mean(g) for g in per_group])),
+        }
+    return out
+
+
+def run_groups(args, cfg: gr.RewardConfig) -> int:
+    import torch
+    import generate_validation as gv
+    from grpo_data import build_prompt_rows
+
+    model, tokenizer = gv.load_adapter_model(args.adapter, base_model=str(args.merged_model))
+    prompts = build_prompt_rows(seed=args.seed)[:args.num_prompts]
+    rows_by_prompt = []
+    for i, p in enumerate(prompts):
+        gens = []
+        for g in range(args.num_generations):
+            torch.manual_seed(args.seed + i * args.num_generations + g)
+            gens.append(gv.generate_one(model, tokenizer, p['source_text'], p['target_author'],
+                                        max_new_tokens=512, temperature=args.temperature))
+        rows_by_prompt.append(gr.score_batch([p['source_text']] * len(gens), gens,
+                                             [p['target_author']] * len(gens), cfg))
+        print(f'{i + 1}/{len(prompts)} poem {p["source_poem_id"]} -> {p["target_author"]}: '
+              f'R={[round(r["R"], 3) for r in rows_by_prompt[-1]]}')
+
+    summary = summarise_groups(rows_by_prompt, GROUP_KEYS)
+    print(f"\n{'component':<26}{'mean':>8}{'within-grp std':>16}{'between std':>13}")
+    for k, s in summary.items():
+        print(f"{k:<26}{s['mean']:>8.3f}{s['within_group_std']:>16.3f}{s['between_prompt_std']:>13.3f}")
+
+    args.groups_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(args.groups_out, 'w', newline='', encoding='utf-8') as f:
+        w = csv.writer(f)
+        w.writerow(['component', 'mean', 'within_group_std', 'between_prompt_std'])
+        for k, s in summary.items():
+            w.writerow([k, s['mean'], s['within_group_std'], s['between_prompt_std']])
+    print(f'\nwrote {args.groups_out}')
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -164,6 +220,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--content-weight', type=float, default=0.5)
     p.add_argument('--style-weights', type=json.loads, default=None,
                    help='JSON {group: weight}; omitted groups keep their default')
+    p.add_argument('--groups', action='store_true',
+                   help='sample --num-generations completions per train prompt from the '
+                        'SFT policy and report each component\'s within-group spread (GPU)')
+    p.add_argument('--merged-model', type=Path, default=ROOT / 'models' / 'qwen3-sft-merged')
+    p.add_argument('--adapter', type=Path, default=None,
+                   help='optional LoRA on top of --merged-model (e.g. a GRPO checkpoint)')
+    p.add_argument('--num-prompts', type=int, default=20)
+    p.add_argument('--num-generations', type=int, default=4)
+    p.add_argument('--temperature', type=float, default=0.9)
+    p.add_argument('--seed', type=int, default=42)
+    p.add_argument('--groups-out', type=Path, default=DEFAULT_GROUPS_OUT)
     return p
 
 
@@ -176,6 +243,8 @@ def config_from_args(args) -> gr.RewardConfig:
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     cfg = config_from_args(args)
+    if args.groups:
+        return run_groups(args, cfg)
     if args.fixtures:
         return run_fixtures(cfg)
     if not (args.generations_csv or (args.target_author and args.generated_file
