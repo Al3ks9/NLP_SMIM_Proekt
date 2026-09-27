@@ -112,3 +112,31 @@ def test_run_validation_never_touches_train_split_unless_asked(monkeypatch, tmp_
     gv.run_validation(adapter_dir=tmp_path / 'adapter', split='val', num_source_poems=1,
                       num_target_authors=1, output_path=tmp_path / 'out.csv')
     assert seen_splits == ['val']
+
+
+# Review Focus 4
+def test_infer_base_model_resolves_a_container_path_under_models(tmp_path, monkeypatch):
+    models = tmp_path / 'models'
+    (models / 'qwen3-sft-merged').mkdir(parents=True)
+    monkeypatch.setattr(gv, 'MODELS_DIR', models)
+    adapter = tmp_path / 'adapter'
+    adapter.mkdir()
+    (adapter / 'adapter_config.json').write_text(
+        json.dumps({'base_model_name_or_path': '/workspace/models/qwen3-sft-merged'}))
+    assert gv._infer_base_model(adapter) == str(models / 'qwen3-sft-merged')
+
+
+def test_infer_base_model_keeps_hub_ids(tmp_path):
+    (tmp_path / 'adapter_config.json').write_text(
+        json.dumps({'base_model_name_or_path': 'Qwen/Qwen3-4B'}))
+    assert gv._infer_base_model(tmp_path) == 'Qwen/Qwen3-4B'
+
+
+def test_run_label_for_checkpoints_and_local_merged_base(tmp_path):
+    ckpt = tmp_path / 'qwen3-grpo' / 'checkpoint-200'
+    ckpt.mkdir(parents=True)
+    assert gv._run_label(ckpt, None) == 'qwen3-grpo-checkpoint-200'
+    merged = tmp_path / 'qwen3-sft-merged'
+    merged.mkdir()
+    assert gv._run_label(None, str(merged)) == 'qwen3-sft-merged'
+    assert gv._run_label(None, 'Qwen/Qwen3-4B') == 'base-Qwen3-4B'

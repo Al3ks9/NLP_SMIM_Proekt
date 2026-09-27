@@ -44,6 +44,8 @@ data/report.out
 models/qwen3-lora-sft/
 data/synthetic/synthetic_errors.csv
 data/synthetic/parts/
+data/synthetic/parts_val/
+data/synthetic/teacher_val_errors.csv
 
 # GRPO stage (src/merge_sft_adapter.py, src/train_grpo.py): the SFT adapter
 # merged into bf16 base weights (GRPO's start policy + KL reference) and the

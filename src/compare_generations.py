@@ -64,6 +64,13 @@ SUMMARY_COLUMNS = [
     ('content_recall', 'content-rec'),
     ('content_jaccard', 'content-jac'),
     ('line_novelty', 'line-novelty'),
+    # GRPO reward columns -- filled only with --rewards (grpo_rewards.py)
+    ('copy_novelty', 'copy-novelty'),
+    ('R_style', 'R-style'),
+    ('R_content', 'R-content'),
+    ('R_style_g', 'R-style-g'),
+    ('R_content_g', 'R-content-g'),
+    ('R', 'R'),
 ]
 
 METRIC_COLUMNS = [c for c, _ in SUMMARY_COLUMNS if c != 'n']
@@ -128,17 +135,21 @@ def corpus_reference_run(num_target_authors: int = 10, label: str = 'REAL POEMS'
 
 # ── Scoring ─────────────────────────────────────────────────────────────────────
 
-def score_run(run: dict) -> list:
+def score_run(run: dict, rewards: bool = False) -> list:
     """Every row of one run scored. source_text comes from stripped_songs.csv
     by poem_id (one source of truth for poem text, as elsewhere in this
-    pipeline) unless the row already carries one explicitly."""
+    pipeline) unless the row already carries one explicitly.
+
+    rewards=True adds the GRPO reward (grpo_rewards.score_batch) for rows
+    with a source poem -- the same numbers the GRPO trainer optimised."""
     poems = _poems_by_id()
-    scored = []
+    scored, sources = [], []
     for row in run['rows']:
         source_text = row.get('source_text', ...)
         if source_text is ...:
             source = poems.get(row['source_poem_id'])
             source_text = source['song_text'] if source else None
+        sources.append(source_text)
 
         metrics = {
             **sm.repetition_metrics(row['generated_poem']),
@@ -156,6 +167,17 @@ def score_run(run: dict) -> list:
                        'source_poem_id': row['source_poem_id'],
                        'target_author': row['target_author'],
                        'split': row['split'], **metrics})
+
+    if rewards:
+        import grpo_rewards as gr  # classla + sentence-transformers: only when asked
+        idx = [i for i, text in enumerate(sources) if text]
+        results = gr.score_batch([sources[i] for i in idx],
+                                 [run['rows'][i]['generated_poem'] for i in idx],
+                                 [run['rows'][i]['target_author'] for i in idx])
+        for i, res in zip(idx, results):
+            scored[i].update({k: res[k] for k in
+                              ('R', 'R_style', 'R_content', 'R_style_g', 'R_content_g')})
+            scored[i]['copy_novelty'] = res['gate/copy_novelty']
     return scored
 
 
@@ -226,7 +248,8 @@ def discover_runs(split: str = 'val') -> list:
 
 def main(run_paths: list, labels: list = None, include_teacher: bool = False,
          corpus_reference: bool = False, num_target_authors: int = 10,
-         rows_path: Path = DEFAULT_ROWS_PATH, report_path: Path = DEFAULT_REPORT_PATH) -> None:
+         rows_path: Path = DEFAULT_ROWS_PATH, report_path: Path = DEFAULT_REPORT_PATH,
+         rewards: bool = False) -> None:
     runs = [load_run(p, labels[i] if labels and i < len(labels) else None)
             for i, p in enumerate(run_paths)]
     comparable = [r['label'] for r in runs]  # the runs the paired view covers
@@ -236,7 +259,7 @@ def main(run_paths: list, labels: list = None, include_teacher: bool = False,
     if corpus_reference:
         runs.append(corpus_reference_run(num_target_authors))
 
-    scored = {run['label']: score_run(run) for run in runs}
+    scored = {run['label']: score_run(run, rewards) for run in runs}
     for label, rows in scored.items():
         log.info('scored %d rows for %s', len(rows), label)
 
@@ -276,6 +299,8 @@ if __name__ == '__main__':
     parser.add_argument('--num-target-authors', type=int, default=10)
     parser.add_argument('--rows-out', type=Path, default=DEFAULT_ROWS_PATH)
     parser.add_argument('--report-out', type=Path, default=DEFAULT_REPORT_PATH)
+    parser.add_argument('--rewards', action='store_true',
+                       help='add GRPO reward columns (loads classla + the embedding model)')
     args = parser.parse_args()
 
     paths = args.runs or discover_runs(args.split)
@@ -284,4 +309,4 @@ if __name__ == '__main__':
                      f'{args.split!r} -- pass --runs explicitly')
     main(paths, labels=args.labels, include_teacher=args.include_teacher,
          corpus_reference=args.corpus_reference, num_target_authors=args.num_target_authors,
-         rows_path=args.rows_out, report_path=args.report_out)
+         rows_path=args.rows_out, report_path=args.report_out, rewards=args.rewards)

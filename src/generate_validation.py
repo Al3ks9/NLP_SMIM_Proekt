@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 
 DEFAULT_ADAPTER_DIR = ROOT / 'models' / 'qwen3-lora-sft'
+MODELS_DIR = ROOT / 'models'
 DEFAULT_OUTPUT_DIR = DATA / 'validation_generations'
 DEFAULT_MAX_NEW_TOKENS = 512
 DEFAULT_SEED = 42
@@ -99,20 +100,38 @@ def _device() -> str:
 
 def _run_label(adapter_dir: Path, base_model: str) -> str:
     """Filename stem / `adapter` column value identifying which model produced
-    a row: the adapter's directory name, or base-<model> for --no-adapter."""
+    a row: the adapter's directory name (checkpoint-N prefixed with its run),
+    a local base model's directory name (the SFT-merged model), or
+    base-<model> for a hub base with --no-adapter."""
     if adapter_dir is not None:
+        adapter_dir = Path(adapter_dir)
+        if adapter_dir.name.startswith('checkpoint-'):
+            return f'{adapter_dir.parent.name}-{adapter_dir.name}'
         return adapter_dir.name
+    if base_model and Path(base_model).is_dir():
+        return Path(base_model).name
     return 'base-' + (base_model or DEFAULT_MODEL_NAME).split('/')[-1]
 
 
 def _infer_base_model(adapter_dir: Path) -> str:
     """base_model_name_or_path out of the adapter's own adapter_config.json,
-    so --base-model only needs overriding when that record is missing."""
+    so --base-model only needs overriding when that record is missing.
+
+    A GRPO adapter records the SFT-merged model as its base -- as the path it
+    was trained with, which inside the container is /workspace/models/....
+    When that path doesn't exist here, the same directory name under this
+    repo's models/ is used instead."""
     config_path = adapter_dir / 'adapter_config.json'
     if config_path.exists():
         config = json.loads(config_path.read_text(encoding='utf-8'))
-        if config.get('base_model_name_or_path'):
-            return config['base_model_name_or_path']
+        base = config.get('base_model_name_or_path')
+        if base:
+            if Path(base).exists():
+                return base
+            local = MODELS_DIR / Path(base).name
+            if local.exists():
+                return str(local)
+            return base
     log.warning('could not infer base model from %s -- falling back to %s',
                config_path, DEFAULT_MODEL_NAME)
     return DEFAULT_MODEL_NAME

@@ -83,7 +83,7 @@ def _fake_run_transfer(source_author, source_title, target_author, model=None,
 
 def test_generate_writes_one_row_per_pair(monkeypatch, tmp_path):
     monkeypatch.setattr(gs, 'select_target_authors', lambda n, explicit=None: ['Ц1', 'Ц2'])
-    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed: [_poem('0', 'А'), _poem('1', 'Б')])
+    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed, split='train': [_poem('0', 'А'), _poem('1', 'Б')])
     monkeypatch.setattr(gs.lst, 'run_transfer', _fake_run_transfer)
 
     result = gs.generate(num_target_authors=2, poems_per_author=2,
@@ -100,7 +100,7 @@ def test_generate_writes_one_row_per_pair(monkeypatch, tmp_path):
 
 def test_generate_is_resumable_and_skips_already_done_pairs(monkeypatch, tmp_path):
     monkeypatch.setattr(gs, 'select_target_authors', lambda n, explicit=None: ['Ц1'])
-    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed: [_poem('0', 'А'), _poem('1', 'Б')])
+    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed, split='train': [_poem('0', 'А'), _poem('1', 'Б')])
     calls = []
 
     def counting_run_transfer(*a, **kw):
@@ -121,7 +121,7 @@ def test_generate_is_resumable_and_skips_already_done_pairs(monkeypatch, tmp_pat
 
 def test_generate_logs_failures_without_aborting_the_batch(monkeypatch, tmp_path):
     monkeypatch.setattr(gs, 'select_target_authors', lambda n, explicit=None: ['Ц1'])
-    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed: [_poem('0', 'А'), _poem('1', 'Б')])
+    monkeypatch.setattr(gs, 'sample_source_poems', lambda n, seed, split='train': [_poem('0', 'А'), _poem('1', 'Б')])
 
     def flaky_run_transfer(source_author, source_title, target_author, source_poem_id=None, **kw):
         if source_poem_id == '0':
@@ -139,3 +139,30 @@ def test_generate_logs_failures_without_aborting_the_batch(monkeypatch, tmp_path
         errors = list(csv.DictReader(f))
     assert len(errors) == 1
     assert errors[0]['source_poem_id'] == '0'
+
+
+def test_generate_uses_and_records_the_requested_split(monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_sample(n, seed, split='train'):
+        seen['split'] = split
+        return [{'poem_id': '5', 'author': 'А', 'song_title': 'Н', 'song_text': 'т'}]
+
+    monkeypatch.setattr(gs, 'select_target_authors', lambda n, explicit=None: ['Б'])
+    monkeypatch.setattr(gs, 'sample_source_poems', fake_sample)
+    monkeypatch.setattr(gs.lst, 'run_transfer', lambda *a, **k: {
+        'source_poem_id': '5', 'source_author': 'А', 'source_title': 'Н', 'target_author': 'Б',
+        'generated_poem': 'п', 'model': 'm', 'backend': 'b', 'log_path': '', 'timestamp': '',
+        'structural_fit': {'delta_lines': 0, 'delta_stanzas': 0, 'delta_tokens_per_line': 0,
+                           'delta_lines_per_stanza': 0}})
+    out = tmp_path / 'o.csv'
+    gs.generate(num_target_authors=1, poems_per_author=1, split='val',
+                output_path=out, errors_path=tmp_path / 'e.csv')
+    assert seen['split'] == 'val'
+    with open(out, encoding='utf-8') as f:
+        assert next(csv.DictReader(f))['split'] == 'val'
+
+
+def test_val_rows_are_refused_for_the_sft_training_file(tmp_path):
+    with pytest.raises(ValueError, match='SFT training file'):
+        gs.generate(split='val', output_path=gs.OUTPUT_PATH, errors_path=tmp_path / 'e.csv')
