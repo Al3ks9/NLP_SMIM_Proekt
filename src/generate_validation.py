@@ -142,7 +142,8 @@ def _infer_base_model(adapter_dir: Path) -> str:
 def generate_one(model, tokenizer, source_poem_text: str, target_author: str,
                  max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS, do_sample: bool = True,
                  temperature: float = 0.7, top_p: float = 0.9,
-                 repetition_penalty: float = 1.0, no_repeat_ngram_size: int = 0) -> str:
+                 repetition_penalty: float = 1.0, no_repeat_ngram_size: int = 0,
+                 top_k: int = None) -> str:
     """
     One style-transfer generation from the loaded adapter model, returning
     just the newly generated text (the prompt is not echoed back).
@@ -160,6 +161,10 @@ def generate_one(model, tokenizer, source_poem_text: str, target_author: str,
     if do_sample:
         kwargs['temperature'] = temperature
         kwargs['top_p'] = top_p
+        # None keeps the model's own generation_config (Qwen3 ships top_k=20);
+        # evaluate_reward --groups passes GRPO's explicit value instead.
+        if top_k is not None:
+            kwargs['top_k'] = top_k
     # Both default to off, i.e. plain sampling. They exist to separate "the
     # tuned model has degenerate *decoding*" from "the tuned model has
     # degenerate *distributions*" -- if a repetition penalty alone closes the

@@ -172,6 +172,17 @@ def summarise_groups(rows_by_prompt: list, keys: list) -> dict:
     return out
 
 
+def grpo_sampling_kwargs() -> dict:
+    """generate() settings matching train_grpo's GRPO defaults. The within-
+    group spread only predicts training if the samples come from the same
+    distribution -- validation generation's top_p=0.9 plus Qwen3's shipped
+    top_k=20 is noticeably narrower than GRPOTrainer's top_p=1.0 / top_k=0."""
+    import train_grpo
+    d = train_grpo.parse_args([])
+    return {'max_new_tokens': d.max_completion_length, 'temperature': d.temperature,
+            'top_p': d.top_p, 'top_k': d.top_k}
+
+
 def run_groups(args, cfg: gr.RewardConfig) -> int:
     import torch
     import generate_validation as gv
@@ -185,7 +196,7 @@ def run_groups(args, cfg: gr.RewardConfig) -> int:
         for g in range(args.num_generations):
             torch.manual_seed(args.seed + i * args.num_generations + g)
             gens.append(gv.generate_one(model, tokenizer, p['source_text'], p['target_author'],
-                                        max_new_tokens=512, temperature=args.temperature))
+                                        **grpo_sampling_kwargs()))
         rows_by_prompt.append(gr.score_batch([p['source_text']] * len(gens), gens,
                                              [p['target_author']] * len(gens), cfg))
         print(f'{i + 1}/{len(prompts)} poem {p["source_poem_id"]} -> {p["target_author"]}: '
@@ -228,7 +239,6 @@ def build_parser() -> argparse.ArgumentParser:
                    help='optional LoRA on top of --merged-model (e.g. a GRPO checkpoint)')
     p.add_argument('--num-prompts', type=int, default=20)
     p.add_argument('--num-generations', type=int, default=4)
-    p.add_argument('--temperature', type=float, default=0.9)
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--groups-out', type=Path, default=DEFAULT_GROUPS_OUT)
     return p

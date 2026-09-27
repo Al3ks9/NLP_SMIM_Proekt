@@ -156,3 +156,4 @@ def test_reward_funcs_score_once_per_batch_and_log(cfg, tmp_path):
 def test_validity_gate_does_not_zero_a_real_poem_with_a_dialogue_dash(cfg):
     row = _score(cfg, 'ветер носи лисје низ поле -\n- мајка чека пред порта')
     assert row['gate/validity'] == 1.0
+

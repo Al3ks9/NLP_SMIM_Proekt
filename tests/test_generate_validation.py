@@ -140,3 +140,18 @@ def test_run_label_for_checkpoints_and_local_merged_base(tmp_path):
     merged.mkdir()
     assert gv._run_label(None, str(merged)) == 'qwen3-sft-merged'
     assert gv._run_label(None, 'Qwen/Qwen3-4B') == 'base-Qwen3-4B'
+
+
+def test_generate_one_passes_top_k_when_given():
+    seen = {}
+
+    class Capture(FakeModel):
+        def generate(self, **kw):
+            seen.update(kw)
+            return super().generate(**kw)
+
+    gv.generate_one(Capture(), FakeTokenizer(), 'извор', 'Автор', top_p=1.0, top_k=0)
+    assert seen['top_k'] == 0 and seen['top_p'] == 1.0
+    seen.clear()
+    gv.generate_one(Capture(), FakeTokenizer(), 'извор', 'Автор')
+    assert 'top_k' not in seen          # default: the model's own generation_config

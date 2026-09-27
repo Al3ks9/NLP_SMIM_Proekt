@@ -95,6 +95,8 @@ def build_grpo_config(args) -> GRPOConfig:
         max_completion_length=args.max_completion_length,
         mask_truncated_completions=args.mask_truncated_completions,
         temperature=args.temperature,
+        top_p=args.top_p,
+        top_k=args.top_k,
         beta=args.beta,
         loss_type=args.loss_type,
         scale_rewards=args.scale_rewards,
@@ -288,6 +290,10 @@ def parse_args(argv=None):
                    action='store_false', default=True,
                    help='give truncated completions loss too (tests with a random model only)')
     t.add_argument('--temperature', type=float, default=0.9)
+    t.add_argument('--top-p', type=float, default=1.0,
+                   help='GRPO sampling nucleus (TRL default; recorded explicitly because '
+                        'evaluate_reward --groups must sample the same way)')
+    t.add_argument('--top-k', type=int, default=0, help='0 disables top-k (TRL default)')
     t.add_argument('--beta', type=float, default=0.04, help='KL coefficient (0 disables the reference)')
     t.add_argument('--loss-type', default='dapo')
     t.add_argument('--scale-rewards', default='group')

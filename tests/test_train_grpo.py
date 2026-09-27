@@ -125,3 +125,11 @@ def test_smoke_path_passes_its_own_checks_on_a_tiny_model(tmp_path, monkeypatch)
         # is truncated and masked, and nothing trains
         '--max-completion-length', '16', '--no-mask-truncated-completions']))
     tg.train(args)   # sys.exit(1) on any failed smoke check
+
+
+def test_grpo_sampling_is_explicit_and_configurable(tmp_path):
+    c = tg.build_grpo_config(tg.parse_args(['--output-dir', str(tmp_path), '--no-bf16']))
+    assert (c.top_p, c.top_k) == (1.0, 0)
+    c = tg.build_grpo_config(tg.parse_args(['--output-dir', str(tmp_path), '--no-bf16',
+                                            '--top-p', '0.8', '--top-k', '20']))
+    assert (c.top_p, c.top_k) == (0.8, 20)
