@@ -413,3 +413,21 @@ Nothing is submitted automatically.
 9. `grpo_smoke.slurm`, `reward_groups.slurm`, `train_grpo.slurm`
 10. Evaluation changes, Gemma val path, `eval_grpo.slurm`
 11. `CLAUDE.md`, `report.tex`
+
+## 10. Changes made during planning and implementation
+
+Planning:
+
+1. **Copy gate metric:** token Jaccard ≥ 0.7 misses one-word edits on this corpus's ~5-token lines (4/6 = 0.67). Replaced by **containment**: a generated line (≥ 3 tokens) is a copy if ≥ 75 % of its token set occurs in one source line; shorter lines count only on exact match (`style_metrics.copy_novelty`).
+2. **Component logging:** TRL 1.13 passes `log_metric` / `log_extra` into reward functions, so no `TrainerCallback` is used.
+3. **Smoke check (d):** "greedy generations differ" replaced by a deterministic log-probability probe (see 9 below for its final form).
+4. **Tagging:** new `tagging.tag_poem` tags the whole poem like the corpus build; `tag_lines` tags line by line.
+5. **Content embedding code** lives in `content_similarity.py`.
+6. **SFT candidates dropped from fixtures:** SFT outputs exist only for val pairs; fixtures use train sources.
+
+Implementation:
+
+7. **Validity gate markup test:** `style_metrics.no_chat_markup` (bold / `#` heading / code fence) replaces `no_markup` in the gate. `no_markup`'s bullet and numbered-line patterns fire on 49 of 1,239 real poems and zeroed a real fixture poem; the reported `no_markup` metric is unchanged.
+8. **Smoke completion cap:** the smoke run keeps the 512-token completion cap. SFT completions have a median of 291 tokens; with a 128 cap every completion is truncated, masked from the loss, and nothing trains. `--no-mask-truncated-completions` exists for tests with a random model.
+9. **Smoke policy-change probe:** log-probability of a fixed completion with the GRPO adapter on vs `disable_adapter()`, on the trained model (threshold 1e-4); the adapter-off model is exactly the start policy.
+10. **Profile CSV:** the refactored `style_profiler.py` reproduces the unmodified script byte-for-byte, but the committed `author_style_profiles.csv` is slightly stale against the current `pos_tagged.csv` (4th-decimal differences) and was deliberately not regenerated.

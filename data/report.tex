@@ -895,6 +895,195 @@ each needs a different fix.
     alone cannot raise recall.
 \end{itemize}
 
+\section{Reward-driven fine-tuning (GRPO): reward design and
+validation}\label{sec:grpo}
+
+The second training stage fine-tunes the distilled model with GRPO (TRL's
+\texttt{GRPOTrainer}): for every (source poem, target author) prompt the
+policy samples $G=4$ poems, each is scored, and the update pushes probability
+towards the above-average members of the group. Everything in this section is
+computed from three inputs only --- the generated poem, the source poem and
+the target author. The Gemma output is never a reward target, and no
+validation or test poem enters the prompts, the reward calibration or any
+in-training evaluation.
+
+\subsection{Why the SFT adapter is merged first}
+
+With a LoRA policy, TRL obtains the KL reference by switching the trainable
+adapter off. Continuing to train the SFT adapter would therefore anchor the
+KL term to the \emph{untuned} base model --- the model that copies its
+source under a markdown heading (\S\ref{sec:sfteval}). Instead the SFT
+adapter is folded into the base weights (\texttt{merge\_sft\_adapter.py})
+and a fresh LoRA is trained on top. A fresh LoRA starts as the identity
+($B=0$), so the start policy and the KL reference ($\beta=0.04$) are both
+exactly the SFT model, and the base weights stay frozen.
+
+\subsection{Style reward}
+
+The style reward reuses the profile definitions of
+\texttt{author\_style\_profiles.csv}, computed per poem instead of per author.
+The per-poem code was extracted into \texttt{style\_features.py} and
+\texttt{style\_profiler.py} now imports it; the refactored profiler's output
+is byte-identical to the unmodified script's, so the profile definitions are
+unchanged. (The committed profile CSV is itself slightly stale against the
+current \texttt{pos\_tagged.csv} --- differences in the fourth decimal --- and
+was deliberately left as it is.) Generated poems are tagged with
+\texttt{tagging.tag\_poem}, which tags the whole poem with the same
+corrections and filtering as the corpus build.
+
+Every feature is scored against the target author's \emph{per-poem}
+distribution over their train-split poems (\texttt{reward\_calibration.json}),
+not against the author mean alone: a single poem's noun share varies a lot
+around its author's average. For a scalar feature $x_f$,
+\begin{equation}
+  s_f = \exp\!\left(-\tfrac12 z_f^2\right),\qquad
+  z_f = \frac{x_f-\mu_{a,f}}{\max(\sigma_{a,f},\,0.5\,\sigma_{\mathrm{corpus},f})},
+\end{equation}
+where the floor keeps authors with few or unusually uniform poems from
+zeroing every small miss. For the POS-bigram and rhyme-ending distributions
+the cosine $c$ to the author's aggregate distribution is scored one-sidedly
+against the author's own leave-one-out self-similarity $(\mu_c,\sigma_c)$:
+$s=1$ for $c\ge\mu_c$, otherwise $\exp(-\tfrac12((c-\mu_c)/\sigma_c)^2)$.
+The classifier's target-author probability is used as it is, and TF-IDF
+palette hits are divided by the author's 90th-percentile hit rate on real
+poems, since the raw rate is about 0.05 even for human text. Scores are
+averaged within groups, and $R_{\mathrm{style}}$ is the weighted mean of the
+groups:
+
+\begin{center}
+\begin{tabular}{llc}
+\toprule
+Group & Features & Weight \\
+\midrule
+POS profile & \texttt{pct\_NOUN/VERB/ADJ/ADV/PROPN} & 1.0 \\
+lexical diversity & MATTR over lemmas (TTR below the 200 window) & 1.0 \\
+structure & tokens/line, lines, stanzas, lines/stanza & 1.0 \\
+POS bigrams & bigram distribution & 1.0 \\
+classifier & \texttt{clf\_target\_prob} & 1.0 \\
+rhyme & rhyme-ending distribution & 0.5 \\
+TF-IDF & palette hits / p90 & 0.5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Because the reward is computed against the \emph{target} author's own
+distribution, a policy that reverts to Блаже Конески for every target is not
+rewarded for it --- the per-author concern raised in
+\S\ref{sec:sfteval}.
+
+\subsection{Content reward}
+
+Content is measured against the source poem with a line-level,
+BERTScore-style F1 over \texttt{paraphrase-multilingual-mpnet-base-v2}
+embeddings: recall averages each source line's best cosine match among the
+generated lines, precision the reverse. Working per line avoids the model's
+128-token truncation and stops a poem that covers only its first stanza from
+earning full recall. Because every line takes its best match, unrelated
+poems already score high: the mean F1 over 2,000 random cross-author train
+pairs is $b=0.553$. The reward is rescaled so that this level is zero,
+$R_{\mathrm{content}}=\mathrm{clip}\big((F_1-b)/(1-b),0,1\big)$.
+
+\subsection{Gates}
+
+Three failure modes are cheaper for the policy than doing the task, and each
+is gated multiplicatively rather than added as a separate objective:
+\begin{itemize}
+  \item \emph{Copying.} The untuned base model's characteristic output is the
+    source reproduced verbatim (line novelty 0.22, \S\ref{sec:sfteval}),
+    which an embedding content reward would pay out on in full.
+    $R_{\mathrm{content}}$ is multiplied by \texttt{copy\_novelty}, the share
+    of generated lines that are not near-copies: a line of at least three
+    tokens is a copy if at least 75\,\% of its word types occur in one source
+    line. Containment is used rather than Jaccard because on this corpus's
+    $\sim$5-token lines a single swapped word gives Jaccard $4/6=0.67$, which
+    a Jaccard threshold of 0.7 would let through.
+  \item \emph{Repetition.} $R_{\mathrm{style}}$ is multiplied by line
+    uniqueness (0.97 on real poems).
+  \item \emph{Format.} Both rewards are multiplied by
+    $\mathrm{validity}=\texttt{is\_cyrillic}\cdot\texttt{no\_chat\_markup}\cdot\texttt{is\_nonempty}$.
+    The markup test is deliberately narrower than the reported
+    \texttt{no\_markup}: bullet and numbered-line patterns fire on 49 of the
+    corpus's 1,239 real poems (dialogue lines opening with ``- ''), and as a
+    hard gate they zeroed one of the fixture cases' real target poems. Bold,
+    heading and code-fence markup alone catch 186 of the untuned model's 191
+    markup outputs and occur in one real poem.
+\end{itemize}
+The total is
+$R=\alpha\,R_{\mathrm{style}}^{g}+\beta\,R_{\mathrm{content}}^{g}$ with
+$\alpha=\beta=0.5$ as a starting point. Under GRPO's per-group advantage
+normalisation, which term drives the update depends on its spread
+\emph{within} a group of samples, not on its mean, so $\alpha,\beta$ are to
+be set from \texttt{evaluate\_reward.py --groups} before the long run.
+
+\subsection{Validation before training}
+
+\texttt{evaluate\_reward.py --fixtures} scores seven hand-built candidates for
+four train-split (source, target) pairs and checks orderings that any usable
+reward must satisfy. All of them hold:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+Candidate & $R_{\mathrm{style}}$ & $R_{\mathrm{content}}$ & $R_{\mathrm{content}}^{g}$ & $R$ \\
+\midrule
+real poem by the target & 0.75--0.90 & 0.00--0.05 & 0.00--0.05 & 0.38--0.45 \\
+verbatim source & 0.49--0.63 & 1.00 & 0.00 & 0.25--0.32 \\
+near-copy (one word per line) & 0.43--0.58 & 0.50--0.72 & 0.00 & 0.22--0.29 \\
+Gemma teacher output & 0.61--0.83 & 0.00--0.26 & 0.00--0.26 & 0.35--0.51 \\
+one line repeated 12$\times$ & 0.19--0.29 & 0.00--0.37 & 0.00 & 0.01 \\
+markdown answer in English & 0.17--0.36 & 0.00 & 0.00 & 0.00 \\
+empty & 0.08--0.11 & 0.00 & 0.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The target author's own poem gets the highest style score, and both copies
+lose their entire content reward to the gate. The table also exposes the
+reward's main weakness: the Gemma teacher's raw content score is low
+(0.00--0.26), so after the baseline rescaling a genuine paraphrase barely
+clears an unrelated poem. The content term may therefore carry little signal
+within a group; the \texttt{--groups} measurement decides whether it needs a
+different baseline or model.
+
+At full scale, over the same 468 validation pairs as \S\ref{sec:sfteval}
+(\texttt{compare\_generations.py --rewards}), the reward ranks the SFT model
+above the untuned base model even though the base model's raw content score
+is far higher --- the copy and format gates remove it:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Metric & untuned base & SFT \\
+\midrule
+copy novelty & 0.197 & 0.993 \\
+$R_{\mathrm{style}}$ / gated & 0.487 / 0.272 & 0.425 / 0.387 \\
+$R_{\mathrm{content}}$ / gated & 0.817 / 0.074 & 0.121 / 0.120 \\
+$R$ & 0.173 & 0.254 \\
+rows with $R=0$ & 39.7\,\% & 0.0\,\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The SFT model's content reward is low (0.121, and exactly zero for 19\,\% of
+rows), consistent with the teacher's own weak content preservation.
+
+
+\subsection{Known limitations}
+
+\begin{itemize}
+  \item \texttt{classifier.pkl} and the TF-IDF palettes were fit on the whole
+    corpus, validation and test poems included. Both are author-level
+    stylometry and never see the target of a transfer, but they are a leak
+    path; retraining them on the train split is a follow-up.
+  \item A paraphrase written in another Cyrillic-script language (Serbian,
+    Russian) passes the validity gate and scores well on multilingual
+    content similarity. This has not been observed in SFT output.
+  \item Below the 200-token MATTR window lexical diversity falls back to TTR,
+    which depends on poem length; z-scoring against the same author's
+    per-poem values keeps it comparable, but it interacts with the line-count
+    feature.
+\end{itemize}
+
 \section{Reproducibility}
 
 Figures in \S\ref{sec:louvain}--\S\ref{sec:community0} (the diagnosis) were
@@ -924,5 +1113,15 @@ regenerated bit-for-bit on different hardware. The scores can be: rerunning
 CPU. The matched-budget vocabulary counts, the held-out classifier accuracy
 and the training-length statistics were produced by one-off scripts, like
 the Louvain sweeps above.
+
+Figures in \S\ref{sec:grpo} come from \texttt{data/reward\_calibration.json}
+(\texttt{src/build\_reward\_calibration.py}, deterministic),
+\texttt{src/evaluate\_reward.py --fixtures}, and
+\texttt{compare\_generations.py --rewards} over the tracked validation CSVs;
+all three run on CPU. The GRPO jobs themselves are
+\texttt{slurm/grpo\_smoke.slurm}, \texttt{slurm/reward\_groups.slurm},
+\texttt{slurm/train\_grpo.slurm} and \texttt{slurm/eval\_grpo.slurm}; each
+run writes its arguments, git commit, merge provenance and calibration hash
+to \texttt{models/qwen3-grpo/run\_config.json}.
 
 \end{document}
