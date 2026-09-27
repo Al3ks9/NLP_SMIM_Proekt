@@ -44,9 +44,15 @@ of a community-detection artifact (author-similarity edges alone defining a
 13-author community with almost no word support) and the seed-stability
 tradeoff that fix introduces; (ii) two correctness bugs found and fixed
 during the pass, one in rhyme-ending extraction and one in the style-transfer
-candidate-selection fallback tier; and (iii) two metric additions — a
+candidate-selection fallback tier; (iii) two metric additions — a
 length-normalized lexical-diversity measure and stanza-level structural
-features — added to the per-author style profiles.
+features — added to the per-author style profiles; and
+(iv) \S\ref{sec:sfteval}, a later addition, the first quantitative evaluation
+of the distilled Qwen3 LoRA style-transfer model against its own untuned base
+model and against the Gemma teacher that produced its training data, which
+finds that fine-tuning succeeded on every axis the task is defined on but
+collapsed ten target voices into one, and separates that collapse from a
+repetition artifact that turns out to be purely a decoding setting.
 \end{abstract}
 
 \section{Background: the tagger migration}
@@ -633,6 +639,262 @@ he lacks their honour. That refusal is the source poem's central turn, it is
 absent from the Macedonian v1 summary, and it appears in both regenerated
 poems.
 
+\section{Evaluating the distilled SFT model against its base and its
+teacher}\label{sec:sfteval}
+
+The Qwen3 LoRA pipeline distills the heavily scaffolded Gemma prompt (style
+profile prose, relevance-filtered vocabulary palette, exemplar lines,
+explicit structural targets) into a 4B model that is given only a source poem
+and a target author's name. This section reports the first quantitative
+evaluation of that distillation: the tuned adapter against the untuned base
+model on identical inputs, read against the Gemma teacher that produced its
+training data and against the target authors' real poems.
+
+\subsection{Setup}
+
+Both models generated over the same 468 (source poem, target author) pairs:
+50 poems sampled from the \texttt{val} split, crossed with the 10
+best-profiled target authors, self-transfer pairs skipped. Identical prompt
+format (\texttt{sft\_data.render\_inference\_prompt}), identical decoding
+(sampling, $T=0.7$, top-$p=0.9$, 512 new tokens) and identical per-item seeds.
+Both runs were executed back to back in one Slurm job on one GPU
+(\texttt{slurm/compare\_base\_lora.slurm}): sampling draws from the device's
+own RNG stream, so a CPU run compared against a GPU run would confound the
+adapter's effect with a change of generator.
+
+Scoring is \texttt{src/style\_metrics.py}, applied by
+\texttt{src/compare\_generations.py}. Every metric is oriented so that higher
+is better, because the same functions are intended to serve unchanged as
+reward components in the GRPO stage; a reward that disagreed with the
+evaluation metric would be a defect rather than a design choice.
+
+Two metric-design points are worth stating explicitly, because both were
+forced by observed behaviour rather than anticipated.
+
+\paragraph{\texttt{line\_novelty}, or why copying had to be detected.}
+The untuned base model's dominant response is not a failed style transfer. It
+is the source poem reproduced verbatim, under a markdown heading, followed by
+an English or Macedonian paragraph explaining the target author's style. That
+output attains near-perfect content preservation and --- being real human
+poetry --- excellent lexical diversity and fluency. Under any combination of
+diversity, fluency and content metrics, ``change nothing'' would therefore
+have been the highest-scoring strategy. \texttt{line\_novelty} is the guard:
+the share of generated lines that are \emph{not} verbatim source lines, after
+normalizing away punctuation and case.
+
+\paragraph{The classifier anchor is not $1.0$.} Target-style match is scored
+with \texttt{models/classifier.pkl}, the character-$(2,4)$-gram author
+classifier. Scored on the target authors' real poems it returns top-1
+accuracy of $1.000$, but this is memorization: \texttt{classifier.py} fits on
+the entire corpus, so the shipped model has seen every poem it is being asked
+to grade. The honest ceiling is the same recipe's held-out accuracy under
+5-fold cross-validation, $0.883$ on these 10 authors. That figure, not $1.0$,
+is what a real poem scores when the classifier has not memorized it.
+
+\subsection{Result}
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+& Base & LoRA-SFT & Gemma & Real \\
+Metric (higher is better) & Qwen3-4B & (tuned) & teacher & poems \\
+\midrule
+\multicolumn{5}{l}{\emph{Task compliance}} \\
+\quad line novelty (not copied from source) & 0.224 & \textbf{1.000} & 1.000 & --- \\
+\quad no markdown / commentary             & 0.592 & \textbf{1.000} & 1.000 & 0.960 \\
+\quad structural fit to target             & 0.680 & \textbf{0.848} & 0.950 & 0.768 \\
+\midrule
+\multicolumn{5}{l}{\emph{Target-style match}} \\
+\quad classifier top-1 = target author     & 0.009 & \textbf{0.141} & 0.589 & 0.883$^\dagger$ \\
+\quad classifier probability of target     & 0.024 & \textbf{0.115} & 0.381 & --- \\
+\quad target TF-IDF vocabulary hit rate    & 0.005 & \textbf{0.044} & 0.311$^\ddagger$ & 0.050 \\
+\midrule
+\multicolumn{5}{l}{\emph{Content preservation}} \\
+\quad content-word recall from source      & 0.901$^\S$ & 0.173 & 0.176 & --- \\
+\midrule
+\multicolumn{5}{l}{\emph{Degeneracy}} \\
+\quad distinct-1                           & 0.635$^\S$ & 0.515 & 0.768 & 0.770 \\
+\quad line uniqueness                      & 0.895 & 0.904 & 0.999 & 0.969 \\
+\quad degenerate outputs (\% of rows)      & 18.6\% & 25.0\% & 0.2\% & 6.6\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+{\footnotesize $^\dagger$ held-out 5-fold CV, not the memorizing shipped
+model. $^\ddagger$ the teacher was \emph{handed} this palette in its prompt,
+so it exceeds human text here; the metric measures palette uptake, not
+quality. $^\S$ inflated by verbatim copying --- see below. ``Degenerate'' is
+distinct-1 $< 0.40$ or line uniqueness $< 0.80$.}
+
+\paragraph{Fine-tuning worked, on every axis the task is defined on.} The
+tuned model writes original lines instead of copying (1.000 vs.\ 0.224),
+never emits markdown scaffolding or commentary (1.000 vs.\ 0.592), fits the
+target author's structure far better (0.848 vs.\ 0.680), and is 15 times more
+likely to be identified as the requested author by an independent stylometric
+classifier (0.141 vs.\ 0.009). Its content-word recall, 0.173, matches the
+teacher's 0.176 almost exactly: the degree of content preservation was
+distilled faithfully.
+
+\paragraph{The base model's apparent diversity advantage is an artifact.}
+Read naively, the base model wins on distinct-1 (0.635 vs.\ 0.515). It does
+not. 87.8\% of its outputs are mostly copied from the source poem, and it is
+the copied human poetry that carries the diversity. Restricted to the 12.2\%
+of rows where the base actually composes something new, its distinct-1 falls
+to 0.532 --- statistically indistinguishable from the tuned model's 0.515,
+and accompanied by a classifier top-1 of 0.035. Fine-tuning did not cost
+diversity; it removed the copying that was disguising the base model's own
+lack of it.
+
+\subsection{The real deficit: style collapse, not repetition}
+
+The repetition visible on inspection is real --- 25.0\% of tuned outputs are
+degenerate by the threshold above, against 0.2\% for the teacher --- but it
+is a symptom of a larger failure that the aggregate table hides. Broken out
+per target author, the tuned model does not have ten voices:
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Target author & Base & LoRA-SFT & Gemma teacher \\
+\midrule
+Блаже Конески       & 0.000 & 0.574 & 0.899 \\
+Пијан Славеј        & 0.000 & 0.395 & 0.565 \\
+Ефтим Клетников     & 0.021 & 0.170 & 0.655 \\
+Ристо Лазаров       & 0.000 & 0.106 & 0.608 \\
+Веле Смилевски      & 0.000 & 0.104 & 0.881 \\
+Братислав Ташковски & 0.000 & 0.022 & 0.579 \\
+Влада Урошевиќ      & 0.000 & 0.021 & 0.816 \\
+Адем Гајтани        & 0.000 & 0.021 & 0.345 \\
+Славко Јаневски     & 0.000 & 0.020 & 0.183 \\
+Катица Ќулавкова    & 0.065 & 0.000 & 0.395 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Classifier top-1 accuracy, per requested target author. The tuned model's
+entire aggregate score is carried by two authors, and those two ---
+Блаже Конески (182 poems) and Пијан Славеј
+(160 poems) --- are simply the two largest authors in the corpus. Asked for
+Катица Ќулавкова it succeeds zero times in 46. Regardless of
+which author is requested, the classifier reads 35.0\% of its output as
+Блаже Конески. The teacher, by contrast, is differentiated
+across the whole range (0.183--0.899).
+
+The model has learned one averaged poem-voice, not ten. Pooled vocabulary
+statistics at a matched 30{,}000-token budget confirm this is corpus-level
+collapse rather than per-poem repetition: 3{,}087 distinct word types for the
+tuned model, against 5{,}376 for the teacher and 9{,}060 for real poems by the
+same authors.
+
+Inspection shows the collapse is syntactic as well as lexical: the tuned model
+falls into a fixed line template, $\langle$noun$\rangle$ $\langle$adverb$\rangle$ $\langle$verb$\rangle$ \emph{сега}, and fills it.
+This is visible even in its \emph{best}-scoring outputs, not only its worst;
+its highest classifier probability on the entire run (0.785, for
+Пијан Славеј) is a poem in which the line
+Мераци брзо се вртат сега occurs four times.
+
+\subsection{Separating degenerate decoding from a degenerate
+policy}\label{sec:decodeablation}
+
+The repetition and the style collapse could in principle be one fault or two.
+A decoding ablation separates them: the same adapter, the same 56 validation
+pairs and the same seeds, under four decoding settings
+(\texttt{slurm/decoding\_ablation.slurm}).
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+& Plain & Repetition & Repetition & No repeated \\
+Metric & sampling & penalty 1.1 & penalty 1.2 & 4-gram \\
+\midrule
+distinct-1                    & 0.503 & 0.807 & 0.895 & 0.751 \\
+line uniqueness               & 0.876 & 0.998 & 1.000 & 1.000 \\
+degenerate outputs            & 30.4\% & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} \\
+\midrule
+classifier top-1 = target     & 0.125 & 0.107 & 0.161 & 0.125 \\
+\quad paired change vs.\ plain & ---   & $-0.018$ & $+0.036$ & $+0.000$ \\
+\midrule
+content-word recall           & 0.125 & 0.078 & 0.031 & 0.088 \\
+structural fit                & 0.859 & 0.837 & 0.813 & 0.837 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The two faults are independent, and only one of them is a training problem.
+
+\paragraph{The repetition is a decoding artifact.} A repetition penalty of
+1.1 --- a single generation keyword, no retraining --- eliminates degenerate
+output entirely (30.4\% to 0.0\%) and lifts distinct-1 from 0.503 to 0.807,
+past both the Gemma teacher (0.768) and the target authors' own poems
+(0.770). Banning repeated 4-grams achieves the same at 0.751, closest to the
+human figure. The looping was never in the model's distribution in a way that
+required more training to remove.
+
+\paragraph{The style collapse is not.} None of the three settings moves
+target-style match: paired per-item changes in classifier top-1 are $-0.018$,
+$+0.036$ and $+0.000$ on $n=56$, i.e.\ noise around zero. Making the model
+stop repeating itself does not make it write in the requested author's voice.
+That deficit is in the policy, and only training can move it.
+
+\paragraph{Cost of the fix.} Both settings trade some content preservation
+for the diversity: content-word recall falls from 0.125 to 0.078 (penalty
+1.1) and to 0.031 (penalty 1.2), because a repetition penalty cannot
+distinguish a word looped by the model from a word legitimately carried over
+from the source poem. Banning repeated 4-grams is the better trade here
+(0.088), since it constrains sequences rather than individual tokens --- at
+the cost of also forbidding a deliberate refrain, which real poems in this
+corpus do use (their line uniqueness is 0.969, not 1.000).
+
+\subsection{Two defects found during the evaluation}
+
+\paragraph{Validation generation ran on the CPU.}
+\texttt{AutoModelForCausalLM.from\_pretrained} places the model on the CPU
+unless told otherwise, and \texttt{generate()} then runs there silently, with
+no error and no warning. The first validation run therefore took 131\,s per
+generation --- 17 hours for 468 rows --- on a node holding an idle A100. The
+same work takes 15.5\,s per generation once the model is moved to the device,
+a factor of 8.5. \texttt{load\_adapter\_model} now logs the device it actually
+loaded onto, so the next occurrence is visible in the job log rather than in
+the wall clock.
+
+\paragraph{6.2\% of training examples were silently truncated.} Training used
+\texttt{max\_seq\_length}\,$=1024$. Measured against the Qwen3 tokenizer, the
+1{,}146 synthetic training examples have a median length of 622 tokens but a
+99th percentile of 2{,}364 and a maximum of 4{,}031: 71 examples (6.2\%)
+exceed the limit and are cut. A truncated example loses the end of its
+assistant turn, and with it the end-of-turn token --- so with
+\texttt{assistant\_only\_loss}, those examples train the model to continue
+past where a poem should have stopped. This is a plausible contributor to the
+observed looping, and is separable from the style collapse.
+\texttt{max\_seq\_length}\,$=2048$ would cover approximately 99\% of examples.
+
+\subsection{Implications for the next stage}
+
+The evaluation splits the remaining gap to the teacher into three parts, and
+each needs a different fix.
+
+\begin{itemize}
+  \item \emph{Repetition} needs a change to decoding, not retraining. The
+    reported configuration for the tuned model should include a repetition
+    control, and the full 468-pair comparison should be rerun under it so the
+    headline table reflects the decoding that would actually ship. A penalty
+    of 1.1 or a 4-gram ban both qualify. The ban costs less content recall,
+    and the penalty keeps deliberate refrains possible.
+  \item \emph{Truncated training examples} are a data-pipeline fix: retrain
+    at \texttt{max\_seq\_length}\,$=2048$ so that every assistant turn ends
+    with its end-of-turn token.
+  \item \emph{Style collapse} is what the GRPO stage exists to fix. Supervised
+    distillation has taught the task format, but not the separation between
+    authors, and its per-author accuracy tracks corpus size. The style-match
+    reward should therefore be computed per target author, or balanced across
+    authors, so that a policy which reverts to Блаже Конески is not rewarded
+    for it. Content-word recall has to be a reward term in its own right,
+    because the teacher preserves little content (0.176), so imitating it
+    alone cannot raise recall.
+\end{itemize}
+
 \section{Reproducibility}
 
 Figures in \S\ref{sec:louvain}--\S\ref{sec:community0} (the diagnosis) were
@@ -648,5 +910,19 @@ Louvain seed-stability sweeps and the tier-frequency measurements were
 produced by one-off scripts run against the live pipeline rather than
 checked-in tests, since they characterize algorithmic stability and
 empirical tier frequency rather than fixed expected behavior.
+
+Figures in \S\ref{sec:sfteval} come from
+\texttt{data/validation\_generations/comparison\_summary.csv} and
+\texttt{comparison\_rows.csv} (the base-vs-tuned run,
+\texttt{slurm/compare\_base\_lora.slurm}), and from
+\texttt{data/validation\_generations/ablation/} (the decoding ablation,
+\texttt{slurm/decoding\_ablation.slurm}). Both are scored with
+\texttt{src/compare\_generations.py --include-teacher --corpus-reference}.
+The generation CSVs are tracked, because sampled model output cannot be
+regenerated bit-for-bit on different hardware. The scores can be: rerunning
+\texttt{compare\_generations.py} on the tracked CSVs reproduces the tables on
+CPU. The matched-budget vocabulary counts, the held-out classifier accuracy
+and the training-length statistics were produced by one-off scripts, like
+the Louvain sweeps above.
 
 \end{document}
