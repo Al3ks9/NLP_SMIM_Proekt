@@ -1,0 +1,25 @@
+import style_metrics as sm
+
+SRC = 'сонце грее над темната гора\nптица пее во зелената шума'
+
+
+def test_copy_novelty_verbatim_copy_is_zero():
+    assert sm.copy_novelty(SRC, SRC) == 0.0
+
+
+def test_copy_novelty_one_word_changed_per_line_still_counts_as_copy():
+    near = 'сонце грее над темната ноќ\nптица пее во зелената ноќ'
+    assert sm.copy_novelty(SRC, near) == 0.0
+
+
+def test_copy_novelty_new_lines_are_novel():
+    assert sm.copy_novelty(SRC, 'ветер носи лисје низ полето\nмајка чека пред портата') == 1.0
+
+
+def test_copy_novelty_short_lines_need_an_exact_match():
+    assert sm.copy_novelty('сонце грее', 'сонце гори') == 1.0
+    assert sm.copy_novelty('сонце грее', 'Сонце, грее!') == 0.0
+
+
+def test_copy_novelty_empty_generation_is_zero():
+    assert sm.copy_novelty(SRC, '') == 0.0

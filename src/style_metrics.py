@@ -252,6 +252,44 @@ def _normalize_line(line: str) -> str:
     return ' '.join(tokens(line))
 
 
+# A generated line is a copy when at least this share of its word types
+# occurs in a single source line. Containment, not Jaccard: with this
+# corpus's ~5-token lines one swapped word gives Jaccard 4/6 = 0.67, which a
+# Jaccard threshold of 0.7 would wave through as "novel".
+COPY_OVERLAP_THRESHOLD = 0.75
+_COPY_MIN_TOKENS = 3
+
+
+def copy_novelty(source_text: str, text: str,
+                 threshold: float = COPY_OVERLAP_THRESHOLD) -> float:
+    """
+    Share of generated lines that are NOT (near-)copies of a source line --
+    the GRPO content reward's copy gate. line_novelty (exact match after
+    normalisation) is kept unchanged for the reported SFT numbers; this is
+    its stricter sibling, catching the one-or-two-words-changed copy that an
+    embedding content reward would otherwise pay out on.
+
+    Lines under _COPY_MIN_TOKENS tokens count as copies only on an exact
+    match: containment on a two-word line is too coarse to mean anything.
+    Empty generations score 0.0 (nothing novel was written).
+    """
+    gen_lines = [tokens(l) for l in lines(text)]
+    gen_lines = [g for g in gen_lines if g]
+    if not gen_lines:
+        return 0.0
+    src_sets = [set(tokens(l)) for l in lines(source_text)]
+    src_exact = {' '.join(tokens(l)) for l in lines(source_text)}
+    copied = 0
+    for g in gen_lines:
+        if len(g) < _COPY_MIN_TOKENS:
+            copied += ' '.join(g) in src_exact
+            continue
+        gset = set(g)
+        if any(len(gset & s) / len(gset) >= threshold for s in src_sets):
+            copied += 1
+    return round(1.0 - copied / len(gen_lines), 4)
+
+
 # ── Combined ────────────────────────────────────────────────────────────────────
 
 def score_generation(source_text: str, generated_text: str, target_author: str) -> dict:
