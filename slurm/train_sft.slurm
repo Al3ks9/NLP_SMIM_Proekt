@@ -25,7 +25,12 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+# $0 is unreliable here -- Slurm copies the script into a spool dir on the
+# compute node before running it, so dirname "$0" resolves to that spool
+# path, not this file's real location. $SLURM_SUBMIT_DIR is the directory
+# sbatch was invoked from, and is correct regardless of the spool copy.
+cd "$SLURM_SUBMIT_DIR"
+[[ -f slurm/train_sft.slurm ]] || cd ..
 mkdir -p logs
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
@@ -58,7 +63,6 @@ singularity exec --nv \
         export TOKENIZERS_PARALLELISM=false
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
-        /opt/venv/bin/python -c "import torch; print(\"CUDA available:\", torch.cuda.is_available(), \"--\", torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"no GPU visible\")"
         /opt/venv/bin/python src/train_sft.py \
             --num-train-epochs 3 \
             --per-device-train-batch-size 4 \
