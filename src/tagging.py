@@ -157,6 +157,40 @@ def tag_lines(text, verb_lemmas):
     return out
 
 
+def tag_poem(text, verb_lemmas):
+    """Tag a whole poem the way pos_tag_corpus.py tags the corpus, returning
+    [(lemma, pos), ...] for its content tokens.
+
+    tag_lines() tags line by line (its consumers splice per line); the corpus
+    build hands classla the whole poem, so sentence context -- and therefore
+    some tags -- differ between the two. Anything compared against
+    pos_tagged.csv-derived statistics (the GRPO style reward) must be tagged
+    this way instead. Corrections use global scope only (poem_id '-1'), as in
+    tag_lines, since generated text has no corpus position.
+    """
+    if not text.strip():
+        return []
+    nlp = pipeline()
+    table = corrections.load()
+    out = []
+    for sent in nlp(text).sentences:
+        context = ' '.join(t.text for t in sent.tokens)
+        for w in sent.words:
+            result = corrections.apply_to(
+                table, w.text, w.upos or '', w.lemma or '', w.xpos or '',
+                w.feats or '', '-1', context)
+            if result is None:
+                continue
+            pos, lemma, xpos, _ = result
+            if not is_content(pos, xpos):
+                continue
+            lemma = lemma.lower()
+            if xpos == 'Rv' and w.text.lower().endswith('јќи'):
+                lemma, _ = gerund_lemma(w.text.lower(), verb_lemmas)
+            out.append((lemma, pos))
+    return out
+
+
 def _span(word, line, cursor):
     """Character span of a classla word within its line, or None if it cannot
     be located.
