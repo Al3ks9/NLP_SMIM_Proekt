@@ -1255,20 +1255,20 @@
     "prompt_version": 2,
     "generated_at": "2026-09-30T12:13:43.962722+00:00"
   },
-  "02b7542317806ef7e4b87089138e860d743a7851c99cce95f905106c78498c08": {
-    "summary": "The poem depicts a spiritual or romantic union with a luminous being who leads the speaker through a field and along a river. This entity, embodying both ecstasy and hidden sorrow, is pursued by dark, blinded figures while seeking oneness with the speaker. The mood is ethereal and melancholic, centering on themes of transcendence and shared isolation.",
-    "author": "Веле Смилевски",
-    "title": "Книгата идеја",
+  "b2dfc84674bf43058fface40abef501f2dabda50f2e27d054656e97106e96f4f": {
+    "summary": "A man watches a woman sleep on his lap, admiring the butterfly-like patterns on her neck and her ethereal, quiet presence. Amidst surreal imagery of light and a mysterious blacksmith bringing a spark for a cigarette, the mood is one of fragile intimacy. The speaker refuses to sleep, fearing that the woman will vanish if he drifts into a dream.",
+    "author": "Анте Поповски",
+    "title": "Не смеам да заспијам – ќе ми исчезне од сонот",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-30T13:48:15.288697+00:00"
+    "generated_at": "2026-09-30T13:45:36.590992+00:00"
   },
-  "908264c71f5a4ea3f25191d467f14dec0c2280eb04984cfc24de571c42dc1006": {
-    "summary": "The poem presents a series of surreal inquiries featuring images of silver fruits in black orchards, a transparent carriage on a lake, and time grinding into dust within clocks. It evokes a mood of existential anxiety and mystery, questioning the strange forces that govern nature, time, and the fate of art. The speaker concludes with a sense of dread regarding their personal responsibility to provide accurate answers to these impossible questions.",
-    "author": "Влада Урошевиќ",
-    "title": "Прашања",
+  "925ed098e8e032393d1c13112adc0c7397b053210737ac826982b405abc0e7d8": {
+    "summary": "The poem examines the human drive for power and the systemic suppression of truth through institutions like the Senate, the Altar, and the Inquisition. It employs stark imagery of stoning, burning piles, and the Red Square to create a cynical, oppressive mood of collective cruelty. The work concludes that despite human insignificance in an infinite universe, people find a dark autonomy in creating their own hell and choosing their victims.",
+    "author": "Катица Ќулавкова",
+    "title": "ЏОРДАНО БРУНО: „Ние сме веќе на небо“",
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
-    "generated_at": "2026-09-30T14:56:55.159391+00:00"
+    "generated_at": "2026-09-30T15:11:38.274984+00:00"
   }
 }
