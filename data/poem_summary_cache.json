@@ -958,5 +958,317 @@
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
     "generated_at": "2026-09-24T15:39:07.776817+00:00"
+  },
+  "b06e9e939999233b60bc938dc06d7e9cee9e30d110572db38008c25eb15d82b8": {
+    "summary": "A couple lingers in a sleepless embrace during a fresh morning, where one partner secretly watches the other wake up. The scene is filled with images of opening eyelids, the sound of distant alarm clocks, and the rhythmic beating of a heart against a chest. The mood is intimate and tentative, reflecting the emotional uncertainty that accompanies the transition from dreams to wakefulness.",
+    "author": "Пијан Славеј",
+    "title": "СТРАНЦИ ВО НОЌТА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-29T22:04:48.426342+00:00"
+  },
+  "07da26ba95d78a1cd7cb468afd6b6cf6e74e60f584cba50d23b6758f3e4bbf94": {
+    "summary": "A speaker pleads with a seagull to fly across the world's depths, heights, and lonely souls to provide a vision the speaker can no longer see. Using imagery of torn shores, icy peaks, and a doomed boat, the poem evokes a mood of profound grief and isolation. It centers on the theme of existential despair and the inevitability of a tragic fate.",
+    "author": "Ацо Шопов",
+    "title": "Кон галебот што кружи над мојата глава",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-29T22:10:48.116481+00:00"
+  },
+  "b4219628b759cbe0550ad1540a36b82946868b452225d83e353cfff8f03bd210": {
+    "summary": "The poem celebrates the native language, portraying it through images of pearly necklaces, juicy fruits, flowing springs, and illuminating stars. It describes language as a sacred ancestral legacy, likened to a hearth ember that must be guarded as carefully as one's own sight. The mood is reverent and urgent, emphasizing that language is the essential foundation of a person's identity.",
+    "author": "Видое Подгорец",
+    "title": "Без јазик си никој и ништо",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T07:31:29.460077+00:00"
+  },
+  "543bbcdcdc3afd21d33da7e6e5fda855e512f21fa9f356fae24bec80d8f8c9bc": {
+    "summary": "The poem depicts the final night of summer, where the landscape and water achieve a harmonious, ripening reflection just before dawn. A child, unable to comprehend the embrace of these elements, weeps as this moment of perfection shatters. The mood is one of melancholy and fragile transition.",
+    "author": "Ефтим Клетников",
+    "title": "ПОСЛЕДНА НОЌ НА ЛЕТОТО Е - 3",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T07:43:36.453376+00:00"
+  },
+  "1cf4147ab6c986349069c4082bc563be48af76ce77a20716a7ac9008f780d16c": {
+    "summary": "The poem depicts the rhythmic thumping of horse hooves striking the earth, stone, and a vessel of moon-milk. It follows wayward horsemen through a mystical landscape of flames, meadows, and mountains, blending the physical act of galloping with themes of ancestral creation and the search for rest. The mood is primal and ethereal, centering on the spiritual connection between nature and the cycle of life.",
+    "author": "Веле Смилевски",
+    "title": "Коњите на книгата",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T07:54:54.666117+00:00"
+  },
+  "0e95dee35ca0d587f553a641cf65f6ce15a01fdd11e1a435b07e787fc6e2fe61": {
+    "summary": "The speaker tenderly addresses a small, gold-winged dove, expressing regret for not having praised its beauty sooner. The poem depicts a desire to caress the bird's wings, adorn it with tiny pearls, and keep it safe in a protective embrace. The mood is one of longing, affection, and gentle care.",
+    "author": "Константин Миладинов",
+    "title": "Голапче",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:05:45.848765+00:00"
+  },
+  "52d7c49459420595839e6e6a255c417ab28fb6dcb0ce6ca4f1a42223c47867c0": {
+    "summary": "The poem presents a series of surreal and paradoxical unions, featuring images of shores meeting in the sea, a hybrid bird crafted from dove and seagull wings, and legendary lovers bound by death. Through these dreamlike pairings of opposites, it explores the concept of the \"Metaphor\" as a force that synthesizes contradictions into a single entity. The mood is ethereal and imaginative, blending the cosmic with the tragic.",
+    "author": "Адем Гајтани",
+    "title": "Μетафора",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:09:30.993715+00:00"
+  },
+  "630e3741fb204afa4931ae9c7021807839728cbc1ead7b6d06cb0f24dd0ab016": {
+    "summary": "The poem depicts a lonely, obsessive man who desperately craves love and intimacy but remains isolated by his own repulsiveness. Through grotesque images of the smell of onions and cheap rakia and the metaphor of a dog eating gnawed scraps, it conveys a mood of desperation and disgust. The theme centers on the tragic gap between a person's longing for affection and the reality of their social alienation.",
+    "author": "Ива Петреска",
+    "title": "Смрдеа",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:13:52.312845+00:00"
+  },
+  "ee42f8d6cf8f286dc9844b629f71f4104cec1b87272643ce21eae57bc04293d4": {
+    "summary": "The poem depicts an intense romantic union where two people are biologically and emotionally fused, sharing both happiness and bitterness. It utilizes visceral imagery of beating hearts and connected blood vessels, alongside the metaphor of building a balanced \"house of love\" using a spirit level. The overall mood is one of deep, symbiotic intimacy and shared destiny.",
+    "author": "Пијан Славеј",
+    "title": "СВРЗАНИ САДОВИ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:24:22.171915+00:00"
+  },
+  "3f4fdf2c5495e45eeac655a9f2376e739f091538e0ed672d6883dd1679c6480c": {
+    "summary": "A confused angel wanders through a landscape of worldly sorrow, consuming ripe plums and gathering sins like walnuts. Through images of fog and molds of suffering, the poem explores the burden of guilt and the search for the nature of sin. The mood is melancholic yet concludes with the realization that youth and love are not transgressions.",
+    "author": "Ристо Лазаров",
+    "title": "ГРЕШНИК",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:26:34.676023+00:00"
+  },
+  "4b44b0c2b46286c6d701f3cd585a9a9242e8e5fc9d0b56454a706ec637e16e4e": {
+    "summary": "The poem describes a separation or disagreement so profound that it should be recorded as a non-event in history books, unmixed rivers in atlases, and colliding, bleeding worlds in planetariums. It evokes a mood of eternal loss and tragic distance, framing the disconnect between two entities as a permanent, cosmic void.",
+    "author": "Јосип Коцев",
+    "title": "Разминувања",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:38:11.145869+00:00"
+  },
+  "954ab848451fd754676b106f0093a62ed56ead4118e85ed8011da6da814afa07": {
+    "summary": "The poem depicts the unpredictable affection of a pet cat, described as a \"wild and clumsy love.\" It features images of the animal purring in a lap, yawning, and stretching, followed by sudden scratching and biting to be let go. The mood is a blend of tenderness and playful chaos.",
+    "author": "Пијан Славеј",
+    "title": "***",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:42:07.587508+00:00"
+  },
+  "24524af068fbc920627734d7da3b9c5830782cfb5eebb79bf27ff60f4ed0f3db": {
+    "summary": "The poem depicts a sorrowful exile cast out to wander lost roads and perish in ruins. Through images of a mute dog, swallowed sounds, and dark puddles of mud, it evokes a mood of profound isolation and degradation. The central theme is the loss of identity and voice amidst a state of total abandonment.",
+    "author": "Бранко Цветкоски",
+    "title": "ЧЕШМА ПОКРАЈ ПАТОТ 1.",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T08:52:48.689503+00:00"
+  },
+  "1cd244092f5048ed8ae12a9899794a59faeb885308832e56b1a29f39516fb517": {
+    "summary": "The poem describes a revolutionary movement of youth determined to overthrow misery through a combination of labor and armed struggle. It utilizes imagery of steel hearts, battle rifles, plows, and shaking earth to convey a mood of power and defiance. The central theme is the pursuit of a new era of faith and love achieved through collective strength and sacrifice.",
+    "author": "Ацо Караманов",
+    "title": "Деца на борбата",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:03:54.400608+00:00"
+  },
+  "1985c7905ed2b2542c4aa442812529762269522e061571f459969b42112382f8": {
+    "summary": "The poem depicts a passionate yet doomed romance where the speaker consciously chooses a path toward inevitable destruction. Through images of crystal eyes, sugar dissolving in cold milk, and a head on a guillotine, it conveys a mood of fatalistic surrender. The central theme is the willingness to embrace pain and fatality for the intoxicating allure of falling in love.",
+    "author": "Ива Петреска",
+    "title": "Двосмислена",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:07:13.259847+00:00"
+  },
+  "ebc0f93389220b0f751a21b3bab61983ac0c3efdb8c857548918a02b6c9eed77": {
+    "summary": "The poem depicts a speaker dividing their existence between two palms, one capturing impulsive desires and the other reflecting the mismatch between life and destiny. Through images of the heart, night and day, and a \"many-headed thirst,\" it explores the tension between passion and fate. The mood is contemplative, concluding that human existence is defined by the enduring mastery of reason, love, and art.",
+    "author": "Катица Ќулавкова",
+    "title": "VIA LASCIVA  2.",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:11:20.840657+00:00"
+  },
+  "cde6b7ea8d86ce1068c5813819c7f77edc551a164235488342444945b3c3b250": {
+    "summary": "The poem reflects on the duality of love and life, comparing their inherent joy and sorrow to the works of Jacques Prévert. It uses imagery of falling rain, burning autumn leaves, and contrasting sensations of warmth and cold to create a melancholic and bittersweet mood.",
+    "author": "Адем Гајтани",
+    "title": "Дожд врнеше како во песните на Жак Превер",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:21:55.131898+00:00"
+  },
+  "117f72145fae3fc17724a4c036a0782fe67c9ce83daa62108456a44579ef51e8": {
+    "summary": "A young female clerk endures a monotonous workday, escaping her tedious office environment through vivid daydreams of distant travels and lost love. She transforms a simple dot on the wallpaper into a falling airplane and the depths of an ocean, highlighting her loneliness and longing. The poem evokes a melancholy mood of stagnation and the desire for freedom amidst a sterile professional routine.",
+    "author": "Адем Гајтани",
+    "title": "Κанцеларија",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:23:16.423582+00:00"
+  },
+  "32be5d3895b7669b80edef7a4aedb0d1bdcdcfa243846b008c7457522695fbfc": {
+    "summary": "The poem depicts a speaker who feels alienated from their own reflection in a mirror, perceiving themselves as trapped in an uncomfortable banality despite their efforts to find signs of genius. This sense of emptiness is contrasted with the awakening and validation they experience when looking into the eyes of a lover. The overall mood is one of existential insecurity and a longing for true identity.",
+    "author": "Пијан Славеј",
+    "title": "ОГЛЕДАЛО",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:34:47.847393+00:00"
+  },
+  "f6e9955a683bad6707642055e176b1ef1dff1e20c41685dad8df3f0296fa2747": {
+    "summary": "The poem reflects on a lost past, where dreams, embraces, and muses now exist only within the confines of poetry. It captures a mood of melancholy and resignation, focusing on the lingering longing for possibilities that were never realized.",
+    "author": "Братислав Ташковски",
+    "title": "За сите небиднати љубови",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:38:00.358857+00:00"
+  },
+  "124603b9ad288b4686e207b9f05642b0626e5bbea73f48c8d29d4facfda4de77": {
+    "summary": "The poem depicts the grueling physical and emotional toll of tobacco farming, where workers toil from dawn until dusk in a cycle of poverty and sickness. It utilizes imagery of yellow leaves, salty sweat, bent backs, and cold scales to contrast the commercial value of the crop with the workers' suffering. The mood is one of deep misery and growing fury against the exploitation of their labor.",
+    "author": "Кочо Рацин",
+    "title": "Тутуноберачите",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:42:42.781233+00:00"
+  },
+  "2c81d5c8a4db4ae2ca75788ef526ca8772f4d9b699829d4904f0c1dbb39fa8f0": {
+    "summary": "The poem describes a person who defines their existence through a paradoxical love for hating everything, whether living or dead. It portrays the speaker hating in solitude and in groups, driven by a cursed and unhappy emotional state. The mood is cynical and self-destructive, culminating in the speaker's desire to eventually hate themselves.",
+    "author": "Пијан Славеј",
+    "title": "ХЕЈТ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T09:55:21.195420+00:00"
+  },
+  "da4c34d6c32be2210c8aa3a99596eeb402f0fc2d291f86c3ad3f6a7b6a17b1bb": {
+    "summary": "While some people collect tears or pin butterflies, the subject of the poem finds pleasure in collecting sensual experiences and kisses. Through images of wine-colored lips and ripe fruits like blackberries and quinces, the poem evokes a mood of passionate desire and indulgence.",
+    "author": "Пијан Славеј",
+    "title": "ОВОШНИ ПЕСНИ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:00:15.115006+00:00"
+  },
+  "3e213eb530c7e5d4005ba0ac5839aa6cbf66800e73639ace82a9d476e57cfcf9": {
+    "summary": "The speaker expresses a failed desire to communicate with faithless and arrogant people who use sweet and bitter words only to build their own glory. The poem depicts a world dominated by empty talk and lies, creating a mood of frustration and moral cynicism. It concludes with the grim image of inevitable death claiming those who live in falsehood.",
+    "author": "Милош Линдро",
+    "title": "РАЗМИНУВАЊЕ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:05:27.607541+00:00"
+  },
+  "480c47d81dd9c7bc77575549ab63cf066b01bf46f1f455bd3fd38a830373bca7": {
+    "summary": "The poem depicts a secret, sensual encounter between two lovers hidden behind closed doors, evoking intimacy through images of pink lipstick, a light dress, and physical passion. This atmosphere of vulnerability and tenderness abruptly shifts to fear when the privacy of their sanctuary is violated by uninvited intruders.",
+    "author": "Ристо Лазаров",
+    "title": "СТРАВ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:17:04.048003+00:00"
+  },
+  "95a2db7c43adc482f0048dd48d4238744ae003d978bc7480c03101e9239f2261": {
+    "summary": "The poem depicts a surreal, headless journey across a bridge and through a gate opened by a starry key. The speaker exists in a state of profound isolation within a void of liquid air and trembling abysses, guided by a mysterious calling voice. The mood is somber and existential, focusing on a transition toward an unknown, silent destination.",
+    "author": "Бранко Цветкоски",
+    "title": "ЦЕЛОСТА",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:28:01.361034+00:00"
+  },
+  "0f4134876bbc5b7482a527c22c93eb48998aef1d579caf814b544835da9af32a": {
+    "summary": "The poem depicts a surreal internal dialogue and a search for identity through images of mirrors, walls, and the palm of a hand. It portrays reality as a door leading to a world constructed from echoes and lines, evoking a mood of fragmented introspection.",
+    "author": "Катица Ќулавкова",
+    "title": "VIA LASCIVA  1.",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:30:50.632056+00:00"
+  },
+  "6717b6b28d67411ba6f22320dfc7c4bcccdf060cb19bc700a96fe41c2a039056": {
+    "summary": "The poem depicts the restless, melancholic atmosphere of Corientas Avenue, where insomniacs, sirens, and stale sandwiches populate a city of disorientation. It blends concrete urban imagery—such as potholes and pedestrian crossings—with surreal elements and a philosophical encounter between Borges and Pamuk in a bookstore. The work explores themes of loneliness, the passage of time, and the search for light and meaning within the chaos of modern urban existence.",
+    "author": "Ристо Лазаров",
+    "title": "АВЕНИЈА КОРИЕНТАС",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:34:57.187035+00:00"
+  },
+  "636da9a81487e62aa6ecaa00831625266b17e0f0d14ad00286b764681201121a": {
+    "summary": "The poem describes a mysterious and distorted traditional dance and music occurring in a silent, void-like space. It features images of a mute whistle and a dance led on the \"blind side,\" evoking a mood of disorientation and eerie confusion.",
+    "author": "Петре М. Андреевски",
+    "title": "Наопачно оро",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:38:39.627981+00:00"
+  },
+  "4600987ae1ab85112254f30fad3806a99ee9cb487e4c9b6909d1e9dcebfb452f": {
+    "summary": "The poem depicts the morning commute as a river of diverse people—varying in physical state and mood—who vanish into their respective destinations between 6 and 8 AM. Through an extensive list of professions and social types, from priests and students to criminals and narcissists, it captures the chaotic variety of humanity. The overall mood is one of monotonous repetition, highlighting the cyclical and predictable nature of urban daily life.",
+    "author": "Гане Тодоровски",
+    "title": "Делнично будење на градот",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:45:42.452645+00:00"
+  },
+  "a820735a4e62ad4d2d9f417a37bb0ac3a0a129ebe36a79ddbe84e5d57ef68cf8": {
+    "summary": "The poem expresses a deep, surreal longing for a loved one, contrasting human fragility with the vastness of a sea-like smile. It evokes a melancholic and timeless mood through images of a frozen river, a scarred face, and a thousand-year silence shared with an angel.",
+    "author": "Братислав Ташковски",
+    "title": "Големата љубовна песна 8.малост",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T10:57:02.208760+00:00"
+  },
+  "2d918e7abc48b2f583654c48f495c8867c32360e79b59246729872b090814adf": {
+    "summary": "A craftsman arrives at a family home to repair its walls, windows, and balcony, bringing a sense of love and tranquility through his work. As the speaker and their family watch the renovations, the house loses the flaws that they had long discussed and lived with. The poem centers on the theme of restoration and the emotional relief of fixing what is broken.",
+    "author": "Тодор Чаловски",
+    "title": "Куќата и недостатоците",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T11:09:56.814339+00:00"
+  },
+  "1730426df530ebc5ab70870b73c8b51cf5a03ea1a50067b07cadd76890c9ea87": {
+    "summary": "The poem depicts the suffocating experience of enduring unbearable moments of boredom and social conformity in settings such as classrooms, buses, and meetings. Through images of biting nails and smoking cigarettes, it conveys a mood of anxiety and claustrophobia as time painfully stretches. The theme centers on alienation, suggesting that escaping these rigid social expectations feels like disconnecting from the lives of others entirely.",
+    "author": "Богомил Ѓузел",
+    "title": "Твоите пет минути",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T11:24:32.287666+00:00"
+  },
+  "6dc2e786316c6f57c98b543aa954b9f9b1db1c3a2427ec052a1fb8ccdb8db84c": {
+    "summary": "A sickle violently cuts through an opium poppy, symbolizing the abrupt destruction of joy and the physical agony of loss. Love and time subsequently retreat into a darkened room, closing the shutters to escape the light of day. The poem conveys a mood of finality, grief, and withdrawal.",
+    "author": "Катица Ќулавкова",
+    "title": "ОПОР РЕЗ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T11:32:38.330201+00:00"
+  },
+  "1530a1fcbd5a8f400868d84681d1395f33b690f0c124b84da526c45b18234b78": {
+    "summary": "The poem describes a couple who has endured great hardships and \"demonic games\" together, remaining resilient against the \"deaf times\" and burdens of life. It evokes a mood of courage and hope, emphasizing that new beginnings are always possible. The central theme is the enduring power of their love, which transcends all obstacles.",
+    "author": "Братислав Ташковски",
+    "title": "Јас и Ти во овој живот",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T11:36:51.976367+00:00"
+  },
+  "7647bc7cfcd79f10658f161b43372058931c788e396ba8669d7277a8c0e3da6a": {
+    "summary": "The poem depicts a damp, winter city permeated by the atmospheric influence of a distant sea. It contrasts images of decay and sickness—such as rusted gutters and flu-stricken residents—with romantic couples and the cinnamon scent of school lessons about southern shores. The mood is a blend of cold melancholy and yearning.",
+    "author": "Влада Урошевиќ",
+    "title": "Блага зима",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T11:41:14.532473+00:00"
+  },
+  "95824da331dc7d871040e2aab802e0775ebebf72df2d5435ecf7cedcd4774cff": {
+    "summary": "Two friends spend an entire night locked in an obsessive game of chess, imagining the board as a battlefield of clashing white and black figures. As dawn arrives, their competitive aggression transforms into a quiet, reflective bond between two exhausted souls. The poem explores the tension between rivalry and friendship, concluding that the shared experience of creation is more meaningful than the game's final result.",
+    "author": "Тодор Чаловски",
+    "title": "Шаховско утро",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T12:13:43.962722+00:00"
+  },
+  "02b7542317806ef7e4b87089138e860d743a7851c99cce95f905106c78498c08": {
+    "summary": "The poem depicts a spiritual or romantic union with a luminous being who leads the speaker through a field and along a river. This entity, embodying both ecstasy and hidden sorrow, is pursued by dark, blinded figures while seeking oneness with the speaker. The mood is ethereal and melancholic, centering on themes of transcendence and shared isolation.",
+    "author": "Веле Смилевски",
+    "title": "Книгата идеја",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T13:48:15.288697+00:00"
+  },
+  "908264c71f5a4ea3f25191d467f14dec0c2280eb04984cfc24de571c42dc1006": {
+    "summary": "The poem presents a series of surreal inquiries featuring images of silver fruits in black orchards, a transparent carriage on a lake, and time grinding into dust within clocks. It evokes a mood of existential anxiety and mystery, questioning the strange forces that govern nature, time, and the fate of art. The speaker concludes with a sense of dread regarding their personal responsibility to provide accurate answers to these impossible questions.",
+    "author": "Влада Урошевиќ",
+    "title": "Прашања",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-09-30T14:56:55.159391+00:00"
   }
 }
