@@ -47,6 +47,13 @@ data/synthetic/parts/
 data/synthetic/parts_val/
 data/synthetic/teacher_val_errors.csv
 
+# GRPO stage (src/merge_sft_adapter.py, src/train_grpo.py): the SFT adapter
+# merged into bf16 base weights (GRPO's start policy + KL reference) and the
+# GRPO LoRA + checkpoints -- regenerate via slurm/train_grpo.slurm.
+models/qwen3-sft-merged/
+models/qwen3-grpo/
+models/qwen3-grpo-smoke/
+
 # Slurm job stdout/stderr (slurm/train_sft.slurm)
 logs/
 

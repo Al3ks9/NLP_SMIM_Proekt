@@ -115,6 +115,13 @@ _LATIN_RE = re.compile(r'[A-Za-z]')
 # Chat/markdown scaffolding a model emits when it answers *about* the task
 # instead of just writing the poem -- the base model's characteristic failure.
 _MARKUP_RE = re.compile(r'(\*\*|^#{1,6}\s|^\s*[-*]\s|^\s*\d+\.\s|```)', re.MULTILINE)
+# The subset of _MARKUP_RE that never occurs in real poetry -- the GRPO
+# validity gate's test. Bullet/numbered-line patterns also fire on 49 of the
+# corpus's 1,239 real poems (a dialogue line opening with "- ", a numbered
+# stanza) while adding only 5 catches over bold/heading/fence on the untuned
+# base model's 468 val outputs; as a hard reward gate they would zero real
+# poems and teach the policy to avoid dialogue dashes.
+_CHAT_MARKUP_RE = re.compile(r'(\*\*|^#{1,6}\s|```)', re.MULTILINE)
 
 
 def language_metrics(text: str) -> dict:
@@ -128,6 +135,7 @@ def language_metrics(text: str) -> dict:
         'cyrillic_ratio': round(cyr / letters, 4) if letters else 0.0,
         'is_cyrillic': 1.0 if letters and cyr / letters >= 0.95 else 0.0,
         'no_markup': 0.0 if _MARKUP_RE.search(text) else 1.0,
+        'no_chat_markup': 0.0 if _CHAT_MARKUP_RE.search(text) else 1.0,
         'is_nonempty': 1.0 if lines(text) else 0.0,
     }
 
@@ -250,6 +258,44 @@ def _normalize_line(line: str) -> str:
     """A line reduced to its word tokens, so a copy is still detected when the
     model re-punctuates it or changes case."""
     return ' '.join(tokens(line))
+
+
+# A generated line is a copy when at least this share of its word types
+# occurs in a single source line. Containment, not Jaccard: with this
+# corpus's ~5-token lines one swapped word gives Jaccard 4/6 = 0.67, which a
+# Jaccard threshold of 0.7 would wave through as "novel".
+COPY_OVERLAP_THRESHOLD = 0.75
+_COPY_MIN_TOKENS = 3
+
+
+def copy_novelty(source_text: str, text: str,
+                 threshold: float = COPY_OVERLAP_THRESHOLD) -> float:
+    """
+    Share of generated lines that are NOT (near-)copies of a source line --
+    the GRPO content reward's copy gate. line_novelty (exact match after
+    normalisation) is kept unchanged for the reported SFT numbers; this is
+    its stricter sibling, catching the one-or-two-words-changed copy that an
+    embedding content reward would otherwise pay out on.
+
+    Lines under _COPY_MIN_TOKENS tokens count as copies only on an exact
+    match: containment on a two-word line is too coarse to mean anything.
+    Empty generations score 0.0 (nothing novel was written).
+    """
+    gen_lines = [tokens(l) for l in lines(text)]
+    gen_lines = [g for g in gen_lines if g]
+    if not gen_lines:
+        return 0.0
+    src_sets = [set(tokens(l)) for l in lines(source_text)]
+    src_exact = {' '.join(tokens(l)) for l in lines(source_text)}
+    copied = 0
+    for g in gen_lines:
+        if len(g) < _COPY_MIN_TOKENS:
+            copied += ' '.join(g) in src_exact
+            continue
+        gset = set(g)
+        if any(len(gset & s) / len(gset) >= threshold for s in src_sets):
+            copied += 1
+    return round(1.0 - copied / len(gen_lines), 4)
 
 
 # ── Combined ────────────────────────────────────────────────────────────────────

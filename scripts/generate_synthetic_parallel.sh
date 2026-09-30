@@ -19,8 +19,13 @@
 # ever discarded or regenerated.
 #
 # Usage:
-#   scripts/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed]
+#   scripts/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed] [split]
 #   scripts/generate_synthetic_parallel.sh 20 10 1 42
+#   scripts/generate_synthetic_parallel.sh 50 10 1 42 val   # Gemma teacher on the val pairs -> data/synthetic/teacher_val.csv
+#
+# split=val writes to its own main file and parts dir (merge_synthetic_parts.py
+# paths_for_split), so val rows can never reach synthetic_dataset.csv, which
+# train_sft.py trains on.
 
 set -eo pipefail
 shopt -s nullglob
@@ -35,20 +40,21 @@ POEMS_PER_AUTHOR="${1:-20}"
 NUM_TARGET_AUTHORS="${2:-10}"
 SAMPLES_PER_PAIR="${3:-1}"
 SEED="${4:-42}"
+SPLIT="${5:-train}"
 
-PARTS_DIR="data/synthetic/parts"
-ERROR_PARTS_DIR="data/synthetic/parts/errors"
-LOG_DIR="data/synthetic/parts/logs"
+# Sets MAIN, ERRORS, PARTS_DIR, ERROR_PARTS_DIR, LOG_DIR for this split.
+eval "$(uv run python src/merge_synthetic_parts.py paths --split "$SPLIT")"
+echo "Split: $SPLIT -> $MAIN"
 mkdir -p "$PARTS_DIR" "$ERROR_PARTS_DIR" "$LOG_DIR"
 
 merge_all() {
     local dataset_parts=("$PARTS_DIR"/*.csv)
     if [ ${#dataset_parts[@]} -gt 0 ]; then
-        uv run python src/merge_synthetic_parts.py merge --kind dataset "${dataset_parts[@]}"
+        uv run python src/merge_synthetic_parts.py merge --kind dataset --output-path "$MAIN" "${dataset_parts[@]}"
     fi
     local error_parts=("$ERROR_PARTS_DIR"/*.csv)
     if [ ${#error_parts[@]} -gt 0 ]; then
-        uv run python src/merge_synthetic_parts.py merge --kind errors "${error_parts[@]}"
+        uv run python src/merge_synthetic_parts.py merge --kind errors --output-path "$ERRORS" "${error_parts[@]}"
     fi
 }
 
@@ -74,7 +80,7 @@ for author in "${AUTHORS[@]}"; do
     errors="$ERROR_PARTS_DIR/${slug}.csv"
     log="$LOG_DIR/${slug}.log"
 
-    uv run python src/merge_synthetic_parts.py seed --author "$author" --part "$part"
+    uv run python src/merge_synthetic_parts.py seed --author "$author" --main "$MAIN" --part "$part"
 
     echo "Launching $author -> $part (log: $log)"
     uv run python src/generate_synthetic.py \
@@ -82,6 +88,7 @@ for author in "${AUTHORS[@]}"; do
         --poems-per-author "$POEMS_PER_AUTHOR" \
         --samples-per-pair "$SAMPLES_PER_PAIR" \
         --seed "$SEED" \
+        --split "$SPLIT" \
         --output-path "$part" \
         --errors-path "$errors" \
         > "$log" 2>&1 &

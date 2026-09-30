@@ -44,6 +44,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 
 DEFAULT_ADAPTER_DIR = ROOT / 'models' / 'qwen3-lora-sft'
+MODELS_DIR = ROOT / 'models'
 DEFAULT_OUTPUT_DIR = DATA / 'validation_generations'
 DEFAULT_MAX_NEW_TOKENS = 512
 DEFAULT_SEED = 42
@@ -99,20 +100,38 @@ def _device() -> str:
 
 def _run_label(adapter_dir: Path, base_model: str) -> str:
     """Filename stem / `adapter` column value identifying which model produced
-    a row: the adapter's directory name, or base-<model> for --no-adapter."""
+    a row: the adapter's directory name (checkpoint-N prefixed with its run),
+    a local base model's directory name (the SFT-merged model), or
+    base-<model> for a hub base with --no-adapter."""
     if adapter_dir is not None:
+        adapter_dir = Path(adapter_dir)
+        if adapter_dir.name.startswith('checkpoint-'):
+            return f'{adapter_dir.parent.name}-{adapter_dir.name}'
         return adapter_dir.name
+    if base_model and Path(base_model).is_dir():
+        return Path(base_model).name
     return 'base-' + (base_model or DEFAULT_MODEL_NAME).split('/')[-1]
 
 
 def _infer_base_model(adapter_dir: Path) -> str:
     """base_model_name_or_path out of the adapter's own adapter_config.json,
-    so --base-model only needs overriding when that record is missing."""
+    so --base-model only needs overriding when that record is missing.
+
+    A GRPO adapter records the SFT-merged model as its base -- as the path it
+    was trained with, which inside the container is /workspace/models/....
+    When that path doesn't exist here, the same directory name under this
+    repo's models/ is used instead."""
     config_path = adapter_dir / 'adapter_config.json'
     if config_path.exists():
         config = json.loads(config_path.read_text(encoding='utf-8'))
-        if config.get('base_model_name_or_path'):
-            return config['base_model_name_or_path']
+        base = config.get('base_model_name_or_path')
+        if base:
+            if Path(base).exists():
+                return base
+            local = MODELS_DIR / Path(base).name
+            if local.exists():
+                return str(local)
+            return base
     log.warning('could not infer base model from %s -- falling back to %s',
                config_path, DEFAULT_MODEL_NAME)
     return DEFAULT_MODEL_NAME
@@ -123,7 +142,8 @@ def _infer_base_model(adapter_dir: Path) -> str:
 def generate_one(model, tokenizer, source_poem_text: str, target_author: str,
                  max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS, do_sample: bool = True,
                  temperature: float = 0.7, top_p: float = 0.9,
-                 repetition_penalty: float = 1.0, no_repeat_ngram_size: int = 0) -> str:
+                 repetition_penalty: float = 1.0, no_repeat_ngram_size: int = 0,
+                 top_k: int = None) -> str:
     """
     One style-transfer generation from the loaded adapter model, returning
     just the newly generated text (the prompt is not echoed back).
@@ -141,6 +161,10 @@ def generate_one(model, tokenizer, source_poem_text: str, target_author: str,
     if do_sample:
         kwargs['temperature'] = temperature
         kwargs['top_p'] = top_p
+        # None keeps the model's own generation_config (Qwen3 ships top_k=20);
+        # evaluate_reward --groups passes GRPO's explicit value instead.
+        if top_k is not None:
+            kwargs['top_k'] = top_k
     # Both default to off, i.e. plain sampling. They exist to separate "the
     # tuned model has degenerate *decoding*" from "the tuned model has
     # degenerate *distributions*" -- if a repetition penalty alone closes the

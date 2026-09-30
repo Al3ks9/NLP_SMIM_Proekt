@@ -151,3 +151,13 @@ def test_seeded_part_makes_generate_synthetic_skip_the_authors_done_pairs(tmp_pa
     msp.seed_part_from_main('Ц1', main, part)
 
     assert load_done_keys(part) == {('0', 'Ц1', 0)}
+
+
+# Review Focus 5
+def test_val_split_never_routes_to_the_sft_training_file():
+    import generate_synthetic as gs
+    val, train = msp.paths_for_split('val'), msp.paths_for_split('train')
+    assert train['main'] == gs.OUTPUT_PATH
+    assert val['main'].name == 'teacher_val.csv'
+    assert val['main'] != gs.OUTPUT_PATH and val['errors'] != gs.ERRORS_PATH
+    assert val['parts_dir'] != train['parts_dir']

@@ -24,6 +24,8 @@ from pathlib import Path
 
 from generate_synthetic import ERRORS_PATH, FIELDNAMES, OUTPUT_PATH, _open_append, load_done_keys
 
+ROOT = Path(__file__).resolve().parent.parent
+
 ERROR_FIELDNAMES = ['source_poem_id', 'source_author', 'target_author', 'sample_index', 'error']
 
 
@@ -95,6 +97,22 @@ def seed_part_from_main(target_author: str, main_path: Path, part_path: Path) ->
     return len(rows)
 
 
+def paths_for_split(split: str) -> dict:
+    """Where the parallel generator writes for a split. 'val' (the Gemma
+    teacher comparison run) gets its own main file and parts dir, so a val row
+    can never be merged into synthetic_dataset.csv, which train_sft.py reads."""
+    synthetic = OUTPUT_PATH.parent
+    if split == 'train':
+        main, errors, parts = OUTPUT_PATH, ERRORS_PATH, synthetic / 'parts'
+    elif split == 'val':
+        main, errors = synthetic / 'teacher_val.csv', synthetic / 'teacher_val_errors.csv'
+        parts = synthetic / 'parts_val'
+    else:
+        raise ValueError(f'no synthetic output location for split {split!r}')
+    return {'main': main, 'errors': errors, 'parts_dir': parts,
+            'error_parts_dir': parts / 'errors', 'log_dir': parts / 'logs'}
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -110,9 +128,15 @@ if __name__ == '__main__':
     merge_p.add_argument('--output-path', type=Path, default=None)
     merge_p.add_argument('parts', nargs='+', type=Path)
 
+    paths_p = subparsers.add_parser('paths', help='print KEY=path lines for a split (shell use)')
+    paths_p.add_argument('--split', default='train')
+
     args = parser.parse_args()
 
-    if args.command == 'seed':
+    if args.command == 'paths':
+        for key, path in paths_for_split(args.split).items():
+            print(f'{key.upper()}={path.relative_to(ROOT)}')
+    elif args.command == 'seed':
         n = seed_part_from_main(args.author, args.main, args.part)
         print(f'seeded {n} already-done row(s) for {args.author!r} into {args.part}')
     elif args.command == 'merge':

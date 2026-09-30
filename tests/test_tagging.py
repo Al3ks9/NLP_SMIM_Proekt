@@ -139,3 +139,31 @@ def test_tag_lines_gives_repeated_words_on_one_line_distinct_offsets(monkeypatch
     assert line[first.start_char:first.end_char] == 'ветер'
     assert line[second.start_char:second.end_char] == 'ветер'
     assert second.start_char > first.start_char
+
+
+# ── tag_poem: whole-poem tagging for the GRPO style reward ──────────────────────
+
+@pytest.mark.slow
+def test_tag_poem_reproduces_the_corpus_tags_for_a_real_poem():
+    import csv
+    from difflib import SequenceMatcher
+    from pathlib import Path
+
+    from make_splits import load_stripped_songs
+
+    root = Path(__file__).resolve().parent.parent
+    with open(root / 'data' / 'pos_tagged.csv', encoding='utf-8') as f:
+        pos_rows = list(csv.DictReader(f))
+    verb_lemmas = tagging.load_verb_lemmas(pos_rows)
+    poem = next(r for r in load_stripped_songs() if r['poem_id'] == '301')
+    corpus = [(r['lemma'], r['pos']) for r in pos_rows if r['poem_id'] == '301']
+
+    got = tagging.tag_poem(poem['song_text'], verb_lemmas)
+
+    # poem/row-scoped hand corrections can't fire at inference, so allow a
+    # sliver of disagreement -- but the token selection must be the corpus's.
+    assert SequenceMatcher(None, got, corpus).ratio() >= 0.97
+
+
+def test_tag_poem_returns_nothing_for_blank_text():
+    assert tagging.tag_poem('  \n\n ', verb_lemmas={}) == []

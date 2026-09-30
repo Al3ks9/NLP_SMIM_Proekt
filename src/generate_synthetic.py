@@ -127,9 +127,13 @@ def generate(num_target_authors: int = DEFAULT_NUM_TARGET_AUTHORS,
             samples_per_pair: int = DEFAULT_SAMPLES_PER_PAIR,
             seed: int = DEFAULT_SEED, target_authors: list = None,
             model: str = lst.DEFAULT_MODEL, backend: str = lst.DEFAULT_BACKEND,
-            output_path: Path = OUTPUT_PATH, errors_path: Path = ERRORS_PATH) -> dict:
+            output_path: Path = OUTPUT_PATH, errors_path: Path = ERRORS_PATH,
+            split: str = 'train') -> dict:
+    if split != 'train' and Path(output_path).resolve() == OUTPUT_PATH.resolve():
+        raise ValueError(f'split={split!r} rows must not go to {OUTPUT_PATH.name} '
+                         '(the SFT training file) -- pass --output-path')
     authors = select_target_authors(num_target_authors, explicit=target_authors)
-    source_poems = sample_source_poems(poems_per_author, seed=seed)
+    source_poems = sample_source_poems(poems_per_author, seed=seed, split=split)
     pairs = build_pairs(source_poems, authors, samples_per_pair)
 
     done = load_done_keys(output_path)
@@ -170,7 +174,7 @@ def generate(num_target_authors: int = DEFAULT_NUM_TARGET_AUTHORS,
                 'source_author': result['source_author'],
                 'source_title': result['source_title'],
                 'target_author': result['target_author'],
-                'split': 'train',
+                'split': split,
                 'sample_index': sample_index,
                 'generated_poem': result['generated_poem'],
                 'model': result['model'],
@@ -219,6 +223,10 @@ if __name__ == '__main__':
                             'write to separate files instead of racing on one')
     parser.add_argument('--errors-path', type=Path, default=ERRORS_PATH,
                        help='errors CSV to append to -- same override as --output-path')
+    parser.add_argument('--split', default='train', choices=['train', 'val'],
+                       help="source-poem split. 'val' is only for the teacher comparison "
+                            "run -- write it to data/synthetic/teacher_val.csv, never to "
+                            "synthetic_dataset.csv (train_sft.py reads that file)")
     args = parser.parse_args()
 
     try:
@@ -227,6 +235,6 @@ if __name__ == '__main__':
                 samples_per_pair=args.samples_per_pair, seed=args.seed,
                 target_authors=args.target_authors, model=args.model,
                 backend=args.backend, output_path=args.output_path,
-                errors_path=args.errors_path)
+                errors_path=args.errors_path, split=args.split)
     except (KeyError, ValueError) as e:
         sys.exit(str(e))

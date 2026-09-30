@@ -27,3 +27,6 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "slow: loads classla / sentence-transformers / downloads a model (deselect with -m 'not slow')",
+]
