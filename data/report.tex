@@ -1014,6 +1014,11 @@ $\alpha=\beta=0.5$ as a starting point. Under GRPO's per-group advantage
 normalisation, which term drives the update depends on its spread
 \emph{within} a group of samples, not on its mean, so $\alpha,\beta$ are to
 be set from \texttt{evaluate\_reward.py --groups} before the long run.
+Measured on SFT samples drawn exactly as in training
+(\texttt{data/grpo/reward\_groups.csv}), the gated style term has a
+within-group standard deviation of 0.113 and the gated content term only
+0.042, so at equal weights the style term would dominate the advantage almost
+three to one. The training run therefore used $\alpha=0.3$, $\beta=0.7$.
 
 \subsection{Validation before training}
 
@@ -1084,6 +1089,166 @@ rows), consistent with the teacher's own weak content preservation.
     feature.
 \end{itemize}
 
+\section{GRPO results}\label{sec:grporesults}
+
+\subsection{Setup}
+
+The GRPO adapter was trained for 500 steps on the train-split pairs of
+\S\ref{sec:grpo} (LoRA $r=16$, $\alpha_{\mathrm{LoRA}}=32$, learning rate
+$10^{-5}$, $G=4$ samples per prompt, 8 prompts per optimizer step, temperature
+0.9, KL coefficient 0.04, reward weights $\alpha=0.3$, $\beta=0.7$). It is
+evaluated on the same 468 validation pairs as \S\ref{sec:sfteval}, against
+its own start policy (the SFT-merged model), generated back to back on one
+GPU with the same seeds and plain sampling (\texttt{slurm/eval\_grpo.slurm}).
+All $R$ columns below are recomputed at the neutral $\alpha=\beta=0.5$, not
+at the training weights, so they do not favour the trained policy's own
+objective. The SFT-merged model reproduces the unmerged SFT adapter's scores to
+within sampling noise ($R=0.254$ for both), confirming that the merge did not
+change the start policy.
+
+\subsection{Result}
+
+\begin{center}
+\begin{tabular}{lrrrr}
+\toprule
+& Base & SFT & GRPO & Real \\
+Metric (higher is better unless noted) & Qwen3-4B & (merged) & & poems \\
+\midrule
+\multicolumn{5}{l}{\emph{Reward (\S\ref{sec:grpo}, $\alpha=\beta=0.5$)}} \\
+\quad $R_{\mathrm{style}}^{g}$              & 0.272 & 0.384 & \textbf{0.511} & --- \\
+\quad $R_{\mathrm{content}}^{g}$            & 0.074 & 0.123 & \textbf{0.302} & --- \\
+\quad $R$                                   & 0.173 & 0.254 & \textbf{0.406} & --- \\
+\midrule
+\multicolumn{5}{l}{\emph{Degeneracy}} \\
+\quad distinct-2                            & 0.863 & 0.785 & \textbf{0.896} & 0.948 \\
+\quad distinct-3                            & 0.898 & 0.885 & \textbf{0.959} & 0.971 \\
+\quad line uniqueness                       & 0.895 & 0.900 & \textbf{0.971} & 0.969 \\
+\quad max.\ repeats of one line (lower)     & 1.80  & 2.05  & \textbf{1.37}  & 1.34 \\
+\quad degenerate outputs (lower)            & 18.6\% & 30.1\% & \textbf{5.3\%} & 6.6\% \\
+\midrule
+\multicolumn{5}{l}{\emph{Content preservation}} \\
+\quad content-word recall from source       & 0.901$^\S$ & 0.174 & \textbf{0.338} & --- \\
+\quad copy novelty                          & 0.197 & \textbf{0.995} & 0.956 & --- \\
+\midrule
+\multicolumn{5}{l}{\emph{Target-style match}} \\
+\quad classifier probability of target      & 0.024 & \textbf{0.120} & 0.083 & --- \\
+\quad classifier top-1 = target author      & 0.009 & \textbf{0.158} & 0.079 & 0.883$^\dagger$ \\
+\quad target TF-IDF vocabulary hit rate     & 0.005 & 0.043 & 0.043 & 0.050 \\
+\quad structural fit                        & 0.680 & \textbf{0.846} & 0.831 & 0.768 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+{\footnotesize $^\S$ inflated by verbatim copying (\S\ref{sec:sfteval}).
+$^\dagger$ held-out 5-fold CV, as in \S\ref{sec:sfteval}. ``Degenerate'' is
+distinct-1 $< 0.40$ or line uniqueness $< 0.80$, as before.}
+
+\paragraph{The reward rose, and it was not gamed on the axes it gates.} GRPO
+scores higher than its start policy on 94.4\,\% of the paired items. The
+content term more than doubled (0.123 to 0.302), and no output has a zero
+gated content reward, against 18.4\,\% for SFT. The degeneracy that
+\S\ref{sec:decodeablation} attributed to decoding is largely gone
+\emph{under plain sampling}: 5.3\,\% degenerate outputs against 30.1\,\%, and
+line uniqueness (0.971) and repetition (1.37) now match real poems. This came
+from the policy itself, not a decoding control, and --- unlike the repetition
+penalty in \S\ref{sec:decodeablation}, which cut content recall to 0.078 ---
+it came together with higher content recall, not at its expense. Format
+compliance is unchanged (100\,\% Cyrillic, no markup).
+
+\paragraph{Where the style reward's gain came from.} The training log
+(\texttt{reward\_components.jsonl}, 16{,}000 scored samples) shows which
+style groups moved between the first and last 50 steps: lexical diversity
+0.49 $\to$ 0.71, POS bigrams 0.64 $\to$ 0.84, POS profile 0.60 $\to$ 0.67;
+structure, rhyme and TF-IDF stayed flat, and the classifier probability
+\emph{fell}, 0.102 $\to$ 0.078. These are exactly the groups with the largest
+within-group spread before training (0.26 and 0.31 for lexical diversity and
+POS bigrams, against 0.05 for the classifier). Under group-normalised
+advantages a component that barely varies among a prompt's four samples
+barely steers the update: at equal group weight, the classifier contributes
+roughly a fifth to a sixth of the within-group variation that either of
+those two groups does, and all style groups together enter $R$ at only
+$\alpha=0.3$.
+
+\subsection{Target-style match went down}
+
+GRPO is identified as the requested author less often than its start policy
+(top-1 0.158 $\to$ 0.079, probability 0.120 $\to$ 0.083), and the
+classifier probability is lower for 9 of the 10 target authors. The per-author
+breakdown qualifies this:
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+Target author & SFT & GRPO \\
+\midrule
+Блаже Конески       & 0.745 & 0.404 \\
+Пијан Славеј        & 0.372 & 0.186 \\
+Ефтим Клетников     & 0.149 & 0.021 \\
+Веле Смилевски      & 0.125 & 0.062 \\
+Адем Гајтани        & 0.085 & 0.000 \\
+Ристо Лазаров       & 0.064 & 0.043 \\
+Катица Ќулавкова    & 0.022 & 0.022 \\
+Братислав Ташковски & 0.022 & 0.022 \\
+Влада Урошевиќ      & 0.021 & 0.021 \\
+Славко Јаневски     & 0.000 & 0.020 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Most of the aggregate loss is on the two authors that carried the SFT score
+in \S\ref{sec:sfteval} because they are the corpus's largest, and the
+share of all outputs the classifier assigns to Блаже Конески falls from
+36.3\,\% to 21.8\,\%. GRPO has therefore partly undone the collapse onto the
+majority voice --- which is what the per-target-author calibration of the
+style reward was designed to do --- but it has not replaced it with the
+requested voices: the remaining eight authors are unchanged or lower, at
+0.000--0.062. The style collapse identified in \S\ref{sec:sfteval} is
+therefore still open. The feature-level style reward moves the surface
+statistics it measures (diversity, POS mix and bigrams) towards the target
+author's per-poem distribution, but those statistics do not by themselves
+make a poem identifiable as that author.
+
+\subsection{Partial copying}
+
+The copy gate held, but the policy moved towards its edge. The share of
+outputs with at least one near-copied source line rose from 8.1\,\% to
+44.4\,\%, although mean copy novelty is still 0.956 and only 3.4\,\% of
+outputs fall below 0.8 (in those with a copy, roughly one line in ten). Part
+of the content gain comes from this: outputs containing a copied line have
+content-word recall 0.382, those without 0.302. The gate multiplies the
+content reward by the copied share, so a single copied line out of twenty
+costs only 5\,\% of $R_{\mathrm{content}}$ and can be worth taking when it
+raises the line-level F1 by more. Beyond whole copied lines, reuse of source
+phrases below the gate's three-token, 75\,\%-containment threshold is also
+visible on inspection (``не слетувај'', ``предели неминати'' carried over
+into an otherwise new poem). This is a modest form of reward hacking, and a
+steeper gate (e.g.\ \texttt{copy\_novelty}$^k$) is the obvious fix.
+
+\subsection{Training dynamics}
+
+The training reward (at the training weights) rose from 0.248 over the first
+50 steps to 0.340 by step 200, then only to 0.361 by step 500. The content
+term kept improving slowly after step 200 (0.215 $\to$ 0.244) while copy
+novelty and the classifier probability stayed at their step-200 levels, so
+later checkpoints mostly trade along the same frontier.
+% TODO: checkpoint-300 comparison (eval job 1232) -- fill in once it lands.
+
+\subsection{Implications}
+
+\begin{itemize}
+  \item \emph{The classifier term needs more weight} if author identity is
+    the goal. Its within-group spread is small, so equal nominal weight
+    leaves it with little influence on the advantage; weighting it by the
+    inverse of its measured spread would give it a share comparable to the
+    POS-bigram and diversity groups.
+  \item \emph{The copy gate should be steeper}, so that one copied line
+    costs more than its content gain.
+  \item Repetition no longer needs a decoding control: GRPO's own sampling
+    matches human repetition rates.
+\end{itemize}
+
 \section{Reproducibility}
 
 Figures in \S\ref{sec:louvain}--\S\ref{sec:community0} (the diagnosis) were
@@ -1122,6 +1287,13 @@ all three run on CPU. The GRPO jobs themselves are
 \texttt{slurm/grpo\_smoke.slurm}, \texttt{slurm/reward\_groups.slurm},
 \texttt{slurm/train\_grpo.slurm} and \texttt{slurm/eval\_grpo.slurm}; each
 run writes its arguments, git commit, merge provenance and calibration hash
-to \texttt{models/qwen3-grpo/run\_config.json}.
+to \texttt{models/qwen3-grpo/run\_config.json}. Figures in
+\S\ref{sec:grporesults} come from
+\texttt{data/validation\_generations/grpo\_comparison\_summary.csv} and
+\texttt{grpo\_comparison\_rows.csv} (\texttt{compare\_generations.py
+--rewards --corpus-reference} over the tracked \texttt{qwen3-sft-merged\_val.csv}
+and \texttt{qwen3-grpo\_val.csv}), and from the run's
+\texttt{reward\_components.jsonl}; the per-author, copy and training-curve
+breakdowns were computed from these files with one-off scripts.
 
 \end{document}
