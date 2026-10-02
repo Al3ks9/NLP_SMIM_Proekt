@@ -157,3 +157,25 @@ def test_validity_gate_does_not_zero_a_real_poem_with_a_dialogue_dash(cfg):
     row = _score(cfg, 'ветер носи лисје низ поле -\n- мајка чека пред порта')
     assert row['gate/validity'] == 1.0
 
+
+
+def test_copy_gate_power_steepens_the_penalty_for_one_copied_line(cfg):
+    partial = SRC.splitlines()[0] + '\n' + NEW          # 1 copied line of 3
+    flat = _score(cfg, partial)
+    cfg.copy_gate_power = 3.0
+    steep = _score(cfg, partial)
+    novelty = flat['gate/copy_novelty']
+    assert novelty == steep['gate/copy_novelty'] == pytest.approx(2 / 3, abs=1e-3)
+    assert steep['R_content'] == pytest.approx(flat['R_content'])
+    assert steep['R_content_g'] == pytest.approx(flat['R_content_g'] * novelty ** 2)
+
+
+def test_copy_gate_power_leaves_clean_and_verbatim_outputs_unchanged(cfg):
+    cfg.copy_gate_power = 3.0
+    assert _score(cfg, NEW)['R_content_g'] == pytest.approx(_score(cfg, NEW)['R_content'])
+    assert _score(cfg, SRC)['R_content_g'] == 0.0
+
+
+def test_copy_gate_power_must_be_positive():
+    with pytest.raises(ValueError):
+        gr.RewardConfig(copy_gate_power=0.0)

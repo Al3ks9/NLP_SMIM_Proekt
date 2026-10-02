@@ -11,7 +11,9 @@ For one generated poem, given the source poem and the target author:
 - content: line-level embedding F1 against the SOURCE poem (never the Gemma
   output), rescaled so unrelated poems score 0.
 - gates (multiplicative, style_metrics): validity = cyrillic * no chat
-  markup (bold/heading/code fence -- not dashes or numbers) * non-empty on both; line_uniqueness on style; copy_novelty on content.
+  markup (bold/heading/code fence -- not dashes or numbers) * non-empty on both; line_uniqueness on style; copy_novelty on content,
+  raised to copy_gate_power (1 = linear; GRPO-v2 uses 3 so that one copied
+  line costs more content reward than it buys in line F1).
 
 R = style_weight * R_style_g + content_weight * R_content_g. Every component
 is returned (and, during training, logged) separately. See
@@ -59,6 +61,7 @@ class RewardConfig:
     style_weight: float = 0.5
     content_weight: float = 0.5
     copy_overlap_threshold: float = sm.COPY_OVERLAP_THRESHOLD
+    copy_gate_power: float = 1.0
     sigma_floor_frac: float = 0.5
     content_model: str = DEFAULT_CONTENT_MODEL
     calibration_path: Path = CALIBRATION_PATH
@@ -71,6 +74,8 @@ class RewardConfig:
                              f'known: {sorted(STYLE_GROUPS)}')
         if sum(self.style_weights.values()) <= 0:
             raise ValueError('style_weights must have a positive total')
+        if self.copy_gate_power <= 0:
+            raise ValueError('copy_gate_power must be positive')
 
 
 _CACHE: dict = {}
@@ -189,7 +194,7 @@ def score_batch(sources: list, generations: list, targets: list, cfg: RewardConf
         g = gates(src, gen, cfg)
         r_content = content_score(f1, cal['content_baseline'])
         r_style_g = g['gate/validity'] * g['gate/line_uniqueness'] * style['R_style']
-        r_content_g = g['gate/validity'] * g['gate/copy_novelty'] * r_content
+        r_content_g = g['gate/validity'] * g['gate/copy_novelty'] ** cfg.copy_gate_power * r_content
         rows.append({
             'target_author': tgt, **style, **g,
             'content/precision': p, 'content/recall': r, 'content/f1': f1,

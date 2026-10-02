@@ -80,6 +80,7 @@ def reward_config(args) -> gr.RewardConfig:
     return gr.RewardConfig(
         style_weights=dict(gr.DEFAULT_STYLE_WEIGHTS, **(args.style_weights or {})),
         style_weight=args.style_weight, content_weight=args.content_weight,
+        copy_gate_power=args.copy_gate_power,
         components_log_path=Path(args.output_dir) / 'reward_components.jsonl')
 
 
@@ -278,6 +279,8 @@ def parse_args(argv=None):
     r.add_argument('--content-weight', type=float, default=0.5, help='beta (content)')
     r.add_argument('--style-weights', type=json.loads, default=None,
                    help='JSON {group: weight}; omitted groups keep their default')
+    r.add_argument('--copy-gate-power', type=float, default=1.0,
+                   help='k in copy_novelty**k on the content reward (1 = v1, linear)')
 
     t = p.add_argument_group('GRPO')
     t.add_argument('--learning-rate', type=float, default=1e-5)

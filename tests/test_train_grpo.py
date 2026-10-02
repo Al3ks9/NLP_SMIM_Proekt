@@ -133,3 +133,8 @@ def test_grpo_sampling_is_explicit_and_configurable(tmp_path):
     c = tg.build_grpo_config(tg.parse_args(['--output-dir', str(tmp_path), '--no-bf16',
                                             '--top-p', '0.8', '--top-k', '20']))
     assert (c.top_p, c.top_k) == (0.8, 20)
+
+
+def test_copy_gate_power_defaults_to_v1_and_reaches_the_reward_config():
+    assert tg.reward_config(tg.parse_args([])).copy_gate_power == 1.0
+    assert tg.reward_config(tg.parse_args(['--copy-gate-power', '3'])).copy_gate_power == 3.0
