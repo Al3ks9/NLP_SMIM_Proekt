@@ -14,6 +14,7 @@
 #
 # Usage:
 #   sbatch slurm/train_grpo.slurm
+#   FAMILY=gemma4 sbatch slurm/train_grpo.slurm   # Gemma 4 E4B student (see train_grpo_gemma.slurm)
 #   sbatch slurm/train_grpo.slurm --max-steps 200 --style-weight 0.6 --content-weight 0.4
 
 set -euo pipefail
@@ -23,6 +24,6 @@ source slurm/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py
-    $PY src/train_grpo.py "$@"
+    $PY src/merge_sft_adapter.py --family "$FAMILY"
+    $PY src/train_grpo.py --family "$FAMILY" "$@"
 ' "$@"

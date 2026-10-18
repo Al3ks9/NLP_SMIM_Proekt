@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 
 import grpo_rewards as gr
+import model_families as mf
 from make_splits import load_stripped_songs
 
 csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
@@ -188,7 +189,8 @@ def run_groups(args, cfg: gr.RewardConfig) -> int:
     import generate_validation as gv
     from grpo_data import build_prompt_rows
 
-    model, tokenizer = gv.load_adapter_model(args.adapter, base_model=str(args.merged_model))
+    model, tokenizer = gv.load_adapter_model(args.adapter, base_model=str(merged_model_path(args)),
+                                             family=mf.get_family(args.family))
     prompts = build_prompt_rows(seed=args.seed)[:args.num_prompts]
     rows_by_prompt = []
     for i, p in enumerate(prompts):
@@ -234,7 +236,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--groups', action='store_true',
                    help='sample --num-generations completions per train prompt from the '
                         'SFT policy and report each component\'s within-group spread (GPU)')
-    p.add_argument('--merged-model', type=Path, default=ROOT / 'models' / 'qwen3-sft-merged')
+    p.add_argument('--family', default=mf.DEFAULT_FAMILY, choices=sorted(mf.FAMILIES))
+    p.add_argument('--merged-model', type=Path, default=None,
+                   help='default: models/<family tag>-sft-merged')
     p.add_argument('--adapter', type=Path, default=None,
                    help='optional LoRA on top of --merged-model (e.g. a GRPO checkpoint)')
     p.add_argument('--num-prompts', type=int, default=20)
@@ -242,6 +246,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--seed', type=int, default=42)
     p.add_argument('--groups-out', type=Path, default=DEFAULT_GROUPS_OUT)
     return p
+
+
+def merged_model_path(args) -> Path:
+    return args.merged_model or mf.default_dirs(mf.get_family(args.family))['merged']
 
 
 def config_from_args(args) -> gr.RewardConfig:

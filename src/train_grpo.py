@@ -16,9 +16,13 @@ per completion to <output-dir>/reward_components.jsonl.
 run_smoke_checks). No evaluation inside training: checkpoints are evaluated
 afterwards with generate_validation.py (slurm/eval_grpo.slurm).
 
+--family gemma4 trains the Gemma 4 E4B student instead (start policy
+models/gemma4-e4b-sft-merged, output models/gemma4-e4b-grpo; model_families.py).
+
 Usage:
     uv run python src/train_grpo.py --smoke
     uv run python src/train_grpo.py --max-steps 500
+    uv run python src/train_grpo.py --family gemma4
 """
 
 import argparse
@@ -30,14 +34,14 @@ import sys
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 from trl import GRPOConfig, GRPOTrainer
 
 import grpo_rewards as gr
+import model_families as mf
 from grpo_data import DEFAULT_MAX_PROMPT_LENGTH, build_grpo_dataset
 from grpo_rewards import make_reward_funcs
 from merge_sft_adapter import DEFAULT_MERGED_DIR
-from sft_data import DEFAULT_MODEL_NAME
 from train_sft import DEFAULT_TARGET_MODULES, build_lora_config
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,16 +53,18 @@ log = logging.getLogger('train_grpo')
 
 # ── Model ────────────────────────────────────────────────────────────────────────
 
-def load_policy(sft_merged: Path, attn_implementation: str):
+def load_policy(sft_merged: Path, attn_implementation: str, family: mf.ModelFamily = None):
     sft_merged = Path(sft_merged)
+    family = family or mf.get_family(mf.DEFAULT_FAMILY)
     if not (sft_merged / 'merge_info.json').exists():
         raise SystemExit(f'{sft_merged}/merge_info.json missing -- build the start policy with '
                          '`python src/merge_sft_adapter.py` (GRPO must start from SFT, not base)')
+    mf.assert_family_matches(family, sft_merged)
     tokenizer = AutoTokenizer.from_pretrained(str(sft_merged))
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(
-        str(sft_merged), dtype=torch.bfloat16, attn_implementation=attn_implementation)
+    model = mf.load_causal_lm(
+        family, sft_merged, dtype=torch.bfloat16, attn_implementation=attn_implementation)
     return model, tokenizer
 
 
@@ -207,7 +213,9 @@ def _probe(dataset) -> tuple:
 def train(args) -> Path:
     args.output_dir = Path(args.output_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    model, tokenizer = load_policy(args.sft_merged, args.attn_implementation)
+    family = mf.get_family(args.family)
+    model, tokenizer = load_policy(args.sft_merged, args.attn_implementation, family=family)
+    mf.lora_targets(family, model, args.target_modules)
     dataset, stats = build_grpo_dataset(
         tokenizer, num_prompts=args.num_prompts, max_prompt_length=args.max_prompt_length,
         target_authors=args.target_authors, num_target_authors=args.num_target_authors,
@@ -247,19 +255,25 @@ def apply_smoke_overrides(args):
     # every smoke completion.
     args.save_steps = 10_000
     args.learning_rate = 1e-4   # large enough that 3 steps visibly move the probe
-    if args.output_dir == DEFAULT_OUTPUT_DIR:
-        args.output_dir = MODELS / 'qwen3-grpo-smoke'
+    family = mf.get_family(args.family)
+    if Path(args.output_dir) == mf.default_dirs(family)['grpo']:
+        args.output_dir = MODELS / f'{family.tag}-grpo-smoke'
     return args
 
 
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('--sft-merged', type=Path, default=DEFAULT_MERGED_DIR,
-                   help='SFT-merged start policy (merge_sft_adapter.py output)')
-    p.add_argument('--base-model', default=DEFAULT_MODEL_NAME,
-                   help='recorded for provenance; the weights come from --sft-merged')
-    p.add_argument('--output-dir', type=Path, default=DEFAULT_OUTPUT_DIR)
+    p.add_argument('--family', default=mf.DEFAULT_FAMILY, choices=sorted(mf.FAMILIES),
+                   help='student model family (model_families.py); sets the defaults below')
+    p.add_argument('--sft-merged', type=Path, default=None,
+                   help='SFT-merged start policy (merge_sft_adapter.py output); '
+                        'default models/<family tag>-sft-merged')
+    p.add_argument('--base-model', default=None,
+                   help="recorded for provenance; the weights come from --sft-merged. "
+                        "Default: the family's hub model")
+    p.add_argument('--output-dir', type=Path, default=None,
+                   help='default: models/<family tag>-grpo')
     p.add_argument('--smoke', action='store_true')
 
     d = p.add_argument_group('data')
@@ -272,7 +286,8 @@ def parse_args(argv=None):
     l.add_argument('--lora-r', type=int, default=16)
     l.add_argument('--lora-alpha', type=int, default=32)
     l.add_argument('--lora-dropout', type=float, default=0.0)
-    l.add_argument('--target-modules', nargs='+', default=DEFAULT_TARGET_MODULES)
+    l.add_argument('--target-modules', nargs='+', default=None,
+                   help="default: the family's targets (model_families.py)")
 
     r = p.add_argument_group('reward')
     r.add_argument('--style-weight', type=float, default=0.5, help='alpha')
@@ -320,7 +335,23 @@ def parse_args(argv=None):
                     action='store_true', default=True)
     gc.add_argument('--no-gradient-checkpointing', dest='gradient_checkpointing',
                     action='store_false')
-    return p.parse_args(argv)
+    return resolve(p.parse_args(argv))
+
+
+def resolve(args):
+    """Fill family-dependent defaults left as None; --family qwen3 resolves
+    to exactly the pre-family values."""
+    family = mf.get_family(args.family)
+    dirs = mf.default_dirs(family)
+    if args.sft_merged is None:
+        args.sft_merged = dirs['merged']
+    if args.base_model is None:
+        args.base_model = family.hf_name
+    if args.output_dir is None:
+        args.output_dir = dirs['grpo']
+    if args.target_modules is None:
+        args.target_modules = family.target_modules
+    return args
 
 
 if __name__ == '__main__':

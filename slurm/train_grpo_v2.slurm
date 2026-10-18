@@ -25,11 +25,12 @@
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 [[ -f slurm/train_grpo_v2.slurm ]] || cd ..
+FAMILY=qwen3   # this run is the Qwen v1-vs-v2 comparison
 source slurm/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py
+    $PY src/merge_sft_adapter.py --family qwen3
     $PY src/train_grpo.py \
         --output-dir models/qwen3-grpo-v2 \
         --style-weight 0.3 --content-weight 0.7 \
