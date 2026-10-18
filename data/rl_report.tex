@@ -1,14 +1,10 @@
 % !TEX program = xelatex
 %
 % Distillation and reinforcement learning for Macedonian poetic style
-% transfer: SFT, GRPO (v1, v2) and the Gemma 4 E4B student. Split out of
-% report.tex, which keeps the tagger migration, SKG and LLM-prompt sections.
-% Requires XeLaTeX (native Cyrillic via fontspec/polyglossia) — compile with
-% `xelatex rl_report.tex`, not pdflatex.
-%
-% Results still being collected are marked with \pending{...}, which prints
-% a red tag in the PDF. `grep -n pending rl_report.tex` lists every one; the
-% document is final when that grep finds only the macro definition.
+% transfer: SFT and GRPO (v1, v2) of a Qwen3-4B student. Split out of
+% report.tex. Compile with `xelatex rl_report.tex` (native Cyrillic via
+% fontspec/polyglossia), not pdflatex. The Gemma 4 E4B student is reported
+% separately once trained.
 \documentclass[11pt]{article}
 
 \usepackage{fontspec}
@@ -20,1248 +16,370 @@
 \newfontfamily\cyrillicfont{Times New Roman}
 \usepackage{amsmath}
 \usepackage{booktabs}
-\usepackage{array}
-\usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{geometry}
-\geometry{margin=2.5cm}
-\sloppy  % long \texttt identifiers cannot hyphenate
-
-\newcommand{\pending}[1]{\textcolor{red}{\textbf{[pending: #1]}}}
-\newcommand{\tbd}{\textcolor{red}{\textbf{?}}}
+\geometry{margin=2.3cm}
+\sloppy
 
 \title{Distilling and Reinforcing Macedonian Poetic Style Transfer:\\
-Supervised Fine-Tuning and GRPO on a 4B Student}
-\author{TODO: author name}
+SFT and GRPO on a 4B Student}
 \date{\today}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-A large instruction-tuned model (Gemma~4 31B), given a heavily scaffolded
-prompt (an author style profile in prose, a vocabulary palette, exemplar
-lines and explicit structural targets), can rewrite a Macedonian poem in a
-named poet's style. This report covers the attempt to obtain the same
-behaviour from a small, locally runnable model that is given only the source
-poem and the target author's name. The teacher's outputs on 1{,}146
-train-split pairs are distilled into Qwen3-4B by LoRA supervised fine-tuning
-(SFT); the distilled model is then trained further with Group Relative Policy
-Optimization (GRPO) against a reward built from the project's own
-stylometric profiles, a line-level content-similarity score and
-multiplicative gates against copying, repetition and malformed output. SFT
-teaches the task format completely but collapses ten target voices into one
-averaged voice dominated by the corpus's two largest authors. GRPO (v1)
-raises the reward from 0.254 to 0.406, removes the repetition SFT showed
-under plain sampling and doubles content preservation, but it halves
-author identification (on the reward classifier and, less sharply, on a held-out
-judge) and learns to copy single source lines at the edge of the copy gate.
-The Gemma teacher, scored on the same pairs, is still identified as the
-requested author three to eight times as often as either student. GRPO-v2 changes only the reward to address both findings,
-and a second student of matched size from another family (Gemma~4 E4B)
-separates properties of Qwen from properties of the method. GRPO-v2 keeps
-author identification close to SFT's on both classifiers instead of losing
-half of it, but only by holding the policy on the two largest authors, not by
-learning the other eight, and it gives back most of v1's repetition fix; for eight of the ten
-targets neither student is ever identified as the requested author, which
-leaves GRPO's group-relative update nothing to amplify.
-\pending{Gemma result, one sentence}
+Gemma~4 31B, given a heavily scaffolded prompt (author style profile,
+vocabulary palette, exemplar lines, structural targets), rewrites a Macedonian
+poem in a named poet's style. We distil this into Qwen3-4B given only the
+source poem and the target author's name: LoRA supervised fine-tuning (SFT) on
+1{,}146 teacher outputs, then Group Relative Policy Optimization (GRPO) against
+a reward built from the project's stylometric profiles, line-level content
+similarity and gates against copying, repetition and malformed output. SFT
+teaches the task format completely but collapses ten voices into one dominated
+by the corpus's two largest authors. GRPO-v1 raises the reward from 0.254 to
+0.406, removes SFT's repetition and doubles content preservation, but lowers
+author identification and learns to copy single source lines. GRPO-v2, which
+reweights the classifier term and steepens the copy gate, keeps identification
+near the SFT level only by holding the policy on the two largest authors. For
+eight of the ten targets neither student is ever identified as the requested
+author, which leaves GRPO's group-relative update nothing to amplify. All
+results are on the validation split; the test-split run is in progress.
 \end{abstract}
 
-\tableofcontents
-
 % ═══════════════════════════════════════════════════════════════════════════
-\section{Overview}\label{sec:overview}
+\section{Setup}\label{sec:setup}
 
-The project's corpus is 2{,}711 Macedonian poems and song lyrics (Cyrillic).
-Two earlier style-transfer approaches precede this work: a token-substitution
-pipeline that splices author vocabulary into masked slots, and a generative
-pipeline that sends Gemma~4 31B one prompt combining an English summary of
-the source poem, its content keywords, the target author's style profile in
-prose, a relevance-filtered vocabulary palette, tone-exemplar lines and
-structural targets (lines, stanzas, tokens per line). The second produces
-fluent, recognisably author-specific poems, but it depends on a 31B model
-behind a rate-limited API (about three minutes per poem including the
-model's obligatory reasoning) and on the whole stylometric pipeline at
-inference time.
+\paragraph{Task.} \emph{source poem} $+$ \emph{target author's name}
+$\to$ \emph{new poem} in the target's voice, in Macedonian Cyrillic. The
+teacher (Gemma~4 31B behind a rate-limited API, about three minutes per poem
+including obligatory reasoning) needs the whole stylometric pipeline at
+inference time; the student needs none of it.
 
-The question this report addresses is how close a 4B model can get to that
-teacher when it is given only
-\begin{center}
-\emph{source poem} $+$ \emph{target author's name} $\;\to\;$ \emph{new poem}.
-\end{center}
-The work is three stages, each consuming the previous one's output:
+\paragraph{Data.} \texttt{make\_splits.py} splits the 1{,}239 poems of the 38
+profiled authors 80/10/10 per author (seed 42) into 987 train, 126 val and 126
+test poems; the unit is the poem, since (author, title) is not unique in the
+corpus. The ten target authors are the ten with the most poems: Блаже
+Конески, Пијан Славеј, Ефтим Клетников, Ристо Лазаров, Веле Смилевски,
+Братислав Ташковски, Влада Урошевиќ, Адем Гајтани, Славко Јаневски and
+Катица Ќулавкова. The teacher wrote 1{,}146 transfers for (train poem,
+target) pairs, 108--120 per target, reusing the same 130 source poems across
+targets so that the data contrasts authors on identical content.
 
-\begin{enumerate}
-  \item \textbf{Synthetic data} (\S\ref{sec:data}). The teacher pipeline,
-    unmodified, writes transfers for (source, target) pairs drawn from the
-    train split only.
-  \item \textbf{SFT} (\S\ref{sec:sft}, \S\ref{sec:sfteval}). LoRA
-    fine-tuning of Qwen3-4B on those pairs, in a compact chat format that
-    contains none of the teacher's scaffolding.
-  \item \textbf{GRPO} (\S\ref{sec:grpo}--\S\ref{sec:grpov2}). Reward-driven
-    fine-tuning of the SFT model against a reward computed only from the
-    generated poem, the source poem and the target author.
-\end{enumerate}
-\S\ref{sec:gemma} repeats stages 2 and 3 with a second student
-(Gemma~4 E4B) to test whether the failures found with Qwen belong to the
-student or to the method.
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{Data}\label{sec:data}
-
-\subsection{Splits}
-
-\texttt{make\_splits.py} assigns every poem to \texttt{train},
-\texttt{val} or \texttt{test}, 80/10/10 per author, seeded (seed 42). The
-unit is the poem, not the (author, title) pair, which is not unique in this
-corpus (Блаже Конески alone has four distinct poems titled \texttt{ПЕСНА}).
-Authors with fewer than three poems cannot be split three ways and go
-entirely to \texttt{train}; every other author has at least one poem in each
-split. Over the 1{,}239 poems of the 38 profiled authors this gives 987
-train, 126 val and 126 test poems. Every later stage reads the split from
-this one file; nothing recomputes it.
-
-\subsection{Target authors}
-
-The ten target authors are the ten authors with the most poems among those
-with a style profile (ties broken alphabetically): Блаже Конески, Пијан
-Славеј, Ефтим Клетников, Ристо Лазаров, Веле Смилевски, Братислав Ташковски,
-Влада Урошевиќ, Адем Гајтани, Славко Јаневски and Катица Ќулавкова. They
-were chosen for having enough real poems to profile reliably, not by a
-diversity criterion; distinct voices follow from their being different
-poets.
-
-\subsection{Synthetic training data}
-
-\texttt{generate\_synthetic.py} calls the teacher pipeline
-(\texttt{llm\_style\_transfer.run\_transfer}) in a loop over sampled
-(source, target) pairs from the train split, with one sample per pair. The
-same set of source poems is reused across all target authors, so that the
-training data contrasts authors on identical content rather than on
-different poems. The run produced 1{,}146 examples: 130 distinct source
-poems, 108--120 examples per target author, with self-transfer pairs
-skipped and failed pairs (API errors, empty answers) logged separately
-rather than retried into the data.
-
-Generation is the throughput bottleneck: the Gemini API serves a few
-requests per minute, and Gemma~4 always reasons before answering, with
-reasoning length varying between about 2k and 16k tokens for the same
-prompt. The batch was therefore run as one process per target author in
-parallel, each writing its own part file, merged afterwards on the key
-(source poem, target author, sample index). The output file is also the
-resume record, so an interrupted run never regenerates a finished pair.
-
-The same procedure on the val split (50 val poems $\times$ 10 targets, self
-pairs skipped, 468 pairs) gives the teacher's output on exactly the pairs
-the students are evaluated on (\texttt{data/synthetic/teacher\_val.csv}).
-It is evaluation data only and is never trained on. All 468 pairs are
-complete.
+\paragraph{Evaluation.} Every system is generated for the same 468 val pairs
+(50 val poems $\times$ 10 targets, self pairs skipped), with the same prompt,
+per-item seeds and plain sampling ($T=0.7$, top-$p=0.9$, top-$k=20$, 512 new
+tokens), on one A100. The teacher was run on the same 468 pairs as a
+reference. Metrics (\texttt{style\_metrics.py}) are all higher-is-better and
+shared with the GRPO reward:
+\begin{itemize}\itemsep0pt
+  \item \emph{degeneracy}: distinct-$n$, line uniqueness; an output is
+    \emph{degenerate} if distinct-1 $<0.40$ or line uniqueness $<0.80$;
+  \item \emph{copying}: \emph{line novelty} (share of lines not verbatim from
+    the source) and \emph{copy novelty} (share not near-copies; \S\ref{sec:reward});
+  \item \emph{content}: content-word recall from the source;
+  \item \emph{target style}: structural fit, TF-IDF palette hit rate, and two
+    author classifiers. The reward classifier (\texttt{classifier.pkl},
+    character 2--4-grams, linear SVM) was fitted on the whole corpus, so it
+    memorises real poems (top-1 1.000 against 0.883 under 5-fold CV), and it
+    is a GRPO reward term. The \emph{judge} is evaluation-only and differs on
+    every axis: train poems only, word uni+bigrams, logistic regression. Its
+    top-1 on unseen real poems of the ten targets is 0.663, the ceiling for a
+    perfect transfer.
+\end{itemize}
 
 % ═══════════════════════════════════════════════════════════════════════════
 \section{Supervised fine-tuning}\label{sec:sft}
 
-\subsection{Task format}
+The student sees a minimal chat: a one-sentence system instruction, the source
+poem and the target's name, and the teacher's poem as the answer. None of the
+teacher's scaffolding is in the prompt; whatever it knows about an author it
+learns from about 115 teacher poems. One module (\texttt{sft\_data.py})
+renders the prompt for training, evaluation and GRPO, so they cannot drift.
+LoRA (rank 16, $\alpha$ 32, dropout 0.05) on all attention and MLP projections
+of \texttt{Qwen/Qwen3-4B}; 3 epochs, effective batch 16, learning rate
+$2\times10^{-4}$ (cosine), max length 1024, bf16, loss on the assistant turn
+only. The run took 210 steps and 15 minutes on one A100. Loss fell from 2.87
+to 1.72 in the first epoch and to 1.34 by the third, with steps at the epoch
+boundaries that suggest partial memorisation of the training poems. 71
+examples (6.2\,\%) are longer than 1024 tokens and lost their end-of-turn
+token; SFT was not retrained, to keep both GRPO runs' start policy fixed.
 
-The student is trained on a deliberately minimal chat:
-\begin{itemize}
-  \item \emph{system}: ``You rewrite Macedonian poems in a different poet's
-    style. Given a source poem and a target author, write a new poem in
-    Macedonian, in Cyrillic script, that conveys the source poem's content
-    and imagery in the target author's voice.''
-  \item \emph{user}: \texttt{Source poem:\textbackslash n\{poem\}\textbackslash n\textbackslash nTarget author: \{name\}}
-  \item \emph{assistant}: the teacher's poem.
-\end{itemize}
-None of the teacher's scaffolding --- the summary, keywords, style profile,
-palette, exemplars or structural targets --- is in the student's prompt.
-Whatever the student knows about an author it has to learn from the 108--120
-teacher poems written for that author. The same module
-(\texttt{sft\_data.py}) renders the prompt for training, for validation
-generation and for GRPO, through the tokenizer's own chat template, so the
-three cannot drift. Qwen3 is used as a non-reasoning model
-(\texttt{enable\_thinking=False}).
+\paragraph{Result.} Against the untuned base (Table~\ref{tab:main}), SFT
+does the task: the base model mostly reproduces the source under a markdown
+heading (line novelty 0.224, markup-free in 59\,\% of outputs), while SFT
+writes original lines (1.000), never adds markup or commentary, fits the
+target's structure (0.846 vs.\ 0.680), and is identified as the target 17
+times more often (classifier top-1 0.158 vs.\ 0.009; judge 0.158 vs.\ 0.064).
+The base model's higher content recall (0.901) and diversity come from the
+copied human text.
 
-\subsection{Training}
-
-LoRA on \texttt{Qwen/Qwen3-4B} with TRL's \texttt{SFTTrainer} and PEFT:
-
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-LoRA rank / $\alpha$ / dropout & 16 / 32 / 0.05 \\
-Target modules & \texttt{q,k,v,o,gate,up,down\_proj} (all attention and MLP projections) \\
-Epochs & 3 \\
-Batch & 4 per device $\times$ 4 accumulation $=16$ \\
-Learning rate & $2\times10^{-4}$, cosine, 3\,\% warm-up \\
-Max sequence length & 1024 tokens \\
-Precision & bf16, gradient checkpointing \\
-Loss & assistant turn only (\texttt{assistant\_only\_loss}) \\
-Seed & 42 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-The target modules were checked against the transformers Qwen3 source rather
-than taken from a generic Llama default; Qwen3's \texttt{q\_norm} and
-\texttt{k\_norm} are RMSNorm layers and are not adapted. The loss is masked
-to the assistant turn: TRL patches generation markers into Qwen3's chat
-template for this. With that template the masked span also contains Qwen3's
-constant empty reasoning block (\texttt{<think>\textbackslash n\textbackslash n</think>}) and the newline after
-the end-of-turn token, which are trivially learnable and do not affect the
-poem.
-
-\subsection{Training run}\label{sec:sfttrain}
-
-The run took 210 optimizer steps (70 per epoch) and processed 2.17M tokens,
-prompts included ($6.1\times10^{16}$ FLOPs). The loss, over assistant tokens
-only, from the run's \texttt{trainer\_state.json}:
-
-\begin{center}
-\begin{tabular}{rrrrr}
-\toprule
-Step & Epoch & Loss & Token accuracy & Entropy \\
-\midrule
-10  & 0.14 & 2.871 & 0.454 & 1.93 \\
-40  & 0.57 & 1.901 & 0.550 & 1.90 \\
-70  & 1.00 & 1.717 & 0.583 & 1.70 \\
-80  & 1.14 & 1.572 & 0.605 & 1.60 \\
-140 & 2.00 & 1.496 & 0.626 & 1.50 \\
-150 & 2.14 & 1.367 & 0.654 & 1.41 \\
-210 & 3.00 & 1.341 & 0.658 & 1.36 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize Each row is the mean over the preceding 10 steps. Token
-accuracy is the share of assistant tokens predicted exactly; entropy is the
-mean entropy of the predicted next-token distribution.}
-
-Most of the loss reduction happens in the first epoch (2.87 $\to$ 1.72).
-After that, the loss falls in steps at the epoch boundaries and stays almost
-flat within an epoch: it drops 0.15 from step 70 to step 80 and 0.13 from
-step 140 to step 150, but only 0.03 over the 60 steps of the third epoch
-after step 150. Steps at epoch boundaries are the usual sign that the model
-recognises examples it has already seen. With 1{,}146 examples and three
-passes, part of the second and third epochs' gain is memorisation of the
-training poems rather than better generalisation. The run has no held-out
-loss to tell the two apart: the evaluation split was configured, but the
-synthetic dataset contains only train rows, so no evaluation step ran. The
-teacher's val-pair outputs (\texttt{teacher\_val.csv},
-\S\ref{sec:teacherval}) were generated later and could now serve as that
-held-out set. The final loss of 1.34 corresponds to a per-token perplexity of
-about 3.8 on the teacher's poems.
-
-The run took 881\,s (about 15 minutes) on one NVIDIA A100-SXM4-80GB.
-
-\subsection{Runtime environment}
-
-Training and generation run on a single A100 in a Slurm cluster, inside a
-Singularity image built from the project's own \texttt{pyproject.toml} and
-\texttt{uv.lock} (\texttt{uv sync --frozen} at build time). The image is
-therefore the same environment as local \texttt{uv run}, with no separate
-CUDA base image: the PyPI \texttt{torch} wheel bundles its CUDA runtime, and
-only the driver comes from the host (\texttt{--nv}). One bind mount maps the
-repository into the container, so a job reads and writes the same
-\texttt{data/} and \texttt{models/} as local runs.
+\paragraph{Two deficits.} \emph{Style collapse}: the aggregate is carried by
+Конески and Пијан Славеј, the corpus's two largest authors; the other eight
+targets are identified 0--15\,\% of the time (Table~\ref{tab:authors}), and
+36\,\% of all outputs are read as Конески whatever the target. The training
+data is balanced across targets, so the imbalance is not one of example
+counts. Pooled vocabulary at a matched 30{,}000-token budget is 3{,}087 word
+types, against 5{,}376 for the teacher and 9{,}060 for real poems.
+\emph{Repetition}: 30.1\,\% of outputs are degenerate. A decoding ablation
+separates the two: a repetition penalty of 1.1 removes degenerate output
+entirely (line uniqueness 0.999) but costs a third of content recall, and on
+56 pairs no decoding setting moves author identification by more than noise.
+Repetition is partly decoding; the collapse is in the policy, and is what GRPO
+is for.
 
 % ═══════════════════════════════════════════════════════════════════════════
-\section{Evaluation methodology}\label{sec:method}
+\section{GRPO}\label{sec:grpo}
 
-\subsection{Protocol}
+GRPO samples $G=4$ completions per prompt, scores each, and normalises the
+rewards within the group, so the update moves probability towards the
+group's above-average samples. The reward sees only the generated poem, the
+source poem and the target author --- never the teacher's output, and no val
+or test poem. With a LoRA policy, TRL's KL reference is the policy with its
+adapter switched off; the SFT adapter is therefore merged into the base
+weights and a fresh LoRA trained on top, so that the start policy and the KL
+reference are both exactly the SFT model.
 
-Every model is evaluated on the same 468 val pairs (50 val poems $\times$
-10 targets, self pairs skipped), with the same prompt, the same per-item
-seeds and plain sampling unless stated otherwise ($T=0.7$, top-$p=0.9$, top-$k$
-20, at most 512 new tokens). Models compared with each other are generated
-back to back in one job on one GPU: sampling draws from the device's own RNG
-stream, so comparing a CPU run with a GPU run would confound the model
-difference with a change of random generator. Results are reported over all
-rows and over the \emph{paired} view (only pairs present in every compared
-run).
+\subsection{Reward}\label{sec:reward}
 
-\subsection{Metrics}
-
-All metrics are computed by one module, \texttt{style\_metrics.py}, and are
-oriented higher-is-better and mostly bounded in $[0,1]$, because the GRPO
-reward uses the same functions; a reward that disagreed with the evaluation
-metric would be a defect.
-
-\begin{center}
-\begin{tabular}{p{3.4cm}p{10.8cm}}
-\toprule
-Group & Metrics \\
-\midrule
-Degeneracy & distinct-1/2/3; line uniqueness; maximum repeats of one line.
-  An output is \emph{degenerate} if distinct-1 $<0.40$ or line uniqueness
-  $<0.80$. \\
-Format & Cyrillic ratio; no markdown or commentary. \\
-Structure & fit of line count, stanza count and tokens per line to the
-  target author's profile. \\
-Target style & \texttt{classifier.pkl} probability of and top-1 for the target
-  author; target TF-IDF vocabulary hit rate; the held-out judge
-  (\S\ref{sec:judge}). \\
-Content & content-word recall from the source; line novelty and copy
-  novelty (\S\ref{sec:copy}). \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Two reference rows anchor the numbers: the teacher's output, and the target
-authors' real poems (\texttt{--corpus-reference}), which show what each
-metric scores on human text.
-
-\subsection{Copying has to be measured}\label{sec:copy}
-
-The untuned base model's dominant response is not a failed style transfer.
-It reproduces the source poem verbatim under a markdown heading, followed by
-a paragraph explaining the target author's style. That output has
-near-perfect content preservation and, because it is real human poetry,
-excellent diversity and fluency. Under any combination of diversity, fluency
-and content metrics, ``change nothing'' would score highest.
-\texttt{line\_novelty} (share of generated lines that are not verbatim source
-lines after normalising punctuation and case) and its fuzzier successor
-\texttt{copy\_novelty} (\S\ref{sec:gates}) are the guard.
-
-\subsection{Two author classifiers}\label{sec:judge}
-
-\texttt{classifier.pkl} is the project's character-(2,4)-gram author
-classifier. It was fitted on the whole corpus, so on the target authors' real
-poems it scores top-1 1.000 by memorisation; the same recipe's held-out
-accuracy under 5-fold cross-validation, 0.883, is the honest ceiling.
-GRPO also uses this classifier's target probability as a reward component,
-so after GRPO its score is no longer independent evidence: a policy trained
-to raise it will raise it whether or not the poem reads as the author.
-
-The \emph{judge} (\texttt{judge\_classifier.py}) is a second classifier used
-only for evaluation and differs from the reward classifier in data, features
-and model: it is fitted on train-split poems only (authors with at least
-five train poems, 23 authors, 963 poems), on word unigrams and bigrams, with
-multinomial logistic regression. Its top-1 on the 172 val and test poems of
-the ten target authors is 0.663, which is the ceiling for real unseen poems;
-in the real-poem row the judge's columns are blank for train poems, which it
-has seen. A test forbids importing the judge from any reward module. A gain
-in classifier top-1 without a gain in judge top-1 would mean the reward
-classifier was gamed.
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{SFT results}\label{sec:sfteval}
-
-\subsection{Against the base model}
-
-\begin{center}
-\begin{tabular}{lrrrr}
-\toprule
-& Base & LoRA-SFT & Gemma & Real \\
-Metric (higher is better) & Qwen3-4B & (tuned) & teacher$^\star$ & poems \\
-\midrule
-\multicolumn{5}{l}{\emph{Task compliance}} \\
-\quad line novelty (not copied from source) & 0.224 & \textbf{1.000} & 1.000 & --- \\
-\quad no markdown / commentary             & 0.592 & \textbf{1.000} & 1.000 & 0.960 \\
-\quad structural fit to target             & 0.680 & \textbf{0.848} & 0.950 & 0.768 \\
-\midrule
-\multicolumn{5}{l}{\emph{Target-style match}} \\
-\quad classifier top-1 = target author     & 0.009 & \textbf{0.141} & 0.589 & 0.883$^\dagger$ \\
-\quad classifier probability of target     & 0.024 & \textbf{0.115} & 0.381 & --- \\
-\quad target TF-IDF vocabulary hit rate    & 0.005 & \textbf{0.044} & 0.311$^\ddagger$ & 0.050 \\
-\midrule
-\multicolumn{5}{l}{\emph{Content preservation}} \\
-\quad content-word recall from source      & 0.901$^\S$ & 0.173 & 0.176 & --- \\
-\midrule
-\multicolumn{5}{l}{\emph{Degeneracy}} \\
-\quad distinct-1                           & 0.635$^\S$ & 0.515 & 0.768 & 0.770 \\
-\quad line uniqueness                      & 0.895 & 0.904 & 0.999 & 0.969 \\
-\quad degenerate outputs (\% of rows)      & 18.6\% & 25.0\% & 0.2\% & 6.6\% \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize $^\star$ the teacher's 1{,}146 \emph{train} rows (its training
-data); the teacher on the val pairs is in \S\ref{sec:teacherval}.
-$^\dagger$ held-out 5-fold CV, not the memorising shipped model.
-$^\ddagger$ the teacher was \emph{handed} this palette in its prompt, so it
-exceeds human text; the metric measures palette uptake, not quality.
-$^\S$ inflated by verbatim copying.}
-
-\paragraph{Fine-tuning worked on every axis the task is defined on.} The
-tuned model writes original lines instead of copying (1.000 vs.\ 0.224),
-never emits markdown or commentary (1.000 vs.\ 0.592), fits the target
-author's structure better (0.848 vs.\ 0.680), and is 15 times more likely to
-be identified as the requested author (0.141 vs.\ 0.009). Its content-word
-recall, 0.173, matches the teacher's 0.176: the teacher's degree of content
-preservation was distilled faithfully, low as it is.
-
-\paragraph{The base model's diversity advantage is an artifact.} 87.8\,\% of
-its outputs are mostly copied from the source, and the copied human poetry
-carries the diversity. On the 12.2\,\% of rows where it composes something
-new, its distinct-1 is 0.532 --- indistinguishable from the tuned model's
-0.515 --- with a classifier top-1 of 0.035. Fine-tuning did not cost
-diversity; it removed the copying that disguised the base model's own lack
-of it.
-
-\subsection{Style collapse}\label{sec:collapse}
-
-Broken out per target author, the tuned model does not have ten voices:
-
-\begin{center}
-\begin{tabular}{lrrr}
-\toprule
-Target author & Base & LoRA-SFT & Gemma teacher \\
-\midrule
-Блаже Конески       & 0.000 & 0.574 & 0.899 \\
-Пијан Славеј        & 0.000 & 0.395 & 0.565 \\
-Ефтим Клетников     & 0.021 & 0.170 & 0.655 \\
-Ристо Лазаров       & 0.000 & 0.106 & 0.608 \\
-Веле Смилевски      & 0.000 & 0.104 & 0.881 \\
-Братислав Ташковски & 0.000 & 0.022 & 0.579 \\
-Влада Урошевиќ      & 0.000 & 0.021 & 0.816 \\
-Адем Гајтани        & 0.000 & 0.021 & 0.345 \\
-Славко Јаневски     & 0.000 & 0.020 & 0.183 \\
-Катица Ќулавкова    & 0.065 & 0.000 & 0.395 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize Classifier top-1, per requested target author.}
-
-The tuned model's aggregate is carried by Блаже Конески and Пијан Славеј,
-the corpus's two largest authors (182 and 160 poems); asked for Катица Ќулавкова it succeeds
-zero times in 46. Whatever author is requested, the classifier reads 35.0\,\%
-of its output as Конески. The teacher is differentiated across the range
-(0.183--0.899). The SFT data is balanced across targets (108--120 examples
-each), so the imbalance does not come from the number of training examples
-per target.
-
-Pooled vocabulary at a matched 30{,}000-token budget confirms the collapse is
-corpus-level, not only per-poem repetition: 3{,}087 distinct word types for
-the tuned model, against 5{,}376 for the teacher and 9{,}060 for real poems
-by the same authors. It is syntactic as well as lexical: the tuned model
-falls into a fixed line template, $\langle$noun$\rangle$
-$\langle$adverb$\rangle$ $\langle$verb$\rangle$ \emph{сега}, visible even in
-its best-scoring output (classifier probability 0.785 for Пијан Славеј, a
-poem in which \emph{Мераци брзо се вртат сега} occurs four times).
-
-\subsection{Degenerate decoding versus a degenerate policy}\label{sec:decodeablation}
-
-The repetition and the collapse could be one fault or two. A decoding
-ablation separates them: the same adapter, 56 val pairs, the same seeds,
-four decoding settings.
-
-\begin{center}
-\begin{tabular}{lrrrr}
-\toprule
-& Plain & Repetition & Repetition & No repeated \\
-Metric & sampling & penalty 1.1 & penalty 1.2 & 4-gram \\
-\midrule
-distinct-1                    & 0.503 & 0.807 & 0.895 & 0.751 \\
-line uniqueness               & 0.876 & 0.998 & 1.000 & 1.000 \\
-degenerate outputs            & 30.4\% & \textbf{0.0\%} & \textbf{0.0\%} & \textbf{0.0\%} \\
-\midrule
-classifier top-1 = target     & 0.125 & 0.107 & 0.161 & 0.125 \\
-\quad paired change vs.\ plain & ---   & $-0.018$ & $+0.036$ & $+0.000$ \\
-\midrule
-content-word recall           & 0.125 & 0.078 & 0.031 & 0.088 \\
-structural fit                & 0.859 & 0.837 & 0.813 & 0.837 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\paragraph{The repetition is a decoding artifact.} A repetition penalty of
-1.1 removes degenerate output entirely and lifts distinct-1 from 0.503 to
-0.807, past both the teacher and the real poems. Banning repeated 4-grams
-does the same at 0.751, closest to human text.
-
-\paragraph{The style collapse is not.} None of the settings moves target-style
-match: paired changes in classifier top-1 are noise around zero. That deficit
-is in the policy, and only training can move it.
-
-\paragraph{Cost.} A repetition penalty cannot tell a looped word from a word
-legitimately carried over from the source, so content recall falls (0.125
-$\to$ 0.078 at 1.1, $\to$ 0.031 at 1.2). The 4-gram ban constrains sequences
-and costs less (0.088), at the price of forbidding deliberate refrains, which
-real poems use (line uniqueness 0.969).
-
-\paragraph{Full-scale confirmation.} The repetition-penalty-1.1 setting was
-rerun on all 468 val pairs for both the base and the SFT model
-(\texttt{data/validation\_generations/reppen-1.1/}):
-
-\begin{center}
-\begin{tabular}{lrrrr}
-\toprule
-& \multicolumn{2}{c}{Base Qwen3-4B} & \multicolumn{2}{c}{LoRA-SFT} \\
-Metric & plain & penalty 1.1 & plain & penalty 1.1 \\
-\midrule
-distinct-1                     & 0.635 & 0.675 & 0.515 & \textbf{0.799} \\
-line uniqueness                & 0.895 & 0.928 & 0.904 & \textbf{0.999} \\
-max.\ repeats of one line      & 1.80  & 1.72  & 2.04  & \textbf{1.03}  \\
-classifier top-1 = target      & 0.009 & 0.024 & 0.141 & \textbf{0.182} \\
-classifier probability         & 0.024 & 0.028 & 0.115 & \textbf{0.127} \\
-judge top-1 = target           & 0.064 & ---   & 0.158 & \textbf{0.175} \\
-target TF-IDF hit rate         & 0.005 & 0.004 & 0.044 & \textbf{0.079} \\
-structural fit                 & 0.680 & 0.670 & \textbf{0.848} & 0.834 \\
-content-word recall            & 0.901$^\S$ & 0.829$^\S$ & \textbf{0.173} & 0.114 \\
-line novelty                   & 0.224 & 0.361 & 1.000 & 1.000 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-The 56-pair result holds at full scale. The penalty removes the SFT model's
-repetition (line uniqueness 0.999, at most 1.03 repeats of a line) at a cost
-of a third of its content recall. On 468 pairs it also raises classifier
-top-1 from 0.141 to 0.182, a larger move than the noise-level changes of the
-56-pair ablation, and the held-out judge moves the same way (0.158 $\to$
-0.175); the TF-IDF hit rate almost doubles as well, consistent with
-the penalty pushing the model off its few looped words and onto a wider
-vocabulary that includes more of the target's. Under the penalty the base
-model still copies most of its source (line novelty 0.361) and is no better
-at the task. All GRPO comparisons below use plain sampling, so that the
-policy, not the decoder, is what is being measured.
-
-\subsection{Defects found during the evaluation}
-
-\paragraph{Validation generation ran on the CPU.}
-\texttt{from\_pretrained} places the model on the CPU and \texttt{generate()}
-then runs there silently. The first validation run took 131\,s per
-generation (17 hours for 468 rows) on a node with an idle A100, against
-15.5\,s once the model is moved to the device. The loader now logs the device
-the model is on.
-
-\paragraph{6.2\,\% of training examples were truncated.} Measured with the
-Qwen3 tokenizer, the 1{,}146 training examples have median length 622 tokens,
-99th percentile 2{,}364 and maximum 4{,}031; at \texttt{max\_seq\_length}
-1024, 71 examples (6.2\,\%) lose the end of their assistant turn and with it
-the end-of-turn token, so they train the model to continue past where a poem
-should stop. This is a plausible contributor to the looping. 2048 would cover
-about 99\,\% of examples. Qwen's SFT was \emph{not} retrained at 2048,
-because that would change the start policy of both GRPO runs; it is a stated
-limitation (\S\ref{sec:limits}), and the Gemma student is trained at 4096
-tokens, which truncates nothing (\S\ref{sec:gemma}).
-
-\subsection{What SFT leaves for GRPO}
-
-Repetition needs a decoding control or a policy change, not more SFT.
-Style collapse is what the GRPO stage exists to address: SFT taught the task
-format but not the separation between authors. The style reward therefore
-has to be computed per target author, so that a policy reverting to Конески
-is not paid for it, and content has to be a reward term in its own right,
-because imitating a teacher that preserves little content cannot raise it.
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{GRPO: method and reward}\label{sec:grpo}
-
-GRPO (TRL's \texttt{GRPOTrainer}) samples $G$ completions per prompt, scores
-each with the reward, and normalises rewards within the group, so the update
-pushes probability towards the above-average members of each group. There is
-no value network; the group mean is the baseline. The reward sees three
-inputs only: the generated poem, the source poem and the target author. The
-teacher's output is never a reward target, and no val or test poem enters
-the prompts, the reward calibration or any in-training evaluation.
-
-\subsection{Why the SFT adapter is merged first}
-
-With a LoRA policy, TRL obtains the KL reference by switching the trainable
-adapter off. Continuing to train the SFT adapter would therefore anchor the
-KL term to the \emph{untuned} base model, the one that copies its source
-under a markdown heading. Instead the SFT adapter is merged into the base
-weights (\texttt{merge\_sft\_adapter.py}, which records the adapter's hash)
-and a fresh LoRA is trained on top. A fresh LoRA starts as the identity
-($B=0$), so the start policy and the KL reference are both exactly the SFT
-model. The merged model reproduces the unmerged adapter's validation scores
-to within sampling noise ($R=0.254$ for both).
-
-\subsection{Prompts}
-
-Train-split poems $\times$ the ten targets, self-transfer skipped, seeded
-shuffle, rendered with the SFT prompt format. Prompts longer than 1{,}024
-tokens are dropped, never truncated.
-
-\subsection{Style reward}
-
-The style reward reuses the definitions of the per-author style profiles,
-computed per poem. The per-poem code was extracted into
-\texttt{style\_features.py}, which the profiler now imports; the refactored
-profiler's output is byte-identical to the original's. Generated poems are
-tagged with \texttt{tagging.tag\_poem}, the corpus build's tagger with its
-hand corrections and filtering.
-
-Every feature is scored against the target author's \emph{per-poem}
-distribution over their train poems (\texttt{reward\_calibration.json}),
-because a single poem varies a lot around its author's mean. For a scalar
-feature $x_f$,
-\begin{equation}
-  s_f = \exp\!\left(-\tfrac12 z_f^2\right),\qquad
-  z_f = \frac{x_f-\mu_{a,f}}{\max(\sigma_{a,f},\,0.5\,\sigma_{\mathrm{corpus},f})},
-\end{equation}
-where the floor stops authors with few or unusually uniform poems from
-zeroing every small miss. For the POS-bigram and rhyme-ending distributions,
-the cosine $c$ to the author's aggregate distribution is scored one-sidedly
-against the author's own leave-one-out self-similarity $(\mu_c,\sigma_c)$:
-$s=1$ for $c\ge\mu_c$, otherwise $\exp(-\tfrac12((c-\mu_c)/\sigma_c)^2)$. The
-classifier's target probability is used as it is, and TF-IDF palette hits are
-divided by the author's 90th-percentile hit rate on real poems (the raw rate
-is about 0.05 even for human text). Scores are averaged within groups and
+\paragraph{Style.} Every feature is scored against the target author's
+\emph{per-poem} distribution over their train poems. A scalar feature scores
+$s_f=\exp(-\tfrac12 z_f^2)$ with
+$z_f=(x_f-\mu_{a,f})/\max(\sigma_{a,f},0.5\,\sigma_{\mathrm{corpus},f})$;
+POS-bigram and rhyme distributions are scored by cosine to the author's
+distribution, one-sided against the author's own leave-one-out
+self-similarity; the reward classifier's target probability is used as is;
+palette hits are divided by the author's 90th-percentile rate on real poems.
 $R_{\mathrm{style}}$ is the weighted mean of the groups:
 
-\begin{center}
+\begin{center}\small
 \begin{tabular}{llcc}
 \toprule
-Group & Features & v1 weight & v2 weight \\
+Group & Features & v1 & v2 \\
 \midrule
-POS profile & \texttt{pct\_NOUN/VERB/ADJ/ADV/PROPN} & 1.0 & 1.0 \\
-lexical diversity & MATTR over lemmas (TTR below the 200 window) & 1.0 & 1.0 \\
+POS profile & share of NOUN, VERB, ADJ, ADV, PROPN & 1.0 & 1.0 \\
+lexical diversity & MATTR over lemmas & 1.0 & 1.0 \\
 structure & tokens/line, lines, stanzas, lines/stanza & 1.0 & 1.0 \\
 POS bigrams & bigram distribution & 1.0 & 1.0 \\
-classifier & \texttt{clf\_target\_prob} & 1.0 & \textbf{5.6} \\
-rhyme & rhyme-ending distribution & 0.5 & 0.5 \\
-TF-IDF & palette hits / p90 & 0.5 & 0.5 \\
+classifier & reward classifier's target probability & 1.0 & \textbf{5.6} \\
+rhyme, TF-IDF & rhyme endings; palette hits & 0.5 & 0.5 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{Content reward}
+\paragraph{Content.} A line-level, BERTScore-style F1 against the source over
+multilingual sentence embeddings: each source line's best match among the
+generated lines (recall) and the reverse (precision). Because every line takes
+its best match, unrelated poems already score $b=0.553$, so
+$R_{\mathrm{content}}=\mathrm{clip}\big((F_1-b)/(1-b),0,1\big)$.
 
-Content is a line-level, BERTScore-style F1 against the source poem over
-\texttt{paraphrase-multilingual-mpnet-base-v2} embeddings: recall averages
-each source line's best cosine match among the generated lines, precision the
-reverse. Working per line avoids the model's 128-token limit and stops a poem
-that covers only the first stanza from earning full recall. Because every line
-takes its best match, unrelated poems already score high: the mean F1 over
-2{,}000 random cross-author train pairs is $b=0.553$. The reward is rescaled
-so that this level is zero, $R_{\mathrm{content}}=\mathrm{clip}\big((F_1-b)/(1-b),0,1\big)$.
+\paragraph{Gates.} Behaviours cheaper than doing the task are multiplied out
+rather than traded off. \emph{Copying}: $R_{\mathrm{content}}$ is multiplied
+by copy novelty, where a line of $\ge3$ tokens is a copy if $\ge75\,\%$ of its
+word types occur in one source line (containment, because Jaccard lets a
+one-word edit of a 5-token line through); v2 uses copy novelty$^3$.
+\emph{Repetition}: $R_{\mathrm{style}}$ is multiplied by line uniqueness.
+\emph{Format}: both are multiplied by
+$\texttt{is\_cyrillic}\cdot\texttt{no\_chat\_markup}\cdot\texttt{is\_nonempty}$.
+The total is $R=\alpha R^{g}_{\mathrm{style}}+\beta R^{g}_{\mathrm{content}}$.
 
-\subsection{Gates}\label{sec:gates}
+\paragraph{Weights from within-group spread.} Under group-normalised
+advantages a term steers the update in proportion to its spread \emph{within}
+a group of samples, not its mean. Sampling four SFT completions per train
+prompt, the gated style term's within-group standard deviation is 0.113 and
+the content term's 0.042, so training uses $\alpha=0.3$, $\beta=0.7$. Within
+style, the classifier's is 0.051 against 0.26--0.31 for lexical diversity and
+POS bigrams. Before training, the reward was checked on hand-built candidates:
+a real poem by the target scores highest on style, and verbatim and
+near-copies of the source lose their whole content reward.
 
-Three behaviours are cheaper for the policy than doing the task. Each is
-gated multiplicatively rather than added as another objective, so it cannot
-be traded against the rest of the reward:
-\begin{itemize}
-  \item \emph{Copying.} $R_{\mathrm{content}}$ is multiplied by
-    \texttt{copy\_novelty}, the share of generated lines that are not
-    near-copies. A line of at least three tokens is a copy if at least
-    75\,\% of its word types occur in one source line. Containment is used
-    rather than Jaccard because on this corpus's $\sim$5-token lines one
-    swapped word gives Jaccard $4/6=0.67$, which a 0.7 threshold would let
-    through. v2 raises the gate to a power, \texttt{copy\_novelty}$^k$, $k=3$
-    (\S\ref{sec:grpov2}).
-  \item \emph{Repetition.} $R_{\mathrm{style}}$ is multiplied by line
-    uniqueness (0.97 on real poems).
-  \item \emph{Format.} Both terms are multiplied by
-    $\mathrm{validity}=\texttt{is\_cyrillic}\cdot\texttt{no\_chat\_markup}\cdot\texttt{is\_nonempty}$.
-    The markup test is narrower than the reported \texttt{no\_markup}: bullet
-    and numbered-line patterns fire on 49 of the 1{,}239 real poems (dialogue
-    lines opening with ``- ''), and as a hard gate zeroed a real target poem
-    in the fixtures. Bold, heading and code-fence markup alone catch 186 of
-    the untuned model's 191 markup outputs and occur in one real poem.
-\end{itemize}
-The total is
-$R=\alpha\,R_{\mathrm{style}}^{g}+\beta\,R_{\mathrm{content}}^{g}$, where $g$
-marks the gated terms.
-
-\subsection{Choosing the weights from within-group spread}
-
-Under group-normalised advantages, which term drives the update depends on
-its spread \emph{within} a group, not on its mean. \texttt{evaluate\_reward.py
---groups} samples $G=4$ SFT completions per train prompt exactly as training
-does and reports each component's within-group standard deviation
-(\texttt{data/grpo/reward\_groups.csv}). The gated style term's is 0.113 and
-the gated content term's only 0.042, so at equal weights style would
-dominate the advantage almost three to one. The training runs therefore use
-$\alpha=0.3$, $\beta=0.7$. Within style, the classifier's spread is 0.051,
-against 0.26 and 0.31 for lexical diversity and POS bigrams; this
-measurement is what v2's classifier weight is derived from.
-
-\subsection{Validating the reward before training}
-
-\texttt{evaluate\_reward.py --fixtures} scores seven hand-built candidates
-for four train (source, target) pairs and checks orderings that any usable
-reward must satisfy. All hold:
-
-\begin{center}
-\begin{tabular}{lcccc}
-\toprule
-Candidate & $R_{\mathrm{style}}$ & $R_{\mathrm{content}}$ & $R_{\mathrm{content}}^{g}$ & $R$ \\
-\midrule
-real poem by the target & 0.75--0.90 & 0.00--0.05 & 0.00--0.05 & 0.38--0.45 \\
-verbatim source & 0.49--0.63 & 1.00 & 0.00 & 0.25--0.32 \\
-near-copy (one word per line) & 0.43--0.58 & 0.50--0.72 & 0.00 & 0.22--0.29 \\
-Gemma teacher output & 0.61--0.83 & 0.00--0.26 & 0.00--0.26 & 0.35--0.51 \\
-one line repeated 12$\times$ & 0.19--0.29 & 0.00--0.37 & 0.00 & 0.01 \\
-markdown answer in English & 0.17--0.36 & 0.00 & 0.00 & 0.00 \\
-empty & 0.08--0.11 & 0.00 & 0.00 & 0.00 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize $R$ at $\alpha=\beta=0.5$.}
-
-The target's own poem gets the highest style score, and both copies lose
-their whole content reward to the gate. The table also shows the reward's
-main weakness: the teacher's raw content score is low (0.00--0.26), so after
-the baseline rescaling a genuine paraphrase barely clears an unrelated poem.
-On the 468 val pairs the reward ranks SFT above the untuned base even though
-the base's raw content score is far higher, because the gates remove it:
-
-\begin{center}
-\begin{tabular}{lcc}
-\toprule
-Metric & untuned base & SFT \\
-\midrule
-copy novelty & 0.197 & 0.993 \\
-$R_{\mathrm{style}}$ / gated & 0.487 / 0.272 & 0.425 / 0.387 \\
-$R_{\mathrm{content}}$ / gated & 0.817 / 0.074 & 0.121 / 0.120 \\
-$R$ & 0.173 & 0.254 \\
-rows with $R=0$ & 39.7\,\% & 0.0\,\% \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\subsection{Training configuration}
-
-\begin{center}
-\begin{tabular}{ll}
-\toprule
-Start policy / KL reference & SFT merged into Qwen3-4B \\
-LoRA rank / $\alpha$ / dropout & 16 / 32 / 0 \\
-Group size $G$ & 4 \\
-Batch & 8 completions $\times$ 4 accumulation (8 prompts per step) \\
-Learning rate & $10^{-5}$ constant, 10 warm-up steps \\
-Steps & 500 (16{,}000 scored completions) \\
-Sampling temperature & 0.9 \\
-Max completion & 512 tokens, truncated completions masked from the loss \\
-KL coefficient $\beta_{\mathrm{KL}}$ & 0.04 \\
-Reward weights & $\alpha=0.3$, $\beta=0.7$ \\
-Seed / precision & 42 / bf16 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-A smoke run (3 steps, 4 prompts, learning rate $10^{-4}$) precedes every long
-run and asserts finite loss and rewards, non-constant rewards within a group,
-LoRA $B$ moved off zero, and a changed log-probability of a fixed completion
-with the adapter on versus off. The completion cap matters here: SFT
-completions have a median of 291 tokens, and with truncation masking a short
-cap would zero the loss of every completion. Every run writes its arguments,
-git commit, merge provenance, calibration hash and library versions to
-\texttt{run\_config.json}, and every reward component of every scored sample
-to \texttt{reward\_components.jsonl}.
-
-On one NVIDIA A100-SXM4-80GB, the 500 steps took 28{,}540\,s (7.9\,h) for
-v1 and 29{,}920\,s (8.3\,h) for v2, about a minute per step: generating the
-32 completions per step and scoring each with the reward (which POS-tags
-every poem with CLASSLA on the CPU) dominate, not the gradient update.
+\paragraph{Training.} 500 steps, 8 prompts $\times$ 4 samples per step
+(16{,}000 scored completions), LoRA rank 16, learning rate $10^{-5}$,
+temperature 0.9, KL coefficient 0.04, 512-token completions with truncated
+ones masked, bf16. Each run took about 8 hours on one A100 (v1 7.9\,h, v2
+8.3\,h), dominated by generation and by POS-tagging every sample for the
+reward. v2 differs from v1 only in the two reward changes.
 
 % ═══════════════════════════════════════════════════════════════════════════
-\section{GRPO v1 results}\label{sec:grporesults}
+\section{Results}\label{sec:results}
 
-Evaluated on the 468 val pairs against its start policy, generated back to
-back on one GPU with the same seeds and plain sampling. All $R$ columns are
-recomputed at the neutral $\alpha=\beta=0.5$, not the training weights, so
-they do not favour the trained policy's own objective.
-
-\begin{center}
-\begin{tabular}{lrrrrr}
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{lrrrrrr}
 \toprule
-& Base & SFT & GRPO & Gemma & Real \\
-Metric (higher is better unless noted) & Qwen3-4B & (merged) & v1 & teacher$^\ast$ & poems \\
+& Base & SFT & GRPO & GRPO & Gemma & Real \\
+Metric & Qwen3-4B & (merged) & v1 & v2 & teacher & poems \\
 \midrule
-\multicolumn{6}{l}{\emph{Reward ($\alpha=\beta=0.5$)}} \\
-\quad $R_{\mathrm{style}}^{g}$              & 0.272 & 0.384 & 0.511 & \textbf{0.686} & --- \\
-\quad $R_{\mathrm{content}}^{g}$            & 0.074 & 0.123 & \textbf{0.302} & 0.105 & --- \\
-\quad $R$                                   & 0.173 & 0.254 & \textbf{0.406} & 0.395 & --- \\
+\multicolumn{7}{l}{\emph{Reward} ($\alpha=\beta=0.5$, neutral weights)} \\
+\quad $R^{g}_{\mathrm{style}}$ / $R^{g}_{\mathrm{content}}$ & .272/.074 & .384/.123 & .511/\textbf{.302} & .414/.285 & \textbf{.686}/.105 & --- \\
+\quad $R$                                   & .173 & .254 & \textbf{.406} & .350 & .395 & --- \\
 \midrule
-\multicolumn{6}{l}{\emph{Degeneracy}} \\
-\quad distinct-2                            & 0.863 & 0.785 & 0.896 & \textbf{0.970} & 0.948 \\
-\quad distinct-3                            & 0.898 & 0.885 & 0.959 & \textbf{0.995} & 0.971 \\
-\quad line uniqueness                       & 0.895 & 0.900 & 0.971 & \textbf{0.998} & 0.969 \\
-\quad max.\ repeats of one line (lower)     & 1.80  & 2.05  & 1.37  & \textbf{1.03} & 1.34 \\
-\quad degenerate outputs (lower)            & 18.6\% & 30.1\% & 5.3\% & \textbf{0.2\%} & 6.6\% \\
+\multicolumn{7}{l}{\emph{Task and copying}} \\
+\quad line novelty                          & .224 & 1.000 & .998 & .999 & 1.000 & --- \\
+\quad outputs with a copied line (lower)    & 98.5\% & 8.1\% & 44.4\% & 33.8\% & 1.9\% & --- \\
+\quad content-word recall                   & .901$^\S$ & .174 & \textbf{.338} & .270 & .159 & --- \\
 \midrule
-\multicolumn{6}{l}{\emph{Content preservation}} \\
-\quad content-word recall from source       & 0.901$^\S$ & 0.174 & \textbf{0.338} & 0.159 & --- \\
-\quad copy novelty                          & 0.197 & 0.995 & 0.956 & \textbf{0.999} & --- \\
+\multicolumn{7}{l}{\emph{Degeneracy}} \\
+\quad line uniqueness                       & .895 & .900 & .971 & .920 & \textbf{.998} & .969 \\
+\quad degenerate outputs (lower)            & 18.6\% & 30.1\% & 5.3\% & 25.4\% & \textbf{0.2\%} & 6.6\% \\
 \midrule
-\multicolumn{6}{l}{\emph{Target-style match}} \\
-\quad classifier probability of target      & 0.024 & 0.120 & 0.083 & \textbf{0.404} & --- \\
-\quad classifier top-1 = target author      & 0.009 & 0.158 & 0.079 & \textbf{0.641} & 0.883$^\dagger$ \\
-\quad judge probability of target           & 0.061 & 0.098 & 0.085 & \textbf{0.232} & 0.298$^\P$ \\
-\quad judge top-1 = target author           & 0.064 & 0.158 & 0.130 & \textbf{0.506} & 0.663$^\P$ \\
-\quad target TF-IDF vocabulary hit rate     & 0.005 & 0.043 & 0.043 & 0.302$^\ddagger$ & 0.050 \\
-\quad structural fit                        & 0.680 & 0.846 & 0.831 & \textbf{0.950} & 0.768 \\
+\multicolumn{7}{l}{\emph{Target style}} \\
+\quad classifier top-1 = target             & .009 & .158 & .079 & .135 & \textbf{.641} & .883$^\dagger$ \\
+\quad judge top-1 = target                  & .064 & .158 & .130 & .150 & \textbf{.506} & .663$^\dagger$ \\
+\quad share read as Конески (classifier)    & 8.5\% & 36.3\% & 21.8\% & 35.9\% & 18.8\% & --- \\
+\quad structural fit                        & .680 & .846 & .831 & .820 & \textbf{.950} & .768 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\caption{All systems on the 468 val pairs. Bold: best model output per row.
+$^\S$ inflated by verbatim copying. $^\dagger$ held-out ceilings (5-fold CV;
+unseen val/test poems for the judge).}
+\label{tab:main}
+\end{table}
 
-\noindent
-{\footnotesize $^\ast$ teacher on the same 468 val pairs
-(\S\ref{sec:teacherval}). $^\S$ inflated by verbatim copying. $^\dagger$ held-out 5-fold CV.
-$^\ddagger$ the teacher is handed the palette. $^\P$ val and test poems only,
-which the judge has not seen. Bold marks the best model output per row.}
-
-\paragraph{The reward rose, and it was not gamed on the axes it gates.} GRPO
-scores higher than its start policy on 94.4\,\% of the paired items. The
-content term more than doubled (0.123 to 0.302), and no output has a zero
-gated content reward, against 18.4\,\% for SFT. The degeneracy that
-\S\ref{sec:decodeablation} attributed to decoding is largely gone \emph{under
-plain sampling}: 5.3\,\% degenerate outputs against 30.1\,\%, and line
-uniqueness (0.971) and repetition (1.37) now match real poems. This came from
-the policy, not a decoding control, and --- unlike the repetition penalty,
-which cut content recall --- together with higher content recall. Format
-compliance is unchanged (100\,\% Cyrillic, no markup).
-
-\paragraph{Where the style gain came from.} Between the first and last 50
-training steps (\texttt{reward\_components.jsonl}), lexical diversity rose
-0.49 $\to$ 0.71, POS bigrams 0.64 $\to$ 0.84 and POS profile 0.60 $\to$
-0.67; structure, rhyme and TF-IDF stayed flat, and the classifier probability
-\emph{fell}, 0.102 $\to$ 0.078. These are exactly the groups with the largest
-within-group spread before training. A component that barely varies among a
-prompt's four samples barely steers a group-normalised update: at equal group
-weight the classifier contributed a fifth to a sixth of the within-group
-variation either of those groups did, and all of style entered $R$ at only
-$\alpha=0.3$.
-
-\subsection{Target-style match went down}
-
-GRPO is identified as the requested author less often than its start policy
-(top-1 0.158 $\to$ 0.079), and the classifier probability is lower for 9 of
-the 10 targets:
-
-\begin{center}
-\begin{tabular}{lrr}
-\toprule
-Target author & SFT & GRPO v1 \\
-\midrule
-Блаже Конески       & 0.745 & 0.404 \\
-Пијан Славеј        & 0.372 & 0.186 \\
-Ефтим Клетников     & 0.149 & 0.021 \\
-Веле Смилевски      & 0.125 & 0.062 \\
-Адем Гајтани        & 0.085 & 0.000 \\
-Ристо Лазаров       & 0.064 & 0.043 \\
-Катица Ќулавкова    & 0.022 & 0.022 \\
-Братислав Ташковски & 0.022 & 0.022 \\
-Влада Урошевиќ      & 0.021 & 0.021 \\
-Славко Јаневски     & 0.000 & 0.020 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Most of the aggregate loss is on the two authors that carried SFT's score,
-and the share of all outputs the classifier assigns to Конески falls from
-36.3\,\% to 21.8\,\%. GRPO has partly undone the collapse onto the majority
-voice --- what the per-target calibration of the style reward was meant to do
---- but has not replaced it with the requested voices: the other eight
-authors are unchanged or lower, at 0.000--0.062. The feature-level reward
-moves the surface statistics it measures towards the target's per-poem
-distribution, but those statistics do not by themselves make a poem
-identifiable as that author.
-
-\paragraph{The judge agrees in direction, not in size.} The held-out judge
-(\S\ref{sec:judge}) also scores GRPO below SFT, but by less: top-1 0.158
-$\to$ 0.130, against 0.158 $\to$ 0.079 for the reward classifier. That v1's
-loss is larger on the classifier it was rewarded with than on an independent
-one is the opposite of gaming; but by neither measure did GRPO improve author
-identification. Per target, the judge's picture matches the classifier's:
-
-\begin{center}
-\begin{tabular}{lrrr}
-\toprule
-Target author & SFT & GRPO v1 & Gemma teacher \\
-\midrule
-Блаже Конески       & 0.553 & 0.447 & 0.979 \\
-Пијан Славеј        & 0.465 & 0.442 & 0.698 \\
-Ефтим Клетников     & 0.383 & 0.298 & 0.872 \\
-Веле Смилевски      & 0.125 & 0.042 & 0.812 \\
-Влада Урошевиќ      & 0.021 & 0.064 & 0.681 \\
-Адем Гајтани        & 0.000 & 0.021 & 0.404 \\
-Ристо Лазаров       & 0.021 & 0.021 & 0.255 \\
-Славко Јаневски     & 0.020 & 0.000 & 0.240 \\
-Братислав Ташковски & 0.022 & 0.000 & 0.109 \\
-Катица Ќулавкова    & 0.000 & 0.000 & 0.022 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize Judge top-1, per requested target author.}
-
-The judge has a majority-author prior of its own: it assigns 32.1\,\% of the
-teacher's outputs, and 36.5\,\% of SFT's, to Конески, and it identifies
-Ќулавкова almost never even in the teacher's output (0.022). Per-author
-judge figures for the smallest-profile targets are therefore a weak signal
-in either direction; the aggregate comparison between systems on the same
-pairs is the reliable one.
-
-\subsection{Partial copying}
-
-The copy gate held, but the policy moved to its edge. The share of outputs
-with at least one near-copied source line rose from 8.1\,\% to 44.4\,\%,
-although mean copy novelty is still 0.956 and only 3.4\,\% of outputs fall
-below 0.8. Part of the content gain comes from this: outputs containing a
-copied line have content-word recall 0.382, those without 0.302. The gate
-multiplies the content reward by the copied share, so one copied line in
-twenty costs only 5\,\% of $R_{\mathrm{content}}$, and can be worth taking
-when it raises the line-level F1 by more. Reuse of source phrases below the
-gate's threshold is also visible on inspection (``не слетувај'', ``предели
-неминати'' carried into an otherwise new poem). This is a modest form of
-reward hacking.
-
-\subsection{Training dynamics}
-
-The training reward (at the training weights) rose from 0.248 over the first
-50 steps to 0.340 by step 200 and only to 0.361 by step 500. The content term
-kept improving slowly after step 200 (0.215 $\to$ 0.244) while copy novelty
-and the classifier stayed at their step-200 levels. The step-300 checkpoint
-confirms that later steps trade along one frontier: against step 500 it has
-lower $R$ (0.381 vs.\ 0.406) and content recall (0.306 vs.\ 0.338), but copies
-less (38.7\,\% of outputs with a copied line vs.\ 44.4\,\%; 1.5\,\% below copy
-novelty 0.8 vs.\ 3.4\,\%), with the same author identification (top-1 0.088
-vs.\ 0.079) and degeneracy (6.6\,\% vs.\ 5.3\,\%). The last 200 steps bought
-content recall partly by copying more.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\textwidth]{figures/grpo_training_curves.pdf}
-\caption{Reward components during GRPO training, per step (mean over the 32
-scored completions, 25-step moving average), from each run's
-\texttt{reward\_components.jsonl}. Only components on a common scale are
-shown: v2 reweights the classifier group and cubes the copy gate, so $R$,
-$R_{\mathrm{style}}$ and the gated content term are not comparable between
-runs. Produced by \texttt{scripts/plot\_grpo\_curves.py}.}
-\label{fig:grpocurves}
-\end{figure}
-
-\subsection{The teacher on the same pairs}\label{sec:teacherval}
-
-The teacher column of the v1 table is Gemma~4 31B on the val pairs
-themselves (\texttt{teacher\_val.csv}), the upper reference for what the
-students imitate. Three observations.
-
-\paragraph{GRPO v1 out-scores its teacher on the reward.} $R=0.406$ against
-0.395. The teacher wins the style term by a wide margin (0.686 vs.\ 0.511)
-but scores only 0.105 on gated content, below SFT (0.123) and a third of
-GRPO's 0.302; its content-word recall (0.159) is below both students'. The
-teacher writes a new poem on the source's theme rather than carrying its
-lines over, and the line-level content reward scores that as barely above an
-unrelated poem. A higher $R$ than the teacher is therefore not a sign that
-the student surpassed it; it shows that at $\alpha=\beta=0.5$ the reward
-values content preservation the teacher never attempted.
-
-\paragraph{The style gap is the open problem.} On both classifiers the
-teacher is identified as the requested author three to eight times as often
-as either student (classifier top-1 0.641 vs.\ 0.079--0.158; judge 0.506 vs.\
-0.130--0.158). The judge reads the teacher's poems as the target at 76\,\%
-of the rate it reads real unseen poems (0.506 vs.\ 0.663). Author identity
-is what the teacher has and distillation did not transfer.
-
-\paragraph{The teacher is not degenerate.} 0.2\,\% degenerate outputs, line
-uniqueness 0.998: the looping in SFT output is the student's, not inherited
-from the data.
-
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{GRPO v2: correcting the reward}\label{sec:grpov2}
-
-v1's two failures are both properties of the reward, so v2 changes the
-reward and nothing else: same start policy, prompts, hyperparameters, seed
-and $\alpha/\beta=0.3/0.7$ (\texttt{slurm/train\_grpo\_v2.slurm},
-\texttt{models/qwen3-grpo-v2/}). A v1-vs-v2 difference can therefore be
-attributed to the two changes.
-
-\paragraph{Classifier weight 5.6.} The classifier group's within-group
-standard deviation is 0.051, against a mean of 0.288 for lexical diversity
-and POS bigrams. Weighting it by the ratio, $0.288/0.051\approx5.6$, gives it
-the same influence on the group-normalised advantage as either of those
-groups, instead of a fifth of it.
-
-\paragraph{Copy gate exponent 3.} The content reward is multiplied by
-$\texttt{copy\_novelty}^3$ instead of $\texttt{copy\_novelty}$. One copied
-line in twenty then costs $1-0.95^3\approx14\,\%$ of the content reward
-instead of 5\,\%, two lines 27\,\% instead of 10\,\%. A fully original poem
-is unaffected.
-
-\paragraph{The risk v2 takes.} Raising the classifier's weight makes it the
-largest single style term, so v2 is exactly the setting in which the reward
-classifier can be gamed; this is why the judge (\S\ref{sec:judge}) exists.
-v2 succeeds only if judge top-1 rises with classifier top-1.
-
-\subsection{Results}
-
-\begin{center}
-\begin{tabular}{lrrrr}
-\toprule
-Metric (higher is better unless noted) & SFT (merged) & GRPO v1 & GRPO v2 & Real poems \\
-\midrule
-$R$ ($\alpha=\beta=0.5$)                    & 0.254 & \textbf{0.406} & 0.350 & --- \\
-$R_{\mathrm{style}}^{g}$ / $R_{\mathrm{content}}^{g}$ & 0.384 / 0.123 & \textbf{0.511} / \textbf{0.302} & 0.414 / 0.285 & --- \\
-classifier top-1 = target                   & \textbf{0.158} & 0.079 & 0.135 & 0.883$^\dagger$ \\
-judge top-1 = target                        & \textbf{0.158} & 0.130 & 0.150 & 0.663$^\dagger$ \\
-share of outputs read as Конески (lower)    & 36.3\% & \textbf{21.8\%} & 35.9\% & --- \\
-outputs with $\ge1$ copied line (lower)     & \textbf{8.1\%} & 44.4\% & 33.8\% & --- \\
-copy novelty                                & \textbf{0.995} & 0.956 & 0.966 & --- \\
-content-word recall                         & 0.174 & \textbf{0.338} & 0.270 & --- \\
-degenerate outputs (lower)                  & 30.1\% & \textbf{5.3\%} & 25.4\% & 6.6\% \\
-structural fit                              & \textbf{0.846} & 0.831 & 0.820 & 0.768 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\noindent
-{\footnotesize $^\dagger$ held-out ceilings. Share read as Конески is the
-reward classifier's; the judge's is 36.5\,\%, 31.8\,\% and 39.1\,\%. Bold
-marks the best student per row.}
-
-v2 scores above its start policy on 81.8\,\% of the paired items, but above
-v1 on only 25.2\,\%: by the neutral reward it is the worse of the two GRPO
-runs. Per target author, on both classifiers:
-
-\begin{center}
+\begin{table}[ht]
+\centering\small
 \begin{tabular}{lrrrrrrrr}
 \toprule
 & \multicolumn{4}{c}{classifier top-1} & \multicolumn{4}{c}{judge top-1} \\
 Target author & SFT & v1 & v2 & teacher & SFT & v1 & v2 & teacher \\
 \midrule
-Блаже Конески       & 0.745 & 0.404 & 0.638 & 0.979 & 0.553 & 0.447 & 0.660 & 0.979 \\
-Пијан Славеј        & 0.372 & 0.186 & 0.442 & 0.651 & 0.465 & 0.442 & 0.419 & 0.698 \\
-Ефтим Клетников     & 0.149 & 0.021 & 0.043 & 0.660 & 0.383 & 0.298 & 0.277 & 0.872 \\
-Веле Смилевски      & 0.125 & 0.062 & 0.083 & 0.938 & 0.125 & 0.042 & 0.042 & 0.812 \\
-Влада Урошевиќ      & 0.021 & 0.021 & 0.000 & 0.787 & 0.021 & 0.064 & 0.043 & 0.681 \\
-Адем Гајтани        & 0.085 & 0.000 & 0.021 & 0.319 & 0.000 & 0.021 & 0.000 & 0.404 \\
-Ристо Лазаров       & 0.064 & 0.043 & 0.085 & 0.745 & 0.021 & 0.021 & 0.085 & 0.255 \\
-Славко Јаневски     & 0.000 & 0.020 & 0.020 & 0.160 & 0.020 & 0.000 & 0.000 & 0.240 \\
-Братислав Ташковски & 0.022 & 0.022 & 0.022 & 0.609 & 0.022 & 0.000 & 0.000 & 0.109 \\
-Катица Ќулавкова    & 0.022 & 0.022 & 0.022 & 0.587 & 0.000 & 0.000 & 0.000 & 0.022 \\
+Блаже Конески       & .745 & .404 & .638 & .979 & .553 & .447 & .660 & .979 \\
+Пијан Славеј        & .372 & .186 & .442 & .651 & .465 & .442 & .419 & .698 \\
+Ефтим Клетников     & .149 & .021 & .043 & .660 & .383 & .298 & .277 & .872 \\
+Веле Смилевски      & .125 & .062 & .083 & .938 & .125 & .042 & .042 & .812 \\
+Влада Урошевиќ      & .021 & .021 & .000 & .787 & .021 & .064 & .043 & .681 \\
+Адем Гајтани        & .085 & .000 & .021 & .319 & .000 & .021 & .000 & .404 \\
+Ристо Лазаров       & .064 & .043 & .085 & .745 & .021 & .021 & .085 & .255 \\
+Славко Јаневски     & .000 & .020 & .020 & .160 & .020 & .000 & .000 & .240 \\
+Братислав Ташковски & .022 & .022 & .022 & .609 & .022 & .000 & .000 & .109 \\
+Катица Ќулавкова    & .022 & .022 & .022 & .587 & .000 & .000 & .000 & .022 \\
 \bottomrule
 \end{tabular}
-\end{center}
+\caption{Author identification per requested target (val pairs).}
+\label{tab:authors}
+\end{table}
 
-\paragraph{The classifier was not gamed.} v2 is the setting in which gaming
-was most likely, and the judge rules it out: it moves with the reward
-classifier, by less (classifier top-1 $0.079\to0.135$, judge
-$0.130\to0.150$), and among the outputs the reward classifier attributes to
-the target, the judge agrees on 57\,\% for v2, against 62\,\% for SFT, 54\,\%
-for v1 and 64\,\% for the teacher. The character-$n$-gram reward is not being
-satisfied by surface tricks a word-level classifier would reject.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{figures/grpo_training_curves.pdf}
+\caption{Reward components during training (mean over the 32 completions per
+step, 25-step moving average). Only components on a common scale are shown;
+$R$ and the gated terms are not comparable between v1 and v2.}
+\label{fig:curves}
+\end{figure}
 
-\paragraph{The difference from v1 is the majority voices.} Almost all of
-v2's gain over v1 is on the two largest authors, Конески ($0.404\to0.638$)
-and Пијан Славеј ($0.186\to0.442$), and the share of all outputs the reward
-classifier assigns to Конески returns from 21.8\,\% to 35.9\,\%, the SFT
-level. The other eight targets stay at 0.000--0.085 on both classifiers, as
-they were under SFT and v1. Writing like the corpus's largest author is the
-cheapest way to keep the classifier term up, and weighting that term by 5.6
-held the policy there. Neither GRPO run beats SFT on author identification by
-either measure.
+\subsection{GRPO v1}
 
-\paragraph{The repetition fix was given back.} Degenerate outputs rise from
-5.3\,\% (v1) to 25.4\,\%, close to SFT's 30.1\,\%. v1's repetition fix came
-from the lexical-diversity and POS-bigram groups (\S\ref{sec:grporesults});
-at classifier weight 5.6 those groups' share of the style reward falls from
-2/6 to 2/10.6, and their pull on the policy with it.
+\paragraph{The reward rose and was not gamed on the gated axes.} v1 beats its
+start policy on 94\,\% of the paired items. The content term more than doubles
+(0.123 $\to$ 0.302), and degenerate outputs fall from 30.1\,\% to 5.3\,\% under
+plain sampling --- matching real poems, from the policy rather than a decoding
+control, and with higher rather than lower content recall. The style gain came
+from the groups with the largest within-group spread: over training, lexical
+diversity rose 0.49 $\to$ 0.71 and POS bigrams 0.64 $\to$ 0.84, while the
+classifier term \emph{fell}, 0.102 $\to$ 0.078 (Figure~\ref{fig:curves}).
 
-\paragraph{The steeper copy gate partly worked.} Outputs with a copied line
-fall from 44.4\,\% to 33.8\,\%, and those below copy novelty 0.8 from
-3.4\,\% to 2.1\,\%, still well above SFT's 8.1\,\% and 0.4\,\%. Content-word
-recall falls with them ($0.338\to0.270$; 0.320 in outputs with a copied line,
-0.244 without), confirming that part of v1's content gain was copying.
+\paragraph{Author identification went down.} Classifier top-1 fell from 0.158
+to 0.079, mostly on Конески and Славеј; the share of outputs read as Конески
+fell from 36\,\% to 22\,\%, so v1 partly undid the collapse onto the majority
+voice but did not replace it with the requested ones. The judge falls less
+(0.158 $\to$ 0.130): a larger loss on the rewarded classifier than on an
+independent one is the opposite of gaming, but neither shows a gain.
 
-\paragraph{Why reweighting cannot fix the collapse.} GRPO's update is driven
-by differences \emph{within} a group of four samples for the same prompt. For
-eight of the ten targets, the student's samples are almost never read as the
-target author by either classifier, before or after GRPO, so all four score
-near zero on that term and the group-normalised advantage has nothing to
-amplify, however large its weight. The only targets on which the classifier
-term varies within a group are the ones the student already writes like ---
-the two largest authors --- and that is where both GRPO runs moved. The
-teacher shows the voices are reachable (judge top-1 0.506 against the 0.663
-real-poem ceiling), but that capacity did not survive distillation into a 4B
-student from 1{,}146 examples. A student whose SFT distribution already puts
-some probability on the minority voices is the precondition for GRPO to help;
-\S\ref{sec:gemma} tests whether a different 4B model provides it.
+\paragraph{Partial copying.} Outputs with at least one near-copied source line
+rose from 8\,\% to 44\,\%. The gate charges one copied line in twenty only
+5\,\% of the content reward, which a gain in line-level F1 can outweigh;
+outputs with a copied line have content recall 0.382, those without 0.302.
+Checkpoint 300 confirms that later steps trade along this frontier: lower $R$
+(0.381) and recall (0.306), less copying (39\,\%), same identification.
 
-\paragraph{The training log agrees.} Over training
-(Figure~\ref{fig:grpocurves}, first versus last 50 steps), v2's classifier
-term stays flat, $0.106\to0.103$, where v1's fell, $0.102\to0.078$. The
-5.6 weight did not move the policy \emph{towards} the requested authors; it
-stopped it moving away from the voices it already had. Lexical diversity
-($0.48\to0.56$, against v1's $0.49\to0.71$) and POS bigrams ($0.63\to0.72$,
-against $0.64\to0.84$) rose far less than in v1, which is the repetition fix
-given back. The ungated content term rose almost identically in both runs
-($0.12\to0.24$ and $0.12\to0.25$); the cubed gate kept more of the trained
-completions copy-free (copy novelty 0.994 at the end, against 0.990).
+\subsection{GRPO v2}
+
+v2 targets both failures: the classifier group is weighted by
+$0.288/0.051\approx5.6$, giving it the same pull on the advantage as lexical
+diversity and POS bigrams, and the copy gate is cubed, so one copied line in
+twenty costs 14\,\% instead of 5\,\%.
+
+\paragraph{The classifier was not gamed.} The judge moves with the reward
+classifier, by less (classifier 0.079 $\to$ 0.135, judge 0.130 $\to$ 0.150),
+and agrees on 57\,\% of the outputs the reward classifier attributes to the
+target, against 62\,\% for SFT and 64\,\% for the teacher.
+
+\paragraph{It held the majority voices rather than learning new ones.} During
+training v2's classifier term stays flat (0.106 $\to$ 0.103) where v1's fell:
+the weight stopped the policy drifting away from the voices it had, but did not
+move it towards the requested ones. Almost all of v2's difference from v1 is
+on Конески (0.404 $\to$ 0.638) and Славеј (0.186 $\to$ 0.442), and 36\,\% of
+outputs are again read as Конески, the SFT level. The other eight targets stay
+at 0--9\,\% on both classifiers. Neither GRPO run beats SFT on author
+identification by either measure.
+
+\paragraph{Costs.} With the classifier at 5.6, the share of the style reward
+held by lexical diversity and POS bigrams falls from 2/6 to 2/10.6; they rise
+far less in training (0.48 $\to$ 0.56 and 0.63 $\to$ 0.72) and degenerate
+outputs return to 25\,\%. The cubed gate cut copying (44\,\% $\to$ 34\,\% of
+outputs) and with it content recall (0.338 $\to$ 0.270). By the neutral reward
+v2 (0.350) is below v1 (0.406), and above it on only 25\,\% of items.
+
+\subsection{Why reweighting cannot fix the collapse}
+
+GRPO's update is driven by differences \emph{within} a group of four samples.
+For eight of the ten targets the student's samples are almost never read as
+the target by either classifier, before or after GRPO, so all four score near
+zero on that term and the normalised advantage has nothing to amplify however
+large its weight. The only targets where the classifier term varies within a
+group are those the student already writes like, and that is where both runs
+moved. The teacher shows the voices are reachable --- judge top-1 0.506, 76\,\%
+of the real-poem ceiling, with eight of the ten targets at 0.24 or above --- but that capacity
+did not survive distillation into a 4B student from 1{,}146 examples. For GRPO
+to help, the student's SFT distribution must already put some probability on
+the minority voices.
+
+The teacher also shows what the reward does not measure. Its $R$ (0.395) is
+below v1's (0.406): it wins style by a wide margin (0.686 vs.\ 0.511) but
+writes a new poem on the source's theme rather than carrying its lines over,
+and the line-level content reward scores that barely above an unrelated poem.
 
 % ═══════════════════════════════════════════════════════════════════════════
-\section{A second student: Gemma 4 E4B}\label{sec:gemma}
+\section{Status and next steps}\label{sec:next}
 
-\subsection{Purpose}
-
-Both of Qwen's open problems --- collapse onto the largest authors and weak
-author identification after GRPO --- could be properties of Qwen3-4B rather
-than of the data and reward. A second student of matched size from another
-family separates the two: if it collapses the same way, the cause is the
-method; if it does markedly better, the base model matters, and the size of
-the difference says by how much. Only the student changes --- the same
-1{,}146 synthetic examples, task format, hyperparameters, GRPO-v2 reward, 468
-val pairs and seeds.
-
-\texttt{google/gemma-4-E4B-it} (about 4.5B effective parameters, 8B with
-per-layer embeddings, instruction-tuned, Apache 2.0) is the closest match to
-Qwen3-4B. It is the teacher's own family, which may make the teacher's
-distribution easier to imitate; this is a stated confound, and also the
-realistic deployment choice.
-
-\subsection{Implementation}
-
-Everything family-specific lives in one registry,
-\texttt{model\_families.py} (hub name, output-directory tag, LoRA targets,
-loss masking, loader, decoding overrides). The SFT, merge, generation, GRPO
-and reward-inspection scripts take \texttt{--family \{qwen3,gemma4\}}; the
-default resolves to exactly the pre-existing Qwen values, which tests pin, so
-v1 and v2 stay reproducible. Adapters and merged models record their family,
-and loading one into the other family is refused. Facts that forced changes,
-verified against the real E4B configuration:
-
-\begin{itemize}
-  \item \emph{Loader.} \texttt{AutoModelForCausalLM} returns the multimodal
-    class with vision and audio towers, so Gemma is loaded text-only
-    (\texttt{Gemma4ForCausalLM} with the text config). The hub checkpoint
-    stores the language weights under \texttt{model.language\_model.*}, and
-    transformers 5.9 has no conversion for it: a plain text-only
-    \texttt{from\_pretrained} \emph{silently} leaves every language weight
-    at its random initialisation. The loader maps the prefix, disables the
-    library's weight-name conversion (which otherwise makes
-    \texttt{save\_pretrained} write keys that lose every weight on reload),
-    and raises on any missing weight; a test exercises this on a tiny
-    checkpoint of the real architecture.
-  \item \emph{LoRA targets.} The towers reuse the names
-    \texttt{q\_proj}\ldots\texttt{down\_proj} for wrapper modules PEFT cannot
-    adapt, so the suffix list Qwen uses is safe only text-only; the
-    multimodal fallback uses a regex restricted to the language model (258
-    modules over 42 layers --- the last 18 share KV and have no
-    \texttt{k\_proj}/\texttt{v\_proj}). The per-layer-embedding projections
-    are never targets, for parity with Qwen's attention+MLP set.
-  \item \emph{Loss masking.} TRL ships no Gemma~4 training template, so
-    \texttt{assistant\_only\_loss} is unavailable. Gemma trains on
-    prompt--completion rows with \texttt{completion\_only\_loss}. Gemma's
-    \texttt{eos\_token} is \texttt{<eos>} but its turn ends with
-    \texttt{<turn|>}, so the end token is set explicitly to
-    \texttt{<turn|>}: otherwise SFT would train \texttt{<turn|><eos>}, and
-    GRPO, which stops sampling on the tokenizer's end token, would sample
-    past the end of the turn. Both formats then put the loss on the poem and
-    its end-of-turn token; Qwen's additionally trains its constant empty
-    reasoning block, a difference pinned by a test.
-  \item \emph{Decoding.} Gemma ships \texttt{top\_k}=64; Gemma runs pin 20 to
-    match Qwen.
-  \item \emph{Sequence length.} The smallest of 1024, 2048 and 4096 that
-    truncates no training example under Gemma's tokenizer. Ten of the 1{,}146
-    examples exceed 2048 Gemma tokens, so Gemma trains at 4096 and truncates
-    nothing, against Qwen's 6.2\,\% at 1024.
+\begin{itemize}\itemsep2pt
+  \item \textbf{Test split.} All numbers above are on the val split, which was
+    also used to make decisions (decoding, v2's reward). The final evaluation
+    on the untouched test split --- base, SFT, GRPO v1 and v2 on 466 (test
+    poem, target) pairs with the same protocol --- is running
+    (\texttt{slurm/eval\_test.slurm}) and will replace these as the reported
+    figures.
+  \item \textbf{Second student.} The same SFT and GRPO-v2 pipeline is being
+    run with Gemma~4 E4B, a student of matched size from the teacher's own
+    family, to separate properties of Qwen3-4B from properties of the method.
+    It will be reported, and compared with these results, separately.
+  \item \textbf{Human evaluation.} A blind rating by native speakers
+    (language, coherence, poetic quality, faithfulness to the source, author
+    attribution, usability) is planned, with the target's own closest real
+    poem as a retrieval baseline.
 \end{itemize}
 
-A compatibility job (\texttt{gemma\_compat.py}) runs first: load, LoRA target
-count, template checks, training-length distribution, one generation, a
-3-step SFT with a merge round-trip, and a GRPO smoke run.
+\paragraph{Limitations.} One seed per run, so differences of a few points
+(e.g.\ classifier top-1 0.079 vs.\ 0.088 between v1's checkpoints) are within
+noise. The reward classifier and TF-IDF palettes were fitted on the whole
+corpus, a leak path the judge avoids. SFT had no held-out loss, so the number
+of epochs was not validated, and 6.2\,\% of its examples were truncated. The
+content signal is narrow: unrelated poems reach line-F1 0.553, and the teacher
+itself preserves little content. Author identity is measured automatically
+only.
 
-The first run (\texttt{data/gemma\_compat\_report.json}) passed five of its
-six checks. The text-only loader loaded every language-model weight; the
-LoRA targets matched 258 modules (q/o/gate/up/down $\times$ 42, k/v
-$\times$ 24); the template's end-of-turn token was detected as
-\texttt{<turn|>}, and the untuned model's sample poem ended with it and
-contained no reasoning channel; and the length check measured a median of 537
-Gemma tokens per training example, 31 over 1024, 10 over 2048 and none over
-4096 (maximum 3{,}370), confirming 4096. The SFT--merge round-trip failed:
-on one training completion of 323 tokens, the merged model's log-probability
-was $-1115.1$ against the adapter model's $-1071.3$ (0.136 per token, against
-a tolerance of 0.02), and the GRPO smoke run, which follows it, did not run.
-\pending{diagnosis of the merge round-trip (base vs.\ adapter vs.\ bf16 and
-fp32 merge, Qwen merge as control), then the GRPO smoke run}
-
-\subsection{Results}
-
-\begin{center}
-\begin{tabular}{lrrrrrr}
-\toprule
-& \multicolumn{3}{c}{Qwen3-4B} & \multicolumn{3}{c}{Gemma 4 E4B} \\
-Metric & base & SFT & GRPO-v2 & base & SFT & GRPO-v2 \\
-\midrule
-line novelty                 & 0.224 & 1.000 & 0.999 & \tbd & \tbd & \tbd \\
-degenerate outputs           & 18.6\% & 30.1\% & 25.4\% & \tbd & \tbd & \tbd \\
-classifier top-1             & 0.009 & 0.158 & 0.135 & \tbd & \tbd & \tbd \\
-judge top-1                  & 0.064 & 0.158 & 0.150 & \tbd & \tbd & \tbd \\
-share read as Конески        & 8.5\% & 36.3\% & 35.9\% & \tbd & \tbd & \tbd \\
-content-word recall          & 0.901$^\S$ & 0.174 & 0.270 & \tbd & \tbd & \tbd \\
-$R$ ($\alpha=\beta=0.5$)     & 0.173 & 0.254 & 0.350 & \tbd & \tbd & \tbd \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\pending{Gemma per-author table and interpretation: does it collapse onto
-Конески/Славеј like Qwen}
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{Limitations}\label{sec:limits}
-
-\begin{itemize}
-  \item \emph{Validation, not test.} Every number here is on the val split,
-    which was also used to make decisions (decoding, v2's reward). The test
-    split has not been touched; a final run of every system on it is
-    the unbiased estimate. \pending{test-split runs, or state explicitly that
-    they are out of scope}
-  \item \emph{Automatic metrics only.} Author identity is measured by two
-    classifiers and fluency by proxies. No human (or native-speaker) rating
-    of style, fluency or content has been collected.
-  \item \emph{Reward classifier and palettes saw val/test poems.}
-    \texttt{classifier.pkl} and the TF-IDF palettes were fit on the whole
-    corpus. They are author-level and never see the target of a transfer,
-    but they are a leak path; the judge is the clean measurement.
-  \item \emph{No held-out SFT loss.} The SFT run monitored only training
-    loss (\S\ref{sec:sfttrain}), so the number of epochs was not chosen by
-    validation, and the extent of memorisation in epochs 2--3 is unmeasured.
-  \item \emph{Qwen SFT truncation.} 6.2\,\% of Qwen's SFT examples were
-    truncated at 1024 tokens and not retrained, to keep both GRPO runs' start
-    policy fixed.
-  \item \emph{Single seed.} Each training run is one seed; differences of a
-    few points between runs (e.g.\ classifier top-1 0.079 vs.\ 0.088 for
-    v1's two checkpoints) are within run-to-run noise.
-  \item \emph{Content measurement is weak.} Unrelated poems already reach
-    line-F1 0.553, and the teacher itself preserves little content-word
-    recall (0.176), so the content signal is narrow.
-  \item \emph{Another Cyrillic language} (Serbian, Russian) would pass the
-    validity gate and score well on multilingual content similarity; not
-    observed in any output.
-  \item \emph{Same-family teacher} for the Gemma student (\S\ref{sec:gemma}).
-\end{itemize}
-
-% ═══════════════════════════════════════════════════════════════════════════
-\section{Reproducibility}\label{sec:repro}
-
-\begin{center}
-\begin{tabular}{p{4.2cm}p{10cm}}
-\toprule
-Artifact & Produced by \\
-\midrule
-splits & \texttt{src/make\_splits.py} $\to$ \texttt{data/splits/poem\_splits.csv} \\
-synthetic train data & \texttt{scripts/generate\_synthetic\_parallel.sh} $\to$ \texttt{data/synthetic/synthetic\_dataset.csv} \\
-teacher on val & \texttt{scripts/generate\_synthetic\_parallel.sh 50 10 1 42 val} $\to$ \texttt{data/synthetic/teacher\_val.csv} \\
-SFT adapter & \texttt{slurm/train\_sft.slurm} $\to$ \texttt{models/qwen3-lora-sft/} \\
-base vs.\ SFT & \texttt{slurm/compare\_base\_lora.slurm}; decoding ablation \texttt{slurm/decoding\_ablation.slurm} \\
-reward calibration & \texttt{src/build\_reward\_calibration.py} $\to$ \texttt{data/reward\_calibration.json} (deterministic) \\
-reward checks & \texttt{src/evaluate\_reward.py --fixtures}; \texttt{slurm/reward\_groups.slurm} $\to$ \texttt{data/grpo/reward\_groups.csv} \\
-GRPO v1 / v2 & \texttt{slurm/train\_grpo.slurm}, \texttt{slurm/train\_grpo\_v2.slurm}; evaluation \texttt{slurm/eval\_grpo.slurm} \\
-Gemma student & \texttt{slurm/gemma\_compat.slurm}, then the same jobs with \texttt{FAMILY=gemma4}, \texttt{slurm/train\_grpo\_gemma.slurm} \\
-tables & \texttt{src/compare\_generations.py --rewards --corpus-reference} over \texttt{data/validation\_generations/*.csv} \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-Generation CSVs are tracked, because sampled model output cannot be
-regenerated bit-for-bit on different hardware; the scores can, and
-rerunning \texttt{compare\_generations.py} on the tracked CSVs reproduces
-every table on CPU. The per-author breakdowns, the matched-budget vocabulary
-counts, the held-out cross-validated accuracy, the training-length statistics
-and the training-curve summaries were computed from the same files with
-one-off scripts.
+{\raggedright\paragraph{Reproducibility.} Splits: \texttt{make\_splits.py}. Teacher data:
+\texttt{generate\_synthetic\_parallel.sh}. SFT, GRPO and evaluation:
+\texttt{slurm/train\_sft.slurm}, \texttt{train\_grpo.slurm},
+\texttt{train\_grpo\_v2.slurm}, \texttt{eval\_grpo.slurm}. Tables:
+\texttt{compare\_generations.py} with \texttt{--rewards} and
+\texttt{--corpus-reference} over the tracked
+generation CSVs in \texttt{data/validation\_generations/}, which reproduces
+every number on CPU. Figure~\ref{fig:curves}:
+\texttt{scripts/plot\_grpo\_curves.py}. Every training run records its
+arguments, commit, merge provenance and library versions in
+\texttt{run\_config.json}.\par}
 
 \end{document}

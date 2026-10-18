@@ -9,6 +9,8 @@ per-token log-prob of each, relative to the bf16 adapter model:
   adapter_bf16   base (bf16) + LoRA        -- what training/eval see
   merged_saved   the merged dir on disk     -- what GRPO starts from
   adapter_fp32   base (fp32) + LoRA
+  base_fp32      adapter disabled, fp32 -- base_fp32 vs base says how much
+                 of the bf16/fp32 gap is the model itself, not the adapter
   merged_fp32    adapter_fp32 merged in memory, no rounding
   merged_fp32_to_bf16  merged_fp32 cast to bf16 (what saving does)
 
@@ -87,6 +89,8 @@ def main() -> None:
     m = PeftModel.from_pretrained(mf.load_causal_lm(fam, base_name, dtype=torch.float32),
                                   str(args.adapter)).to(args.device).eval()
     results['adapter_fp32'] = score(m, items)
+    with m.disable_adapter():
+        results['base_fp32'] = score(m, items)
     m = m.merge_and_unload()
     results['merged_fp32'] = score(m, items)
     m = m.to(torch.bfloat16)

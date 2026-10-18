@@ -22,6 +22,7 @@
 #   scripts/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed] [split]
 #   scripts/generate_synthetic_parallel.sh 20 10 1 42
 #   scripts/generate_synthetic_parallel.sh 50 10 1 42 val   # Gemma teacher on the val pairs -> data/synthetic/teacher_val.csv
+#   scripts/generate_synthetic_parallel.sh 50 10 1 42 test  # ... on the test pairs -> data/synthetic/teacher_test.csv
 #
 # split=val writes to its own main file and parts dir (merge_synthetic_parts.py
 # paths_for_split), so val rows can never reach synthetic_dataset.csv, which

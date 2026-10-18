@@ -17,8 +17,11 @@ form and Gemma's --max-seq-length):
 4. lengths     Gemma-tokenized length of every train example (always passes;
                picks max_seq_length = smallest of 1024/2048/4096 truncating none)
 5. generate    one untuned sample is non-empty and has no thinking channel
-6. sft_merge   3 SFT steps -> merge -> merged vs adapter log-prob agree, and
-               the merged dir reloads through AutoModelForCausalLM
+6. sft_merge   3 SFT steps -> merge; the fp32 merge must reproduce the fp32
+               adapter's log-prob (the merge is correct), and the saved merge
+               reloads through AutoModelForCausalLM. The bf16 merge's gap is
+               recorded, not gated: bf16 storage loses part of a 3-step
+               adapter's weight change (scripts/diagnose_merge.py)
 
 Exit 1 if any check fails. slurm/gemma_compat.slurm then runs
 train_grpo.py --smoke on the merged model.
@@ -196,6 +199,7 @@ def check_sft_merge(report: dict, family, work_dir: Path, max_seq_length: int) -
     from transformers import AutoModelForCausalLM, AutoTokenizer
     import generate_validation as gv
     import merge_sft_adapter as msa
+    import model_families as mf
     import sft_data
     import train_sft
     from train_grpo import completion_logprob
@@ -218,15 +222,33 @@ def check_sft_merge(report: dict, family, work_dir: Path, max_seq_length: int) -
     tokenizer = AutoTokenizer.from_pretrained(str(sft_dir))
     source, target, poem = sft_data._source_target_poem(rows[:1])[0]
     pc = sft_data.build_prompt_completion(tokenizer, source, target, poem)
+    n_tokens = len(tokenizer(pc['completion'], add_special_tokens=False)['input_ids'])
+    lp = lambda model: completion_logprob(model, tokenizer, pc['prompt'], pc['completion'])
+
+    # Gate: the merge itself, in fp32 -- merged and adapter must agree.
+    from peft import PeftModel
+    fp32 = PeftModel.from_pretrained(mf.load_causal_lm(family, family.hf_name, dtype=torch.float32),
+                                     str(sft_dir)).to('cuda').eval()
+    lp_adapter32 = lp(fp32)
+    lp_merged32 = lp(fp32.merge_and_unload())
+    del fp32
+    torch.cuda.empty_cache()
+
+    # Information only: what bf16 storage costs. On the first compat run a
+    # 3-step Gemma adapter kept ~85 % of its log-prob shift after a bf16 merge
+    # (Qwen's full SFT merge loses ~0); scripts/diagnose_merge.py measures it
+    # on the real adapter before GRPO.
     adapter_model, _ = gv.load_adapter_model(sft_dir, family=family)
-    lp_adapter = completion_logprob(adapter_model, tokenizer, pc['prompt'], pc['completion'])
+    lp_adapter16 = lp(adapter_model)
     del adapter_model
     torch.cuda.empty_cache()
     merged = AutoModelForCausalLM.from_pretrained(str(merged_dir), dtype=torch.bfloat16).to('cuda')
-    lp_merged = completion_logprob(merged, tokenizer, pc['prompt'], pc['completion'])
-    n_tokens = len(tokenizer(pc['completion'], add_special_tokens=False)['input_ids'])
-    report['merge_logprob'] = {'adapter': lp_adapter, 'merged': lp_merged, 'n_tokens': n_tokens}
-    _record(report, 'sft_merge', *merge_agrees(lp_adapter, lp_merged, n_tokens))
+    lp_merged16 = lp(merged)
+    report['merge_logprob'] = {
+        'n_tokens': n_tokens, 'adapter_fp32': lp_adapter32, 'merged_fp32': lp_merged32,
+        'adapter_bf16': lp_adapter16, 'merged_saved_bf16': lp_merged16,
+        'bf16_merge_gap_per_token': (lp_merged16 - lp_adapter16) / n_tokens}
+    _record(report, 'sft_merge', *merge_agrees(lp_adapter32, lp_merged32, n_tokens))
     return merged_dir
 
 
