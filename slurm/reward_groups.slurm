@@ -21,6 +21,6 @@ source slurm/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py
-    $PY src/evaluate_reward.py --groups "$@"
+    $PY src/merge_sft_adapter.py --family "$FAMILY"
+    $PY src/evaluate_reward.py --family "$FAMILY" --groups "$@"
 ' "$@"

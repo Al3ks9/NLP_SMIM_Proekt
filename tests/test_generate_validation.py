@@ -71,7 +71,7 @@ def test_run_validation_writes_expected_columns_and_uses_the_given_split(monkeyp
     monkeypatch.setattr(gv, 'sample_source_poems',
                         lambda n, seed, split: [_poem('0', 'А'), _poem('1', 'Б')])
     monkeypatch.setattr(gv, 'load_adapter_model',
-                        lambda adapter_dir, base_model=None: (FakeModel(), FakeTokenizer()))
+                        lambda adapter_dir, base_model=None, **kw: (FakeModel(), FakeTokenizer()))
     monkeypatch.setattr(gv, 'generate_one', lambda *a, **kw: 'генерирана песна')
     monkeypatch.setattr(lst, 'structural_targets', lambda author: {
         'avg_lines_per_poem': 2, 'avg_tokens_per_line': 2,
@@ -103,7 +103,7 @@ def test_run_validation_never_touches_train_split_unless_asked(monkeypatch, tmp_
 
     monkeypatch.setattr(gv, 'sample_source_poems', fake_sample)
     monkeypatch.setattr(gv, 'load_adapter_model',
-                        lambda adapter_dir, base_model=None: (FakeModel(), FakeTokenizer()))
+                        lambda adapter_dir, base_model=None, **kw: (FakeModel(), FakeTokenizer()))
     monkeypatch.setattr(gv, 'generate_one', lambda *a, **kw: 'п')
     monkeypatch.setattr(lst, 'structural_targets', lambda author: {
         'avg_lines_per_poem': 1, 'avg_tokens_per_line': 1,
@@ -155,3 +155,19 @@ def test_generate_one_passes_top_k_when_given():
     seen.clear()
     gv.generate_one(Capture(), FakeTokenizer(), 'извор', 'Автор')
     assert 'top_k' not in seen          # default: the model's own generation_config
+
+
+# ── --family ─────────────────────────────────────────────────────────────────────
+
+from model_families import get_family
+
+
+def test_gemma_top_k_override_and_cli_wins():                        # Review Focus 4
+    assert gv.effective_top_k(get_family('gemma4'), cli_top_k=None) == 20
+    assert gv.effective_top_k(get_family('gemma4'), cli_top_k=50) == 50
+    assert gv.effective_top_k(get_family('qwen3'), cli_top_k=None) is None
+
+
+def test_gemma_base_label():
+    assert gv._run_label(None, None, family=get_family('gemma4')) == 'base-gemma-4-E4B-it'
+    assert gv._run_label(None, None) == 'base-Qwen3-4B'

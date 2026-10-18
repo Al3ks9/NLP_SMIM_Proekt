@@ -55,6 +55,16 @@ models/qwen3-grpo/
 models/qwen3-grpo-smoke/
 models/qwen3-grpo-v2/
 
+# Gemma 4 E4B student (src/model_families.py --family gemma4): SFT adapter,
+# merged start policy, GRPO run and the compatibility job's scratch
+# (slurm/gemma_compat.slurm). The compat *report* is tracked:
+# data/gemma_compat_report.json.
+models/gemma4-e4b-lora-sft/
+models/gemma4-e4b-sft-merged/
+models/gemma4-e4b-grpo/
+models/gemma4-e4b-grpo-smoke/
+models/gemma4-compat/
+
 # Slurm job stdout/stderr (slurm/train_sft.slurm)
 logs/
 
@@ -67,3 +77,4 @@ singularity/.build_cache/
 .DS_Store
 data/.DS_Store
 llm/.DS_Store
+models/judge_classifier.pkl

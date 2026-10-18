@@ -56,7 +56,7 @@ def test_groups_sample_like_grpo_training(monkeypatch, tmp_path):
     import train_grpo as tg
 
     calls = []
-    monkeypatch.setattr(gv, 'load_adapter_model', lambda a, base_model=None: (None, None))
+    monkeypatch.setattr(gv, 'load_adapter_model', lambda a, base_model=None, **kw: (None, None))
     monkeypatch.setattr(gv, 'generate_one', lambda *a, **kw: calls.append(kw) or 'песна')
     monkeypatch.setattr(grpo_data, 'build_prompt_rows', lambda seed: [
         {'source_poem_id': '1', 'source_text': 'извор', 'target_author': 'Б'}])
@@ -84,3 +84,12 @@ def test_single_line_scores_well_below_the_full_poem_it_came_from():
         first = next(l for l in full.splitlines() if l.strip())
         rows = gr.score_batch([source, source], [full, first], [case['target_author']] * 2)
         assert rows[1]['R'] < rows[0]['R'] - 0.05, case
+
+
+def test_merged_model_default_follows_the_family():
+    from model_families import MODELS
+    assert er.merged_model_path(er.build_parser().parse_args([])) == MODELS / 'qwen3-sft-merged'
+    assert er.merged_model_path(er.build_parser().parse_args(['--family', 'gemma4'])) \
+        == MODELS / 'gemma4-e4b-sft-merged'
+    explicit = er.build_parser().parse_args(['--family', 'gemma4', '--merged-model', 'x'])
+    assert str(er.merged_model_path(explicit)) == 'x'

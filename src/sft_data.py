@@ -162,24 +162,62 @@ def build_synthetic_messages(rows: list) -> list:
     than trusting a copy in the synthetic CSV -- one source of truth for poem
     text, matching load_poem_text_by_id's role in llm_style_transfer.py.
     """
+    return [build_messages(source, target, poem)
+            for source, target, poem in _source_target_poem(rows)]
+
+
+def build_hf_dataset(rows: list, fmt: str = 'messages', tokenizer=None):
+    """
+    Synthetic-dataset rows -> a datasets.Dataset for TRL's SFTTrainer.
+
+    fmt='messages' (Qwen): one 'messages' column (see build_synthetic_messages),
+    loss masked by assistant_only_loss. fmt='prompt_completion' (Gemma, which
+    has no TRL training template): 'prompt' / 'completion' columns rendered
+    with `tokenizer` (see build_prompt_completion), loss masked by
+    completion_only_loss -- the same loss-bearing tokens, tested in
+    tests/test_sft_data.py. Imports `datasets` lazily so importing this module
+    never requires it -- only actually building a training set does.
+    """
+    from datasets import Dataset
+    if fmt == 'messages':
+        return Dataset.from_dict({'messages': build_synthetic_messages(rows)})
+    if fmt != 'prompt_completion':
+        raise ValueError(f"unknown dataset format {fmt!r}; use 'messages' or 'prompt_completion'")
+    if tokenizer is None:
+        raise ValueError("fmt='prompt_completion' renders through the chat template and needs a tokenizer")
+    return Dataset.from_list([build_prompt_completion(tokenizer, source, target, poem)
+                              for source, target, poem in _source_target_poem(rows)])
+
+
+def _source_target_poem(rows: list) -> list:
+    """(source poem text, target author, generated poem) per synthetic row,
+    the source looked up by poem_id as in build_synthetic_messages."""
     poems_by_id = {r['poem_id']: r for r in load_stripped_songs()}
-    messages = []
+    out = []
     for row in rows:
         source = poems_by_id.get(row['source_poem_id'])
         if source is None:
             raise KeyError(f'synthetic row references unknown source_poem_id='
                            f'{row["source_poem_id"]!r}')
-        messages.append(build_messages(
-            source['song_text'], row['target_author'], row['generated_poem']))
-    return messages
+        out.append((source['song_text'], row['target_author'], row['generated_poem']))
+    return out
 
 
-def build_hf_dataset(rows: list):
-    """
-    Synthetic-dataset rows -> a datasets.Dataset with one 'messages' column,
-    ready for TRL's SFTTrainer (see build_synthetic_messages). Imports
-    `datasets` lazily so importing this module never requires it -- only
-    actually building a training set does.
-    """
-    from datasets import Dataset
-    return Dataset.from_dict({'messages': build_synthetic_messages(rows)})
+def end_of_turn(tokenizer) -> str:
+    """The text the chat template emits right after an assistant turn's
+    content (Qwen3: <|im_end|>, Gemma 4: <turn|>), without the newline that
+    follows it. Derived from the template itself rather than hardcoded."""
+    marker = '\x00END\x00'
+    rendered = render_chat(tokenizer, [{'role': 'user', 'content': 'x'},
+                                       {'role': 'assistant', 'content': marker}])
+    tail = rendered[rendered.rindex(marker) + len(marker):]
+    return tail.split('\n', 1)[0]
+
+
+def build_prompt_completion(tokenizer, source_poem: str, target_author: str,
+                            generated_poem: str) -> dict:
+    """One prompt-completion training row: the exact inference prompt
+    (render_inference_prompt, generation prompt open) and the poem closed by
+    the template's end-of-turn token, so the model learns to stop."""
+    return {'prompt': render_inference_prompt(tokenizer, source_poem, target_author),
+            'completion': generated_poem.strip() + end_of_turn(tokenizer)}

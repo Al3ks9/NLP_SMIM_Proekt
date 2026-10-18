@@ -138,3 +138,25 @@ def test_grpo_sampling_is_explicit_and_configurable(tmp_path):
 def test_copy_gate_power_defaults_to_v1_and_reaches_the_reward_config():
     assert tg.reward_config(tg.parse_args([])).copy_gate_power == 1.0
     assert tg.reward_config(tg.parse_args(['--copy-gate-power', '3'])).copy_gate_power == 3.0
+
+
+def test_grpo_gemma_defaults():
+    from model_families import MODELS
+    a = tg.parse_args(['--family', 'gemma4'])
+    assert a.sft_merged == MODELS / 'gemma4-e4b-sft-merged' and a.output_dir == MODELS / 'gemma4-e4b-grpo'
+    assert a.base_model == 'google/gemma-4-E4B-it'
+    assert tg.apply_smoke_overrides(tg.parse_args(['--family', 'gemma4', '--smoke'])).output_dir \
+        == MODELS / 'gemma4-e4b-grpo-smoke'
+
+
+def test_grpo_qwen_defaults_unchanged():
+    a = tg.parse_args([])
+    assert a.sft_merged == tg.DEFAULT_MERGED_DIR and a.output_dir == tg.DEFAULT_OUTPUT_DIR
+    assert a.target_modules == tg.DEFAULT_TARGET_MODULES
+
+
+def test_grpo_refuses_a_policy_from_the_other_family(tmp_path):
+    (tmp_path / 'merge_info.json').write_text('{"family": "qwen3"}')
+    from model_families import get_family
+    with pytest.raises(ValueError, match='--family gemma4'):
+        tg.load_policy(tmp_path, 'sdpa', family=get_family('gemma4'))

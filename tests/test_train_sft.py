@@ -143,3 +143,75 @@ def test_train_wires_assistant_only_loss_and_lora_config_through(monkeypatch, tm
     assert trainer.peft_config.r == args.lora_r
     assert trainer.saved_to == str(tmp_path / 'out')
     assert (tmp_path / 'out' / 'run_config.json').exists()
+
+
+# ── --family ─────────────────────────────────────────────────────────────────────
+
+from model_families import MODELS, get_family
+
+
+def test_family_default_leaves_qwen_config_unchanged():
+    a = ts.resolve(ts.parse_args([]))
+    assert a.family == 'qwen3' and a.model_name == 'Qwen/Qwen3-4B'
+    assert a.output_dir == MODELS / 'qwen3-lora-sft'
+    assert a.target_modules == ts.DEFAULT_TARGET_MODULES
+
+
+def test_gemma_family_resolves_its_own_defaults():
+    a = ts.parse_args(['--family', 'gemma4'])
+    assert a.model_name == 'google/gemma-4-E4B-it' and a.output_dir == MODELS / 'gemma4-e4b-lora-sft'
+    assert a.target_modules == get_family('gemma4').target_modules
+
+
+def test_explicit_paths_beat_family_defaults(tmp_path):
+    a = ts.parse_args(['--family', 'gemma4', '--output-dir', str(tmp_path), '--model-name', 'x/y'])
+    assert a.output_dir == tmp_path and a.model_name == 'x/y'
+
+
+def test_gemma_family_uses_completion_only_loss():
+    cfg = ts.build_sft_config(ts.parse_args(['--family', 'gemma4', '--no-bf16']))
+    assert cfg.completion_only_loss is True and cfg.assistant_only_loss is False
+
+
+def test_qwen_family_keeps_assistant_only_loss():
+    cfg = ts.build_sft_config(ts.parse_args(['--no-bf16']))
+    assert cfg.assistant_only_loss is True
+
+
+def test_gemma_train_builds_prompt_completion_datasets(monkeypatch, tmp_path):
+    _FakeTrainer.instances.clear()
+    seen = {}
+    monkeypatch.setattr(ts, 'SFTTrainer', _FakeTrainer)
+    monkeypatch.setattr(ts, 'load_model_and_tokenizer', lambda *a, **kw: ('MODEL', _FakeTokenizer()))
+
+    def fake_build_datasets(path, eval_split='val', fmt='messages', tokenizer=None):
+        seen['fmt'], seen['tokenizer'] = fmt, tokenizer
+        return 'TRAIN_DS', None
+    monkeypatch.setattr(ts, 'build_datasets', fake_build_datasets)
+    monkeypatch.setattr(ts, 'end_of_turn', lambda tok: '<turn|>')
+    ts.train(ts.parse_args(['--family', 'gemma4', '--output-dir', str(tmp_path / 'o'), '--no-bf16']))
+    assert seen['fmt'] == 'prompt_completion' and isinstance(seen['tokenizer'], _FakeTokenizer)
+    cfg = (tmp_path / 'o' / 'run_config.json').read_text(encoding='utf-8')
+    assert '"family": "gemma4"' in cfg
+
+
+def test_gemma_sft_stops_on_end_of_turn_not_eos(monkeypatch, tmp_path):   # review I1
+    # TRL appends tokenizer.eos_token (<eos>) to every completion unless
+    # SFTConfig.eos_token says otherwise; GRPO stops on tokenizer.eos_token.
+    # Gemma's turn ends with <turn|>, so that must be the eos for both.
+    _FakeTrainer.instances.clear()
+    monkeypatch.setattr(ts, 'SFTTrainer', _FakeTrainer)
+    monkeypatch.setattr(ts, 'load_model_and_tokenizer', lambda *a, **kw: ('MODEL', _FakeTokenizer()))
+    monkeypatch.setattr(ts, 'build_datasets', lambda *a, **kw: ('TRAIN_DS', None))
+    monkeypatch.setattr(ts, 'end_of_turn', lambda tok: '<turn|>')
+    ts.train(ts.parse_args(['--family', 'gemma4', '--output-dir', str(tmp_path / 'g'), '--no-bf16']))
+    ts.train(ts.parse_args(['--output-dir', str(tmp_path / 'q'), '--no-bf16']))
+    gemma, qwen = _FakeTrainer.instances
+    assert gemma.args.eos_token == '<turn|>'
+    assert qwen.args.eos_token is None          # Qwen unchanged
+
+
+def test_max_seq_length_defaults_per_family():   # review I2
+    assert ts.parse_args([]).max_seq_length == 1024
+    assert ts.parse_args(['--family', 'gemma4']).max_seq_length == 4096
+    assert ts.parse_args(['--family', 'gemma4', '--max-seq-length', '2048']).max_seq_length == 2048

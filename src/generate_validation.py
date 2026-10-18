@@ -33,17 +33,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoTokenizer
 from peft import PeftModel
 
 import llm_style_transfer as lst
+import model_families as mf
 from generate_synthetic import build_pairs, sample_source_poems
 from sft_data import DEFAULT_MODEL_NAME, render_inference_prompt, select_target_authors
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
 
-DEFAULT_ADAPTER_DIR = ROOT / 'models' / 'qwen3-lora-sft'
 MODELS_DIR = ROOT / 'models'
 DEFAULT_OUTPUT_DIR = DATA / 'validation_generations'
 DEFAULT_MAX_NEW_TOKENS = 512
@@ -54,7 +54,7 @@ log = logging.getLogger('generate_validation')
 
 # ── Model loading ────────────────────────────────────────────────────────────────
 
-def load_adapter_model(adapter_dir: Path, base_model: str = None):
+def load_adapter_model(adapter_dir: Path, base_model: str = None, family: mf.ModelFamily = None):
     """
     The model to generate from, plus its tokenizer.
 
@@ -68,16 +68,20 @@ def load_adapter_model(adapter_dir: Path, base_model: str = None):
     the tokenizer saved alongside the adapter (train_sft.py saves both to the
     same directory).
     """
+    family = family or mf.get_family(mf.DEFAULT_FAMILY)
     if adapter_dir is None:
         if base_model is None:
-            base_model = DEFAULT_MODEL_NAME
+            base_model = family.hf_name
+        if Path(base_model).is_dir():
+            mf.assert_family_matches(family, base_model)
         tokenizer = AutoTokenizer.from_pretrained(base_model)
-        model = AutoModelForCausalLM.from_pretrained(base_model, dtype=torch.bfloat16)
+        model = mf.load_causal_lm(family, base_model, dtype=torch.bfloat16)
     else:
+        mf.assert_family_matches(family, adapter_dir)
         if base_model is None:
             base_model = _infer_base_model(adapter_dir)
         tokenizer = AutoTokenizer.from_pretrained(str(adapter_dir))
-        model = AutoModelForCausalLM.from_pretrained(base_model, dtype=torch.bfloat16)
+        model = mf.load_causal_lm(family, base_model, dtype=torch.bfloat16)
         model = PeftModel.from_pretrained(model, str(adapter_dir))
 
     model.to(_device())
@@ -98,7 +102,7 @@ def _device() -> str:
     return 'cpu'
 
 
-def _run_label(adapter_dir: Path, base_model: str) -> str:
+def _run_label(adapter_dir: Path, base_model: str, family: mf.ModelFamily = None) -> str:
     """Filename stem / `adapter` column value identifying which model produced
     a row: the adapter's directory name (checkpoint-N prefixed with its run),
     a local base model's directory name (the SFT-merged model), or
@@ -110,7 +114,9 @@ def _run_label(adapter_dir: Path, base_model: str) -> str:
         return adapter_dir.name
     if base_model and Path(base_model).is_dir():
         return Path(base_model).name
-    return 'base-' + (base_model or DEFAULT_MODEL_NAME).split('/')[-1]
+    if base_model:
+        return 'base-' + base_model.split('/')[-1]
+    return mf.base_label(family or mf.get_family(mf.DEFAULT_FAMILY))
 
 
 def _infer_base_model(adapter_dir: Path) -> str:
@@ -135,6 +141,14 @@ def _infer_base_model(adapter_dir: Path) -> str:
     log.warning('could not infer base model from %s -- falling back to %s',
                config_path, DEFAULT_MODEL_NAME)
     return DEFAULT_MODEL_NAME
+
+
+def effective_top_k(family: mf.ModelFamily, cli_top_k: int = None):
+    """--top-k if given, else the family's override (Gemma pins Qwen3's
+    shipped 20 instead of its own 64), else None = the model's own config."""
+    if cli_top_k is not None:
+        return cli_top_k
+    return family.generation_overrides.get('top_k')
 
 
 # ── Generation ───────────────────────────────────────────────────────────────────
@@ -190,16 +204,19 @@ def run_validation(adapter_dir: Path, split: str = 'val', num_source_poems: int 
                    samples_per_pair: int = 1, max_new_tokens: int = DEFAULT_MAX_NEW_TOKENS,
                    do_sample: bool = True, temperature: float = 0.7, top_p: float = 0.9,
                    repetition_penalty: float = 1.0, no_repeat_ngram_size: int = 0,
-                   output_path: Path = None) -> Path:
+                   output_path: Path = None, family: str = mf.DEFAULT_FAMILY,
+                   top_k: int = None) -> Path:
     authors = select_target_authors(num_target_authors, explicit=target_authors)
     source_poems = sample_source_poems(num_source_poems, seed=seed, split=split)
     pairs = build_pairs(source_poems, authors, samples_per_pair)
 
-    model, tokenizer = load_adapter_model(adapter_dir, base_model=base_model)
+    fam = mf.get_family(family)
+    top_k = effective_top_k(fam, top_k)
+    model, tokenizer = load_adapter_model(adapter_dir, base_model=base_model, family=fam)
 
-    label = _run_label(adapter_dir, base_model)
+    label = _run_label(adapter_dir, base_model, family=fam)
     resolved_base = (base_model if adapter_dir is None else
-                     base_model or _infer_base_model(adapter_dir)) or DEFAULT_MODEL_NAME
+                     base_model or _infer_base_model(adapter_dir)) or fam.hf_name
 
     if output_path is None:
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -221,7 +238,7 @@ def run_validation(adapter_dir: Path, split: str = 'val', num_source_poems: int 
                 max_new_tokens=max_new_tokens, do_sample=do_sample,
                 temperature=temperature, top_p=top_p,
                 repetition_penalty=repetition_penalty,
-                no_repeat_ngram_size=no_repeat_ngram_size)
+                no_repeat_ngram_size=no_repeat_ngram_size, top_k=top_k)
             targets = lst.structural_targets(target_author)
             fit = lst.validate_structure(generated, targets)
 
@@ -253,7 +270,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--adapter', type=Path, default=DEFAULT_ADAPTER_DIR)
+    parser.add_argument('--family', default=mf.DEFAULT_FAMILY, choices=sorted(mf.FAMILIES))
+    parser.add_argument('--adapter', type=Path, default=None,
+                       help='default: models/<family tag>-lora-sft')
     parser.add_argument('--no-adapter', action='store_true',
                        help='generate from the untuned base model (ignores --adapter) -- '
                             'the A/B baseline for compare_generations.py')
@@ -268,6 +287,8 @@ if __name__ == '__main__':
     parser.add_argument('--max-new-tokens', type=int, default=DEFAULT_MAX_NEW_TOKENS)
     parser.add_argument('--temperature', type=float, default=0.7)
     parser.add_argument('--top-p', type=float, default=0.9)
+    parser.add_argument('--top-k', type=int, default=None,
+                       help="default: the family's override (gemma4: 20), else the model's own")
     parser.add_argument('--repetition-penalty', type=float, default=1.0,
                        help='>1.0 penalises already-generated tokens (1.0 = off)')
     parser.add_argument('--no-repeat-ngram-size', type=int, default=0,
@@ -277,12 +298,14 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, default=None)
     args = parser.parse_args()
 
+    adapter = args.adapter or mf.default_dirs(mf.get_family(args.family))['sft']
     run_validation(
-        adapter_dir=None if args.no_adapter else args.adapter, split=args.split, num_source_poems=args.num_source_poems,
+        adapter_dir=None if args.no_adapter else adapter, split=args.split, num_source_poems=args.num_source_poems,
         target_authors=args.target_authors, num_target_authors=args.num_target_authors,
         base_model=args.base_model, seed=args.seed, samples_per_pair=args.samples_per_pair,
         max_new_tokens=args.max_new_tokens, do_sample=not args.greedy,
         temperature=args.temperature, top_p=args.top_p,
         repetition_penalty=args.repetition_penalty,
         no_repeat_ngram_size=args.no_repeat_ngram_size, output_path=args.output,
+        family=args.family, top_k=args.top_k,
     )
