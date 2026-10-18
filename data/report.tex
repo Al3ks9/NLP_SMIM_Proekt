@@ -1233,7 +1233,16 @@ The training reward (at the training weights) rose from 0.248 over the first
 term kept improving slowly after step 200 (0.215 $\to$ 0.244) while copy
 novelty and the classifier probability stayed at their step-200 levels, so
 later checkpoints mostly trade along the same frontier.
-% TODO: checkpoint-300 comparison (eval job 1232) -- fill in once it lands.
+
+The step-300 checkpoint, evaluated on the same 468 validation pairs, confirms
+this. Against the final step-500 adapter it scores a lower $R$ (0.381 against
+0.406) and lower content-word recall (0.306 against 0.338), but copies less:
+38.7\,\% of its outputs contain a near-copied source line, against 44.4\,\%,
+and 1.5\,\% fall below a copy novelty of 0.8, against 3.4\,\%. Its classifier
+top-1 is 0.088 against 0.079, a difference within sampling noise, and its
+degeneracy rate is similar (6.6\,\% against 5.3\,\%). The last 200 steps
+therefore bought content recall partly by copying more, and they did not
+improve author identification.
 
 \subsection{Implications}
 
