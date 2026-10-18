@@ -78,3 +78,7 @@ singularity/.build_cache/
 data/.DS_Store
 llm/.DS_Store
 models/judge_classifier.pkl
+
+# GRPO training logs copied back from the cluster (~50 MB each); the run dirs
+# themselves (models/qwen3-grpo*/) are ignored above.
+models/reward_components*.jsonl

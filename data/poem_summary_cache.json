@@ -1270,5 +1270,37 @@
     "model": "gemma-4-31b-it",
     "prompt_version": 2,
     "generated_at": "2026-09-30T15:11:38.274984+00:00"
+  },
+  "908264c71f5a4ea3f25191d467f14dec0c2280eb04984cfc24de571c42dc1006": {
+    "summary": "The poem presents a series of surreal inquiries featuring images of river stones under moonlight, deaf mountains, silver fruits in black orchards, and time grinding into dust. It conveys a mood of existential anxiety and dread as the speaker questions why they are burdened with the responsibility of providing precise answers to these impossible mysteries.",
+    "author": "Влада Урошевиќ",
+    "title": "Прашања",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-10-18T13:23:30.014719+00:00"
+  },
+  "7537bb07ab9a6a481143d280db55b7ec10b463d310b61d54c531cf810db991b0": {
+    "summary": "The poem describes the intensity of a deep physical and emotional connection, urging the reader not to restrain a lover during passionate, sweaty nights. It suggests that if the relationship must end, it should be done through a deep, consuming kiss rather than through tears. The mood is sensual and bittersweet.",
+    "author": "Пијан Славеј",
+    "title": "СЛАТКОВОДЕН БАКНЕЖ",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-10-18T13:56:35.886846+00:00"
+  },
+  "03429d970663936c064b1ef385c9824c3f9fab1402267fa3facb56ea35dbe403": {
+    "summary": "The poem depicts a city at sunset experiencing a surreal, feverish state of instability and physical illness. It features images of leaning streets, burning greenhouses, a fleeing python, and windows shaking with malarial fever. The mood is oppressive and chaotic, blending urban life with a sense of disorientation and sickness.",
+    "author": "Влада Урошевиќ",
+    "title": "Залез во градот",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-10-18T14:09:58.134914+00:00"
+  },
+  "02b7542317806ef7e4b87089138e860d743a7851c99cce95f905106c78498c08": {
+    "summary": "A luminous presence leads the speaker by the hand through a field and along a river, embodying a blend of ecstasy and hidden sorrow. They seek a spiritual union in an uncertain realm where \"dark people\" attack the light out of blindness. The mood is ethereal and melancholic, focusing on a transcendent bond that exists in isolation from the rest of the world.",
+    "author": "Веле Смилевски",
+    "title": "Книгата идеја",
+    "model": "gemma-4-31b-it",
+    "prompt_version": 2,
+    "generated_at": "2026-10-18T14:22:48.126279+00:00"
   }
 }
