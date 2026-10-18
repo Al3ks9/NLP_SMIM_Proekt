@@ -53,6 +53,7 @@ data/synthetic/teacher_val_errors.csv
 models/qwen3-sft-merged/
 models/qwen3-grpo/
 models/qwen3-grpo-smoke/
+models/qwen3-grpo-v2/
 
 # Slurm job stdout/stderr (slurm/train_sft.slurm)
 logs/
