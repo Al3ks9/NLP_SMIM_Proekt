@@ -31,8 +31,9 @@ import logging
 import sys
 from pathlib import Path
 
+import judge_classifier as jc
 import style_metrics as sm
-from make_splits import load_stripped_songs
+from make_splits import load_splits, load_stripped_songs
 from sft_data import select_target_authors
 
 csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
@@ -60,6 +61,9 @@ SUMMARY_COLUMNS = [
     ('fit_structure', 'struct-fit'),
     ('clf_target_prob', 'clf-prob'),
     ('clf_top1', 'clf-top1'),
+    # held-out judge (judge_classifier.py): not a reward, so GRPO can't game it
+    ('judge_target_prob', 'judge-prob'),
+    ('judge_top1', 'judge-top1'),
     ('tfidf_hit_rate', 'tfidf-hit'),
     ('content_recall', 'content-rec'),
     ('content_jaccard', 'content-jac'),
@@ -143,6 +147,7 @@ def score_run(run: dict, rewards: bool = False) -> list:
     rewards=True adds the GRPO reward (grpo_rewards.score_batch) for rows
     with a source poem -- the same numbers the GRPO trainer optimised."""
     poems = _poems_by_id()
+    splits = load_splits()
     scored, sources = [], []
     for row in run['rows']:
         source_text = row.get('source_text', ...)
@@ -156,7 +161,12 @@ def score_run(run: dict, rewards: bool = False) -> list:
             **sm.language_metrics(row['generated_poem']),
             **sm.structure_fit(row['generated_poem'], row['target_author']),
             **sm.style_match(row['generated_poem'], row['target_author']),
+            **jc.judge_match(row['generated_poem'], row['target_author']),
         }
+        if row['split'] == 'corpus' and splits.get(row['source_poem_id']) == 'train':
+            # the judge trained on this very poem -- blank, not a memorized 1.0
+            metrics.update({'judge_target_prob': None, 'judge_top1': None,
+                            'judge_predicted': ''})
         if source_text:
             metrics.update(sm.content_preservation(source_text, row['generated_poem']))
         else:
@@ -223,7 +233,7 @@ def write_reports(all_scored: list, summaries: dict, rows_path: Path,
                   report_path: Path) -> None:
     rows_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ['run', 'source_poem_id', 'target_author', 'split'] + METRIC_COLUMNS + [
-        'clf_predicted', 'actual_lines', 'actual_stanzas', 'actual_tokens_per_line']
+        'clf_predicted', 'judge_predicted', 'actual_lines', 'actual_stanzas', 'actual_tokens_per_line']
     with open(rows_path, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
         writer.writeheader()

@@ -1,0 +1,12 @@
+{
+  "n_authors": 23,
+  "n_train_poems": 963,
+  "held_out_all_authors": {
+    "n": 238,
+    "top1": 0.5336134453781513
+  },
+  "held_out_target_authors": {
+    "n": 172,
+    "top1": 0.6627906976744186
+  }
+}

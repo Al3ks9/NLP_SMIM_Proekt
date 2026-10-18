@@ -65,4 +65,4 @@ singularity/.build_cache/
 
 .DS_Store
 data/.DS_Store
-llm/.DS_Store
+llm/.DS_Storemodels/judge_classifier.pkl
