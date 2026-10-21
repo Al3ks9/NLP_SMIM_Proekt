@@ -22,6 +22,7 @@
 # Usage:
 #   sbatch slurm/train_sft.slurm
 #   sbatch slurm/train_sft.slurm --num-train-epochs 5 --learning-rate 1e-4   # extra args forwarded to train_sft.py
+#   FAMILY=gemma4 sbatch slurm/train_sft.slurm      # Gemma 4 E4B student (--max-seq-length defaults per family: qwen3 1024, gemma4 4096)
 
 set -euo pipefail
 
@@ -32,6 +33,8 @@ set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 [[ -f slurm/train_sft.slurm ]] || cd ..
 mkdir -p logs
+FAMILY="${FAMILY:-qwen3}"   # student model family, src/model_families.py
+export FAMILY
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
 if [[ ! -f "$SIF" ]]; then
@@ -64,6 +67,7 @@ singularity exec --nv \
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
         /opt/venv/bin/python src/train_sft.py \
+            --family "$FAMILY" \
             --num-train-epochs 3 \
             --per-device-train-batch-size 4 \
             --per-device-eval-batch-size 4 \
@@ -72,7 +76,6 @@ singularity exec --nv \
             --lora-r 16 \
             --lora-alpha 32 \
             --lora-dropout 0.05 \
-            --max-seq-length 1024 \
             --bf16 \
             "$@"
     ' _ "$@"

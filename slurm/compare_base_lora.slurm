@@ -21,6 +21,7 @@
 # Usage:
 #   sbatch slurm/compare_base_lora.slurm
 #   sbatch slurm/compare_base_lora.slurm --num-source-poems 25   # forwarded to both runs
+#   FAMILY=gemma4 sbatch slurm/compare_base_lora.slurm            # Gemma 4 E4B: base vs its SFT adapter
 
 set -euo pipefail
 
@@ -28,6 +29,8 @@ set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 [[ -f slurm/compare_base_lora.slurm ]] || cd ..
 mkdir -p logs
+source slurm/grpo_common.sh   # FAMILY -> TAG (family_vars)
+family_vars || exit 1
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
 if [[ ! -f "$SIF" ]]; then
@@ -35,8 +38,8 @@ if [[ ! -f "$SIF" ]]; then
     exit 1
 fi
 
-if [[ ! -d models/qwen3-lora-sft ]]; then
-    echo "Missing models/qwen3-lora-sft -- run train_sft.slurm first." >&2
+if [[ ! -d models/$TAG-lora-sft ]]; then
+    echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch slurm/train_sft.slurm first." >&2
     exit 1
 fi
 
@@ -57,7 +60,7 @@ singularity exec --nv \
         cd /workspace
         /opt/venv/bin/python -c "import torch; print(\"CUDA available:\", torch.cuda.is_available(), \"--\", torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"no GPU visible\")"
         echo "=== baseline: untuned base model ==="
-        /opt/venv/bin/python src/generate_validation.py --no-adapter --split val "$@"
+        /opt/venv/bin/python src/generate_validation.py --family "$FAMILY" --no-adapter --split val "$@"
         echo "=== tuned: LoRA adapter ==="
-        /opt/venv/bin/python src/generate_validation.py --split val "$@"
+        /opt/venv/bin/python src/generate_validation.py --family "$FAMILY" --split val "$@"
     ' _ "$@"

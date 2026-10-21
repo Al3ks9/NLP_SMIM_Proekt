@@ -161,3 +161,11 @@ def test_val_split_never_routes_to_the_sft_training_file():
     assert val['main'].name == 'teacher_val.csv'
     assert val['main'] != gs.OUTPUT_PATH and val['errors'] != gs.ERRORS_PATH
     assert val['parts_dir'] != train['parts_dir']
+
+
+def test_test_split_gets_its_own_teacher_file():
+    import generate_synthetic as gs
+    test, val = msp.paths_for_split('test'), msp.paths_for_split('val')
+    assert test['main'].name == 'teacher_test.csv'
+    assert test['main'] != gs.OUTPUT_PATH and test['parts_dir'] not in (val['parts_dir'],
+                                                                        msp.paths_for_split('train')['parts_dir'])

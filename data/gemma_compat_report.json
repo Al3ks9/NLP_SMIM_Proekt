@@ -1,0 +1,53 @@
+{
+  "family": "gemma4",
+  "hf_name": "google/gemma-4-E4B-it",
+  "checks": {
+    "load": "pass",
+    "lora": "pass",
+    "template": "pass",
+    "lengths": "pass",
+    "generate": "pass",
+    "sft_merge": "fail: adapter -1071.337 vs merged -1115.133 over 323 tokens (0.1356/token, tolerance 0.02)"
+  },
+  "loader_used": "gemma4_text",
+  "missing_keys": [],
+  "details": {
+    "load": "gemma4_text: every language-model weight loaded",
+    "lora": "258 modules",
+    "template": "end_of_turn='<turn|>'",
+    "lengths": "max_seq_length=4096 ({'n': 1146, 'p50': 537, 'p95': 899, 'p99': 1961, 'max': 3370, 'n_over_1024': 31, 'n_over_2048': 10, 'n_over_4096': 0})",
+    "generate": "419 chars",
+    "sft_merge": "adapter -1071.337 vs merged -1115.133 over 323 tokens (0.1356/token, tolerance 0.02)"
+  },
+  "lora_match_counts": {
+    "q_proj": 42,
+    "k_proj": 24,
+    "v_proj": 24,
+    "o_proj": 42,
+    "gate_proj": 42,
+    "up_proj": 42,
+    "down_proj": 42
+  },
+  "end_of_turn": "<turn|>",
+  "train_token_lengths": {
+    "n": 1146,
+    "p50": 537,
+    "p95": 899,
+    "p99": 1961,
+    "max": 3370,
+    "n_over_1024": 31,
+    "n_over_2048": 10,
+    "n_over_4096": 0
+  },
+  "max_seq_length": 4096,
+  "sample_generation": {
+    "source_poem_id": "0",
+    "target_author": "Блаже Конески",
+    "raw": "## Претсетна игра (Во стил на Блаже Конески)\n\nКој ја плете таму таа песна,\nво сенките на изгубеното време,\nсо свирка што е само ехо,\nза забуна која не се смее?\n\nКој ја води таа ноќна танцувачка,\nсо чекор што го знае само метем,\nна патот што ги потрошиле раните,\nдо границата на невидењето?\n\nКој таму, во таа мрачна тишина,\nшто дише со прашина и желба?\nКој таму, во таа нејасна мапа,\nшто знае што се крие зад таа облека?<turn|>"
+  },
+  "merge_logprob": {
+    "adapter": -1071.336669921875,
+    "merged": -1115.132568359375,
+    "n_tokens": 323
+  }
+}

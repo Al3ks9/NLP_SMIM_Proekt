@@ -50,3 +50,46 @@ def test_merge_is_idempotent_and_refuses_a_different_adapter(tiny_adapter, tmp_p
     (out / 'merge_info.json').write_text(json.dumps(info))
     with pytest.raises(SystemExit):
         msa.merge(adapter, out, base_model=TINY)
+
+
+# ── --family ─────────────────────────────────────────────────────────────────────
+
+import model_families as mf
+
+
+def test_family_mismatch_is_refused(tmp_path):                        # Review Focus 3
+    (tmp_path / 'merge_info.json').write_text('{"family": "qwen3"}')
+    with pytest.raises(ValueError, match='--family gemma4 .* qwen3'):
+        mf.assert_family_matches(mf.get_family('gemma4'), tmp_path)
+
+
+def test_family_mismatch_read_from_an_adapter_config(tmp_path):
+    (tmp_path / 'adapter_config.json').write_text(
+        '{"base_model_name_or_path": "/workspace/models/gemma4-e4b-sft-merged"}')
+    with pytest.raises(ValueError, match='--family qwen3 .* gemma4'):
+        mf.assert_family_matches(mf.get_family('qwen3'), tmp_path)
+    mf.assert_family_matches(mf.get_family('gemma4'), tmp_path)
+
+
+def test_unknown_provenance_is_not_an_error(tmp_path):
+    # pre-family merges and hub ids we don't recognise must keep working
+    (tmp_path / 'merge_info.json').write_text('{"adapter_dir": "x"}')
+    mf.assert_family_matches(mf.get_family('gemma4'), tmp_path)
+
+
+def test_merge_records_the_family(tiny_adapter, tmp_path):
+    adapter, _ = tiny_adapter
+    out = msa.merge(adapter, tmp_path / 'merged', base_model=TINY)
+    assert json.loads((out / 'merge_info.json').read_text())['family'] == 'qwen3'
+
+
+def test_forced_merge_with_the_wrong_family_deletes_nothing(tiny_adapter, tmp_path):   # review minor 2
+    adapter, _ = tiny_adapter
+    out = msa.merge(adapter, tmp_path / 'merged', base_model=TINY)
+    (adapter / 'adapter_config.json').write_text(json.dumps(
+        {**json.loads((adapter / 'adapter_config.json').read_text()),
+         'base_model_name_or_path': 'google/gemma-4-E4B-it'}))
+    (adapter / 'extra').write_text('changes the adapter hash')
+    with pytest.raises(ValueError):
+        msa.merge(adapter, out, base_model=TINY, family='qwen3', force=True)
+    assert (out / 'merge_info.json').exists()

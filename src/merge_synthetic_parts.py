@@ -104,9 +104,9 @@ def paths_for_split(split: str) -> dict:
     synthetic = OUTPUT_PATH.parent
     if split == 'train':
         main, errors, parts = OUTPUT_PATH, ERRORS_PATH, synthetic / 'parts'
-    elif split == 'val':
-        main, errors = synthetic / 'teacher_val.csv', synthetic / 'teacher_val_errors.csv'
-        parts = synthetic / 'parts_val'
+    elif split in ('val', 'test'):
+        main, errors = synthetic / f'teacher_{split}.csv', synthetic / f'teacher_{split}_errors.csv'
+        parts = synthetic / f'parts_{split}'
     else:
         raise ValueError(f'no synthetic output location for split {split!r}')
     return {'main': main, 'errors': errors, 'parts_dir': parts,
