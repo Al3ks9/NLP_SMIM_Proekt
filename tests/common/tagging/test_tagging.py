@@ -4,7 +4,7 @@ from collections import Counter
 
 import pytest
 
-import tagging
+from common.tagging import tagging
 
 
 def test_is_content_keeps_a_real_adverb():
@@ -149,9 +149,9 @@ def test_tag_poem_reproduces_the_corpus_tags_for_a_real_poem():
     from difflib import SequenceMatcher
     from pathlib import Path
 
-    from make_splits import load_stripped_songs
+    from common.corpus.make_splits import load_stripped_songs
 
-    root = Path(__file__).resolve().parent.parent
+    from common.paths import ROOT as root
     with open(root / 'data' / 'pos_tagged.csv', encoding='utf-8') as f:
         pos_rows = list(csv.DictReader(f))
     verb_lemmas = tagging.load_verb_lemmas(pos_rows)

@@ -35,7 +35,7 @@ import random
 from collections import Counter, defaultdict
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 SPLITS_PATH = DATA / 'splits' / 'poem_splits.csv'
 

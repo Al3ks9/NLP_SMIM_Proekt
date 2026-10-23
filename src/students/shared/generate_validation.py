@@ -36,12 +36,12 @@ import torch
 from transformers import AutoTokenizer
 from peft import PeftModel
 
-import structure
-import model_families as mf
-from generate_synthetic import build_pairs, sample_source_poems
-from sft_data import DEFAULT_MODEL_NAME, render_inference_prompt, select_target_authors
+from common.evaluation import structure
+from students.shared import model_families as mf
+from gemma_teacher.generate_synthetic import build_pairs, sample_source_poems
+from students.shared.sft_data import DEFAULT_MODEL_NAME, render_inference_prompt, select_target_authors
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 MODELS_DIR = ROOT / 'models'

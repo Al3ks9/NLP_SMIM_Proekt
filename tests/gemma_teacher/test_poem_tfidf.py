@@ -2,7 +2,7 @@
 corpus, over pos_tagged.csv lemmas — distinct from tfidf_authors.py's
 author-level, surface-word computation."""
 
-import poem_tfidf as pt
+from gemma_teacher import poem_tfidf as pt
 
 
 def test_word_unique_to_one_poem_ranks_above_a_word_common_to_all():

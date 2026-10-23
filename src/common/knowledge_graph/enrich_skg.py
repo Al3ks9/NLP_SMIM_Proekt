@@ -4,7 +4,7 @@ from collections import defaultdict, Counter
 from pathlib import Path
 import networkx as nx
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

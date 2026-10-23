@@ -19,7 +19,7 @@ is already patched. That needs a full re-tag:
 import csv
 import shutil
 
-import corrections as C
+from common.tagging import corrections as C
 
 FLAGS = C.DATA / 'pos_flags.csv'
 TAGGED = C.DATA / 'pos_tagged.csv'

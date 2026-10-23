@@ -16,10 +16,10 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import corrections as C
-from tagging import KEEP_POS, RELATIVIZER_XPOS, is_content, gerund_lemma
+from common.tagging import corrections as C
+from common.tagging.tagging import KEEP_POS, RELATIVIZER_XPOS, is_content, gerund_lemma
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 MIN_POEMS = 5
@@ -93,7 +93,7 @@ qualified = {a for a, c in author_counts.items() if c >= MIN_POEMS}
 poems = [r for r in rows if r['author'] in qualified]
 print(f"Tagging {len(qualified)} authors ({len(poems)} poems) with classla")
 
-from tagging import pipeline
+from common.tagging.tagging import pipeline
 nlp = pipeline()
 
 # Tag everything first, including function words and punctuation. The audit

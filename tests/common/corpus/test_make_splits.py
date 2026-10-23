@@ -2,7 +2,7 @@
 
 import itertools
 
-import make_splits as ms
+from common.corpus import make_splits as ms
 
 # poem_id is a globally unique id in the real corpus (add_poem_ids.py assigns
 # it by row order across ALL authors) -- a shared counter keeps that true

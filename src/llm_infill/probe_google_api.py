@@ -24,7 +24,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 # A real task, not "say hello": Macedonian generation is the whole reason for

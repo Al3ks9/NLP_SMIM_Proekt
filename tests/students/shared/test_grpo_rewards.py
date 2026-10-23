@@ -4,9 +4,9 @@ import math
 import numpy as np
 import pytest
 
-import grpo_rewards as gr
-import style_features as sf
-import style_metrics as sm
+from students.shared import grpo_rewards as gr
+from common.stylometry import style_features as sf
+from common.evaluation import style_metrics as sm
 
 AUTHOR = 'Автор'
 

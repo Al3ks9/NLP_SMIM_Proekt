@@ -1,6 +1,6 @@
 """Feats parsing and the relaxation order (spec §Relaxation order)."""
 
-import morph
+from common.tagging import morph
 
 NOUN_FEM_SG_DEF = 'Case=Nom|Definite=Def|Gender=Fem|Number=Sing'
 VERB_PRES_3SG = 'Aspect=Prog|Mood=Ind|Number=Sing|Person=3|Polarity=Pos|Tense=Pres'
@@ -232,7 +232,7 @@ def test_target_author_is_preferred_over_the_pooled_index():
 import json
 from pathlib import Path
 
-MODELS = Path(__file__).resolve().parent.parent / 'models'
+from common.paths import MODELS
 
 
 def test_morph_lookup_has_both_indices():

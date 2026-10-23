@@ -22,9 +22,9 @@ import argparse
 import csv
 from pathlib import Path
 
-from generate_synthetic import ERRORS_PATH, FIELDNAMES, OUTPUT_PATH, _open_append, load_done_keys
+from gemma_teacher.generate_synthetic import ERRORS_PATH, FIELDNAMES, OUTPUT_PATH, _open_append, load_done_keys
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 
 ERROR_FIELDNAMES = ['source_poem_id', 'source_author', 'target_author', 'sample_index', 'error']
 

@@ -21,7 +21,7 @@ import json
 from collections import defaultdict, Counter
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

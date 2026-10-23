@@ -5,7 +5,7 @@ tested end-to-end against the real corpus, like test_candidate_selection.py."""
 import numpy as np
 import pytest
 
-import exemplar_selection as es
+from gemma_teacher import exemplar_selection as es
 
 RACIN = 'Кочо Рацин'
 KONESKI = 'Блаже Конески'

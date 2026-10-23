@@ -4,11 +4,11 @@ from pathlib import Path
 import pytest
 import torch
 
-import model_families as mf
+from students.shared import model_families as mf
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
-FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'gemma4_e4b_config.json'
+FIXTURE = ROOT / 'tests' / 'fixtures' / 'gemma4_e4b_config.json'
 
 GEMMA_REGEX = r'.*language_model.*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)$'
 

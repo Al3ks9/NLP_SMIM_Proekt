@@ -1,6 +1,6 @@
 """Offset splicing — the mechanism that makes out-of-region edits impossible."""
 
-import style_transfer as st
+from word_substitution import style_transfer as st
 
 
 def test_splice_replaces_one_span():

@@ -11,7 +11,7 @@ Defining the normalization once makes that divergence impossible.
 from collections import Counter
 from dataclasses import dataclass
 
-import corrections
+from common.tagging import corrections
 
 KEEP_POS = {'NOUN', 'VERB', 'ADJ', 'ADV', 'PROPN'}
 

@@ -1,7 +1,7 @@
 """Style profile -> descriptive text (step 3): percentile ranking, banding, and
 the prose translation of top_pos_bigrams / top_rhyme_endings."""
 
-import style_narrator as sn
+from gemma_teacher import style_narrator as sn
 
 # Three synthetic authors, one numeric column, easy to hand-check percentiles for.
 ROWS = [

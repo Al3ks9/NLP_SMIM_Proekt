@@ -33,7 +33,7 @@ Usage (inside the container, see slurm/gemma_compat.slurm):
 import json
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 REPORT_PATH = ROOT / 'data' / 'gemma_compat_report.json'
 
 LIMITS = (1024, 2048, 4096)   # 10 of 1,146 train rows exceed 2048 Gemma tokens (max 3,371)
@@ -108,7 +108,7 @@ def check_load(report: dict, family) -> None:
     production scripts use FAMILIES as committed, not this process's view."""
     import dataclasses
     import torch
-    import model_families as mf
+    from students.shared import model_families as mf
 
     report['loader_used'] = family.loader
     try:
@@ -129,7 +129,7 @@ def check_load(report: dict, family) -> None:
 
 def check_lora(report: dict, family) -> None:
     import torch
-    import model_families as mf
+    from students.shared import model_families as mf
     model = mf.load_causal_lm(family, family.hf_name, dtype=torch.bfloat16)
     names = [n for n, _ in model.named_modules()]
     matched = [n for n in names if mf.count_target_matches(family.target_modules, [n])]
@@ -138,7 +138,7 @@ def check_lora(report: dict, family) -> None:
 
 
 def check_template(report: dict, tokenizer) -> None:
-    import sft_data
+    from students.shared import sft_data
     source, target, poem = 'извор\nред', 'Блаже Конески', 'нова песна\nвтор стих'
     pc = sft_data.build_prompt_completion(tokenizer, source, target, poem)
     full = sft_data.render_chat(tokenizer, sft_data.build_messages(source, target, poem))
@@ -155,7 +155,7 @@ def check_template(report: dict, tokenizer) -> None:
 
 
 def check_lengths(report: dict, tokenizer) -> None:
-    import sft_data
+    from students.shared import sft_data
     rows = sft_data.load_synthetic_rows(split='train')
     lengths = []
     for source, target, poem in sft_data._source_target_poem(rows):
@@ -170,9 +170,9 @@ def check_lengths(report: dict, tokenizer) -> None:
 
 def check_generation(report: dict, family, tokenizer) -> None:
     import torch
-    import model_families as mf
-    import sft_data
-    from make_splits import poems_in_split
+    from students.shared import model_families as mf
+    from students.shared import sft_data
+    from common.corpus.make_splits import poems_in_split
 
     poem = sorted(poems_in_split('val'), key=lambda p: int(p['poem_id']))[0]
     target = sft_data.select_target_authors(10)[0]
@@ -197,12 +197,12 @@ def check_sft_merge(report: dict, family, work_dir: Path, max_seq_length: int) -
     import csv
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    import generate_validation as gv
-    import merge_sft_adapter as msa
-    import model_families as mf
-    import sft_data
-    import train_sft
-    from train_grpo import completion_logprob
+    from students.shared import generate_validation as gv
+    from students.shared import merge_sft_adapter as msa
+    from students.shared import model_families as mf
+    from students.shared import sft_data
+    from students.shared import train_sft
+    from students.shared.train_grpo import completion_logprob
 
     rows = sft_data.load_synthetic_rows(split='train')[:8]
     data = work_dir / 'synthetic_8.csv'
@@ -257,7 +257,7 @@ def main(argv=None) -> int:
     import logging
     import traceback
     from transformers import AutoTokenizer
-    import model_families as mf
+    from students.shared import model_families as mf
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
     p = argparse.ArgumentParser(description=__doc__,

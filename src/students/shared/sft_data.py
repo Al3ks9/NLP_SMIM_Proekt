@@ -18,10 +18,10 @@ things the task is actually defined on: a source poem and a target author.
 import csv
 from pathlib import Path
 
-from make_splits import load_stripped_songs, SPLIT_NAMES
-from targets import load_profile_rows, select_target_authors  # noqa: F401 (re-exported)
+from common.corpus.make_splits import load_stripped_songs, SPLIT_NAMES
+from common.stylometry.targets import load_profile_rows, select_target_authors  # noqa: F401 (re-exported)
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 DEFAULT_MODEL_NAME = 'Qwen/Qwen3-4B'

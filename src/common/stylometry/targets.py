@@ -9,7 +9,7 @@ rather than in the students' sft_data.py (which re-exports both names).
 import csv
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 _CACHE: dict = {}

@@ -17,9 +17,9 @@ never saw.
 import logging
 import random
 
-from generate_synthetic import build_pairs
-from make_splits import poems_in_split
-from sft_data import render_inference_prompt, select_target_authors
+from gemma_teacher.generate_synthetic import build_pairs
+from common.corpus.make_splits import poems_in_split
+from students.shared.sft_data import render_inference_prompt, select_target_authors
 
 DEFAULT_SEED = 42
 DEFAULT_MAX_PROMPT_LENGTH = 1024

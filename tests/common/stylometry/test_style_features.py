@@ -2,7 +2,7 @@ from collections import Counter
 
 import pytest
 
-import style_features as sf
+from common.stylometry import style_features as sf
 
 POEM = 'сонце грее над гора\nптица пее\n\nреката тече\nкон морето сина'
 

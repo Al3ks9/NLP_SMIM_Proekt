@@ -6,7 +6,7 @@ import csv
 
 import pytest
 
-import generate_synthetic as gs
+from gemma_teacher import generate_synthetic as gs
 
 
 def _poem(poem_id, author, title='Наслов'):

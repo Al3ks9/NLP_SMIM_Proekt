@@ -55,10 +55,10 @@ from transformers import AutoTokenizer
 from peft import LoraConfig
 from trl import SFTConfig, SFTTrainer
 
-import model_families as mf
-from sft_data import DEFAULT_MODEL_NAME, build_hf_dataset, end_of_turn, load_synthetic_rows
+from students.shared import model_families as mf
+from students.shared.sft_data import DEFAULT_MODEL_NAME, build_hf_dataset, end_of_turn, load_synthetic_rows
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

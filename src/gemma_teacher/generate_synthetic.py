@@ -38,11 +38,11 @@ import random
 import sys
 from pathlib import Path
 
-from make_splits import poems_in_split
-from targets import select_target_authors
-import llm_style_transfer as lst
+from common.corpus.make_splits import poems_in_split
+from common.stylometry.targets import select_target_authors
+from gemma_teacher import llm_style_transfer as lst
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 OUTPUT_PATH = DATA / 'synthetic' / 'synthetic_dataset.csv'
 ERRORS_PATH = DATA / 'synthetic' / 'synthetic_errors.csv'

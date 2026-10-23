@@ -3,8 +3,8 @@ from collections import Counter
 import numpy as np
 import pytest
 
-import build_reward_calibration as brc
-import style_features as sf
+from students.shared import build_reward_calibration as brc
+from common.stylometry import style_features as sf
 
 
 def _feats(noun, bigrams):

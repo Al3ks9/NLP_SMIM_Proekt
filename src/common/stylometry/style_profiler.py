@@ -4,11 +4,11 @@ from collections import defaultdict, Counter
 import math
 from pathlib import Path
 
-from style_features import (  # noqa: F401 (re-exported for existing importers)
+from common.stylometry.style_features import (  # noqa: F401 (re-exported for existing importers)
     CONTENT_POS, MATTR_WINDOW, line_final_syllable, line_stats, mattr,
 )
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 MIN_POEMS = 5

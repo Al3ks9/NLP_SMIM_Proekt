@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-import candidate_selection as cs
+from common.masking import candidate_selection as cs
 
 RACIN = 'Кочо Рацин'
 KONESKI = 'Блаже Конески'
@@ -223,7 +223,7 @@ def test_legacy_fallback_uses_the_target_authors_own_words(resources):
     TARGET_AUTHOR demo constant. Конески and Рацин have disjoint top-15 TF-IDF
     vocabularies, so this fails loudly if the tier silently reuses the wrong
     author's words."""
-    from llm_probe import load_target_words
+    from llm_infill.llm_probe import load_target_words
 
     ranked = cs.tier_legacy_fallback(
         'вардар', 'PROPN', RACIN, None, None,

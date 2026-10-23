@@ -30,11 +30,11 @@ import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import style_features as sf
-import style_metrics as sm
-from content_similarity import DEFAULT_CONTENT_MODEL, LineEmbedder, line_f1
+from common.stylometry import style_features as sf
+from common.evaluation import style_metrics as sm
+from common.evaluation.content_similarity import DEFAULT_CONTENT_MODEL, LineEmbedder, line_f1
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 CALIBRATION_PATH = DATA / 'reward_calibration.json'
 
@@ -93,7 +93,7 @@ def load_calibration(path: Path) -> dict:
 
 
 def _default_tagger():
-    import tagging
+    from common.tagging import tagging
 
     def build():
         with open(DATA / 'pos_tagged.csv', encoding='utf-8') as f:

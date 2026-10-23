@@ -3,7 +3,7 @@ import json
 import pytest
 import torch
 
-import merge_sft_adapter as msa
+from students.shared import merge_sft_adapter as msa
 
 TINY = 'trl-internal-testing/tiny-Qwen3ForCausalLM'
 
@@ -54,7 +54,7 @@ def test_merge_is_idempotent_and_refuses_a_different_adapter(tiny_adapter, tmp_p
 
 # ── --family ─────────────────────────────────────────────────────────────────────
 
-import model_families as mf
+from students.shared import model_families as mf
 
 
 def test_family_mismatch_is_refused(tmp_path):                        # Review Focus 3

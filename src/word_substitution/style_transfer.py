@@ -14,10 +14,10 @@ from pathlib import Path
 
 import numpy as np
 
-import candidate_selection
-import tagging
+from common.masking import candidate_selection
+from common.tagging import tagging
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

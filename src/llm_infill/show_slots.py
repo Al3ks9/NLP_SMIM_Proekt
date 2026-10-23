@@ -9,8 +9,8 @@ Usage:
 import json
 import logging
 
-from candidate_selection import build_slots, log_slot
-from llm_probe import MASK_WORDS, SOURCE_AUTHOR, TARGET_AUTHOR, load_stanza
+from common.masking.candidate_selection import build_slots, log_slot
+from llm_infill.llm_probe import MASK_WORDS, SOURCE_AUTHOR, TARGET_AUTHOR, load_stanza
 
 
 if __name__ == '__main__':

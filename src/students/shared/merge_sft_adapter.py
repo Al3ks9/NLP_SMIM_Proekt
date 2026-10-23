@@ -30,10 +30,10 @@ from pathlib import Path
 
 import torch
 
-import model_families as mf
-from generate_validation import _infer_base_model
+from students.shared import model_families as mf
+from students.shared.generate_validation import _infer_base_model
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
 DEFAULT_SFT_ADAPTER = MODELS / 'qwen3-lora-sft'
 DEFAULT_MERGED_DIR = MODELS / 'qwen3-sft-merged'

@@ -13,7 +13,7 @@ Costs 5 requests against the OpenRouter free quota (50/day without credits).
 
 import sys
 
-from llm_probe import run
+from llm_infill.llm_probe import run
 
 MODEL = 'google/gemma-4-31b-it:free'
 

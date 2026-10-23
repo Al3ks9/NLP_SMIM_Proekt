@@ -1,5 +1,5 @@
-import sft_data
-import targets
+from students.shared import sft_data
+from common.stylometry import targets
 
 
 def test_sft_data_reexports_targets():

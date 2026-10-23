@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import llm_style_transfer as lst
-import structure
-import style_metrics
+from gemma_teacher import llm_style_transfer as lst
+from common.evaluation import structure
+from common.evaluation import style_metrics
 
 
 def test_lst_reexports_structure():

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-import llm_client as lc
+from common import llm_client as lc
 
 
 def test_call_dispatches_to_the_named_backend(monkeypatch):

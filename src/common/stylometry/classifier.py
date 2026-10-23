@@ -11,7 +11,7 @@ from sklearn.metrics import classification_report
 from sklearn.calibration import CalibratedClassifierCV
 import numpy as np
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

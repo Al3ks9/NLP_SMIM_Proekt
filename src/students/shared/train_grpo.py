@@ -37,14 +37,14 @@ import torch
 from transformers import AutoTokenizer
 from trl import GRPOConfig, GRPOTrainer
 
-import grpo_rewards as gr
-import model_families as mf
-from grpo_data import DEFAULT_MAX_PROMPT_LENGTH, build_grpo_dataset
-from grpo_rewards import make_reward_funcs
-from merge_sft_adapter import DEFAULT_MERGED_DIR
-from train_sft import DEFAULT_TARGET_MODULES, build_lora_config
+from students.shared import grpo_rewards as gr
+from students.shared import model_families as mf
+from students.shared.grpo_data import DEFAULT_MAX_PROMPT_LENGTH, build_grpo_dataset
+from students.shared.grpo_rewards import make_reward_funcs
+from students.shared.merge_sft_adapter import DEFAULT_MERGED_DIR
+from students.shared.train_sft import DEFAULT_TARGET_MODULES, build_lora_config
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
 DEFAULT_OUTPUT_DIR = MODELS / 'qwen3-grpo'
 

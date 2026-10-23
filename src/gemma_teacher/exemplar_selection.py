@@ -22,11 +22,11 @@ from pathlib import Path
 import numpy as np
 from sklearn.cluster import KMeans
 
-from candidate_selection import (  # noqa: F401 — reused, see module docstring
+from common.masking.candidate_selection import (  # noqa: F401 — reused, see module docstring
     _align, corpus_token_stream, load_pos_rows, load_tfidf, load_word_embeddings,
 )
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 TOP_TFIDF_WORDS = 20

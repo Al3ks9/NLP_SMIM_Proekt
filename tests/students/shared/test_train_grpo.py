@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-import train_grpo as tg
+from students.shared import train_grpo as tg
 
 TINY = 'trl-internal-testing/tiny-Qwen3ForCausalLM'
 
@@ -141,7 +141,7 @@ def test_copy_gate_power_defaults_to_v1_and_reaches_the_reward_config():
 
 
 def test_grpo_gemma_defaults():
-    from model_families import MODELS
+    from students.shared.model_families import MODELS
     a = tg.parse_args(['--family', 'gemma4'])
     assert a.sft_merged == MODELS / 'gemma4-e4b-sft-merged' and a.output_dir == MODELS / 'gemma4-e4b-grpo'
     assert a.base_model == 'google/gemma-4-E4B-it'
@@ -157,6 +157,6 @@ def test_grpo_qwen_defaults_unchanged():
 
 def test_grpo_refuses_a_policy_from_the_other_family(tmp_path):
     (tmp_path / 'merge_info.json').write_text('{"family": "qwen3"}')
-    from model_families import get_family
+    from students.shared.model_families import get_family
     with pytest.raises(ValueError, match='--family gemma4'):
         tg.load_policy(tmp_path, 'sdpa', family=get_family('gemma4'))

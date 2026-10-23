@@ -4,8 +4,8 @@ data/synthetic/synthetic_dataset.csv / synthetic_errors.csv."""
 
 import csv
 
-import merge_synthetic_parts as msp
-from generate_synthetic import FIELDNAMES
+from gemma_teacher import merge_synthetic_parts as msp
+from gemma_teacher.generate_synthetic import FIELDNAMES
 
 
 def _row(poem_id, target_author, sample_index=0, poem='песна'):
@@ -142,7 +142,7 @@ def test_seeded_part_makes_generate_synthetic_skip_the_authors_done_pairs(tmp_pa
     # The actual point of seeding: a fresh generate_synthetic.py process
     # pointed at the seeded part file must treat the author's prior successes
     # as already done, via the same load_done_keys it always uses.
-    from generate_synthetic import load_done_keys
+    from gemma_teacher.generate_synthetic import load_done_keys
 
     main = tmp_path / 'main.csv'
     _write_dataset(main, [_row('0', 'Ц1'), _row('1', 'Ц2')])
@@ -155,7 +155,7 @@ def test_seeded_part_makes_generate_synthetic_skip_the_authors_done_pairs(tmp_pa
 
 # Review Focus 5
 def test_val_split_never_routes_to_the_sft_training_file():
-    import generate_synthetic as gs
+    from gemma_teacher import generate_synthetic as gs
     val, train = msp.paths_for_split('val'), msp.paths_for_split('train')
     assert train['main'] == gs.OUTPUT_PATH
     assert val['main'].name == 'teacher_val.csv'
@@ -164,7 +164,7 @@ def test_val_split_never_routes_to_the_sft_training_file():
 
 
 def test_test_split_gets_its_own_teacher_file():
-    import generate_synthetic as gs
+    from gemma_teacher import generate_synthetic as gs
     test, val = msp.paths_for_split('test'), msp.paths_for_split('val')
     assert test['main'].name == 'teacher_test.csv'
     assert test['main'] != gs.OUTPUT_PATH and test['parts_dir'] not in (val['parts_dir'],

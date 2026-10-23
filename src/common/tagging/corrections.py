@@ -26,7 +26,7 @@ the right tag is never rewritten. Scope narrows that further:
 import csv
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 CORRECTIONS_CSV = DATA / 'pos_corrections.csv'
 

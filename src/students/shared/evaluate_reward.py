@@ -23,13 +23,13 @@ from pathlib import Path
 
 import numpy as np
 
-import grpo_rewards as gr
-import model_families as mf
-from make_splits import load_stripped_songs
+from students.shared import grpo_rewards as gr
+from students.shared import model_families as mf
+from common.corpus.make_splits import load_stripped_songs
 
 csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 FIXTURES_PATH = ROOT / 'tests' / 'fixtures' / 'reward_cases.json'
 SYNTHETIC_PATH = DATA / 'synthetic' / 'synthetic_dataset.csv'
@@ -178,7 +178,7 @@ def grpo_sampling_kwargs() -> dict:
     group spread only predicts training if the samples come from the same
     distribution -- validation generation's top_p=0.9 plus Qwen3's shipped
     top_k=20 is noticeably narrower than GRPOTrainer's top_p=1.0 / top_k=0."""
-    import train_grpo
+    from students.shared import train_grpo
     d = train_grpo.parse_args([])
     return {'max_new_tokens': d.max_completion_length, 'temperature': d.temperature,
             'top_p': d.top_p, 'top_k': d.top_k}
@@ -186,8 +186,8 @@ def grpo_sampling_kwargs() -> dict:
 
 def run_groups(args, cfg: gr.RewardConfig) -> int:
     import torch
-    import generate_validation as gv
-    from grpo_data import build_prompt_rows
+    from students.shared import generate_validation as gv
+    from students.shared.grpo_data import build_prompt_rows
 
     model, tokenizer = gv.load_adapter_model(args.adapter, base_model=str(merged_model_path(args)),
                                              family=mf.get_family(args.family))

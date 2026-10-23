@@ -3,7 +3,7 @@ from pathlib import Path
 import networkx as nx
 import community as community_louvain
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 

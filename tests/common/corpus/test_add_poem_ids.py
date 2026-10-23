@@ -3,7 +3,7 @@
 
 import pytest
 
-import add_poem_ids as api
+from common.corpus import add_poem_ids as api
 
 
 IDS_BY_TITLE = {

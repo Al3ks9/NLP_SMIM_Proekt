@@ -2,7 +2,7 @@ from pathlib import Path
 import networkx as nx
 from pyvis.network import Network
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
 
 G = nx.read_gexf(MODELS / 'skg_final.gexf')

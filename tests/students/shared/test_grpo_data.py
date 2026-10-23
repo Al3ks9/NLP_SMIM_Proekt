@@ -1,5 +1,5 @@
-import grpo_data as gd
-from make_splits import load_splits
+from students.shared import grpo_data as gd
+from common.corpus.make_splits import load_splits
 
 
 class FakeTokenizer:

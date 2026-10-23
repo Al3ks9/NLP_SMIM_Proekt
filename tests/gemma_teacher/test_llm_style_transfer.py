@@ -7,10 +7,10 @@ import json
 import numpy as np
 import pytest
 
-import exemplar_selection
-import llm_style_transfer as lst
-import poem_tfidf
-import style_narrator
+from gemma_teacher import exemplar_selection
+from gemma_teacher import llm_style_transfer as lst
+from gemma_teacher import poem_tfidf
+from gemma_teacher import style_narrator
 
 KONESKI = 'Блаже Конески'
 RACIN = 'Кочо Рацин'

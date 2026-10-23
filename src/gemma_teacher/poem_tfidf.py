@@ -24,7 +24,7 @@ from pathlib import Path
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 TOP_N = 10

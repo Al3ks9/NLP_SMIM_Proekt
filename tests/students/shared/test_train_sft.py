@@ -4,7 +4,7 @@ Model/dataset loading and the actual TRL trainer are monkeypatched throughout
 
 import pytest
 
-import train_sft as ts
+from students.shared import train_sft as ts
 
 
 # ── build_lora_config ────────────────────────────────────────────────────────────
@@ -147,7 +147,7 @@ def test_train_wires_assistant_only_loss_and_lora_config_through(monkeypatch, tm
 
 # ── --family ─────────────────────────────────────────────────────────────────────
 
-from model_families import MODELS, get_family
+from students.shared.model_families import MODELS, get_family
 
 
 def test_family_default_leaves_qwen_config_unchanged():

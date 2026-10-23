@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-import content_similarity as cs
+from common.evaluation import content_similarity as cs
 
 
 def _unit(*rows):

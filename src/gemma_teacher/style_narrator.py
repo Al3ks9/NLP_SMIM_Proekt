@@ -15,7 +15,7 @@ sentence-level translation.
 import csv
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 NUMERIC_COLUMNS = [

@@ -33,7 +33,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
 
 ATTN_MLP = ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj']

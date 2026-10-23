@@ -7,8 +7,8 @@ import json
 
 import torch
 
-import generate_validation as gv
-import structure
+from students.shared import generate_validation as gv
+from common.evaluation import structure
 
 
 def _poem(poem_id, author, title='Наслов', text='текст на песна'):
@@ -159,7 +159,7 @@ def test_generate_one_passes_top_k_when_given():
 
 # ── --family ─────────────────────────────────────────────────────────────────────
 
-from model_families import get_family
+from students.shared.model_families import get_family
 
 
 def test_gemma_top_k_override_and_cli_wins():                        # Review Focus 4

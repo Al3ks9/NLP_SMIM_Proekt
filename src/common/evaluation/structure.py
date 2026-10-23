@@ -11,7 +11,7 @@ import csv
 import re
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 _CACHE: dict = {}

@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-import evaluate_reward as er
+from students.shared import evaluate_reward as er
 
 
 def test_candidates_cover_every_kind():
@@ -50,10 +50,10 @@ def test_groups_sample_like_grpo_training(monkeypatch, tmp_path):
     to sample the way GRPOTrainer does (train_grpo defaults), not the way
     validation generation does."""
     import argparse
-    import generate_validation as gv
-    import grpo_data
-    import grpo_rewards as gr
-    import train_grpo as tg
+    from students.shared import generate_validation as gv
+    from students.shared import grpo_data
+    from students.shared import grpo_rewards as gr
+    from students.shared import train_grpo as tg
 
     calls = []
     monkeypatch.setattr(gv, 'load_adapter_model', lambda a, base_model=None, **kw: (None, None))
@@ -77,7 +77,7 @@ def test_single_line_scores_well_below_the_full_poem_it_came_from():
     """A one-line output is not gated to zero (real poems are never gated on
     length); structure and content must still rank it well below the full
     poem. Real classla, embedder and calibration."""
-    import grpo_rewards as gr
+    from students.shared import grpo_rewards as gr
     for case in json.loads(er.FIXTURES_PATH.read_text(encoding='utf-8')):
         source = er._poem(case['source_poem_id'])['song_text']
         full = er._gemma(case['source_poem_id'], case['target_author'])
@@ -87,7 +87,7 @@ def test_single_line_scores_well_below_the_full_poem_it_came_from():
 
 
 def test_merged_model_default_follows_the_family():
-    from model_families import MODELS
+    from students.shared.model_families import MODELS
     assert er.merged_model_path(er.build_parser().parse_args([])) == MODELS / 'qwen3-sft-merged'
     assert er.merged_model_path(er.build_parser().parse_args(['--family', 'gemma4'])) \
         == MODELS / 'gemma4-e4b-sft-merged'

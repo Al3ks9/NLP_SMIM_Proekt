@@ -36,10 +36,9 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'src'))
-import model_families as mf  # noqa: E402
-import sft_data  # noqa: E402
-from train_grpo import completion_logprob  # noqa: E402
+from students.shared import model_families as mf  # noqa: E402
+from students.shared import sft_data  # noqa: E402
+from students.shared.train_grpo import completion_logprob  # noqa: E402
 
 
 def score(model, items) -> list:

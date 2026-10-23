@@ -5,7 +5,7 @@ from pathlib import Path
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 MIN_POEMS = 5

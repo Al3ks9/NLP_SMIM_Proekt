@@ -31,14 +31,14 @@ import logging
 import sys
 from pathlib import Path
 
-import judge_classifier as jc
-import style_metrics as sm
-from make_splits import load_splits, load_stripped_songs
-from targets import select_target_authors
+from common.evaluation import judge_classifier as jc
+from common.evaluation import style_metrics as sm
+from common.corpus.make_splits import load_splits, load_stripped_songs
+from common.stylometry.targets import select_target_authors
 
 csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 GENERATIONS_DIR = DATA / 'validation_generations'
 TEACHER_PATH = DATA / 'synthetic' / 'synthetic_dataset.csv'
@@ -179,7 +179,7 @@ def score_run(run: dict, rewards: bool = False) -> list:
                        'split': row['split'], **metrics})
 
     if rewards:
-        import grpo_rewards as gr  # classla + sentence-transformers: only when asked
+        from students.shared import grpo_rewards as gr  # classla + sentence-transformers: only when asked
         idx = [i for i, text in enumerate(sources) if text]
         results = gr.score_batch([sources[i] for i in idx],
                                  [run['rows'][i]['generated_poem'] for i in idx],

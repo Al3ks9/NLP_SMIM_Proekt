@@ -6,8 +6,8 @@ import csv
 
 import pytest
 
-import sft_data
-import targets
+from students.shared import sft_data
+from common.stylometry import targets
 
 
 class FakeTokenizer:

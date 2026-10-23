@@ -12,8 +12,8 @@ can't survive multi-line quoted fields safely and can't insert a column).
 import csv
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-in_file = ROOT / 'songs.csv'
+from common.paths import ROOT
+in_file = ROOT / 'data' / 'songs.csv'
 out_file = ROOT / 'data' / 'stripped_songs.csv'
 
 with open(in_file, encoding='utf-8') as f:

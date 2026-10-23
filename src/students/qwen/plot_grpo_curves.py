@@ -23,7 +23,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 OUT = ROOT / 'data' / 'figures' / 'grpo_training_curves.pdf'
 
 PANELS = [

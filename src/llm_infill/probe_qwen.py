@@ -22,7 +22,7 @@ expensive a full multi-call PEGF run over the corpus would be.
 
 import sys
 
-from llm_probe import run
+from llm_infill.llm_probe import run
 
 MODEL = 'qwen3:14b'  # 14b beat 8b on region discipline at content_kept 0.769 -> 1.0
 

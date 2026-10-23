@@ -2,7 +2,7 @@
 unique poem key in this corpus (~15 shared titles; see CLAUDE.md's Data quality
 context)."""
 
-import corrections as C
+from common.tagging import corrections as C
 
 
 def test_key_for_global_scope_ignores_poem_id():

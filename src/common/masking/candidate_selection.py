@@ -33,9 +33,9 @@ from pathlib import Path
 
 import numpy as np
 
-from morph import surface_form  # noqa: F401 — re-exported for callers and tests
+from common.tagging.morph import surface_form  # noqa: F401 — re-exported for callers and tests
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 MODELS = ROOT / 'models'
 
@@ -584,7 +584,7 @@ def _retag(text: str) -> list:
     Uses the same normalization as the corpus build, so a source 'што' is
     dropped and a '-јќи' form resolves to the base verb the lookup knows.
     """
-    import tagging
+    from common.tagging import tagging
     verb_lemmas = _cached('verb_lemmas', lambda: tagging.load_verb_lemmas(load_pos_rows()))
     return [{'line': t.line, 'word': t.text, 'lemma': t.lemma,
              'pos': t.pos, 'feats': t.feats}

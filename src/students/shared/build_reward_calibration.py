@@ -28,13 +28,13 @@ from pathlib import Path
 
 import numpy as np
 
-import style_features as sf
-import style_metrics as sm
-from content_similarity import DEFAULT_CONTENT_MODEL, LineEmbedder, line_f1
-from make_splits import SPLITS_PATH, poems_in_split
-from targets import load_profile_rows
+from common.stylometry import style_features as sf
+from common.evaluation import style_metrics as sm
+from common.evaluation.content_similarity import DEFAULT_CONTENT_MODEL, LineEmbedder, line_f1
+from common.corpus.make_splits import SPLITS_PATH, poems_in_split
+from common.stylometry.targets import load_profile_rows
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 CALIBRATION_PATH = DATA / 'reward_calibration.json'
 SEED = 42

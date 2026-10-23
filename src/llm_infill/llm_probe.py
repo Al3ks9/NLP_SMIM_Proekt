@@ -25,10 +25,10 @@ import re
 import time
 from pathlib import Path
 
-import candidate_selection
-from llm_client import call
+from common.masking import candidate_selection
+from common.llm_client import call
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 DATA = ROOT / 'data'
 
 # ── Language identity checks ──────────────────────────────────────────────────
@@ -150,7 +150,7 @@ def _slots(stanza: str) -> list[dict]:
     the §6 audit line per slot so a batch run can be scored on how often the
     pipeline was grounded rather than relaxed.
     """
-    from candidate_selection import build_slots, log_slot
+    from common.masking.candidate_selection import build_slots, log_slot
 
     slots = build_slots(stanza, MASK_WORDS, SOURCE_AUTHOR, TARGET_AUTHOR)
     for slot in slots:
@@ -174,7 +174,7 @@ def build_probes(instr_lang: str = 'mk') -> list[dict]:
 
     # The infill probes get a per-slot candidate structure instead of one global
     # vocab string; vanilla keeps the old string, since it has no slots to key off.
-    from candidate_selection import render_slot_spec
+    from common.masking.candidate_selection import render_slot_spec
     slots = _slots(stanza)
 
     if instr_lang == 'mk':

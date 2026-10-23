@@ -2,9 +2,11 @@ from pathlib import Path
 
 import pytest
 
-import judge_classifier as jc
+from common.evaluation import judge_classifier as jc
 
-SRC = Path(__file__).resolve().parent.parent / 'src'
+from common.paths import ROOT
+
+SRC = ROOT / 'src'
 
 A, B = 'Автор А', 'Автор Б'
 A_WORDS = 'ѕвезда месечина ноќ сонце небо'
@@ -58,5 +60,6 @@ def test_judge_match_on_empty_or_unknown_author_is_zero():
 def test_judge_is_never_part_of_the_reward():
     # the judge exists because the GRPO policy optimises classifier.pkl; if a
     # reward ever read the judge, it would stop being an independent check
-    for name in ('grpo_rewards.py', 'train_grpo.py', 'style_metrics.py'):
+    for name in ('students/shared/grpo_rewards.py', 'students/shared/train_grpo.py',
+                 'common/evaluation/style_metrics.py'):
         assert 'judge_classifier' not in (SRC / name).read_text(encoding='utf-8'), name

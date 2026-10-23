@@ -40,10 +40,10 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
-from make_splits import load_splits, load_stripped_songs
-from style_metrics import lines, tokens
+from common.corpus.make_splits import load_splits, load_stripped_songs
+from common.evaluation.style_metrics import lines, tokens
 
-ROOT = Path(__file__).resolve().parent.parent
+from common.paths import ROOT
 MODELS = ROOT / 'models'
 DATA = ROOT / 'data'
 JUDGE_PATH = MODELS / 'judge_classifier.pkl'
@@ -115,7 +115,7 @@ def judge_match(text: str, target_author: str, model: Pipeline = None) -> dict:
 
 
 if __name__ == '__main__':
-    from targets import select_target_authors
+    from common.stylometry.targets import select_target_authors
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)

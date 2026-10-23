@@ -1,4 +1,4 @@
-import style_metrics as sm
+from common.evaluation import style_metrics as sm
 
 SRC = 'сонце грее над темната гора\nптица пее во зелената шума'
 
