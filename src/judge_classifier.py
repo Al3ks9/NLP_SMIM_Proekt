@@ -115,7 +115,7 @@ def judge_match(text: str, target_author: str, model: Pipeline = None) -> dict:
 
 
 if __name__ == '__main__':
-    from sft_data import select_target_authors
+    from targets import select_target_authors
 
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)

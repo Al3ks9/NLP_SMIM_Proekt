@@ -32,7 +32,7 @@ import style_features as sf
 import style_metrics as sm
 from content_similarity import DEFAULT_CONTENT_MODEL, LineEmbedder, line_f1
 from make_splits import SPLITS_PATH, poems_in_split
-from sft_data import load_profile_rows
+from targets import load_profile_rows
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'

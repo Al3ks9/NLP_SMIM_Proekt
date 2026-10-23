@@ -8,7 +8,7 @@ import json
 import torch
 
 import generate_validation as gv
-import llm_style_transfer as lst
+import structure
 
 
 def _poem(poem_id, author, title='Наслов', text='текст на песна'):
@@ -73,7 +73,7 @@ def test_run_validation_writes_expected_columns_and_uses_the_given_split(monkeyp
     monkeypatch.setattr(gv, 'load_adapter_model',
                         lambda adapter_dir, base_model=None, **kw: (FakeModel(), FakeTokenizer()))
     monkeypatch.setattr(gv, 'generate_one', lambda *a, **kw: 'генерирана песна')
-    monkeypatch.setattr(lst, 'structural_targets', lambda author: {
+    monkeypatch.setattr(structure, 'structural_targets', lambda author: {
         'avg_lines_per_poem': 2, 'avg_tokens_per_line': 2,
         'avg_stanzas_per_poem': 1, 'avg_lines_per_stanza': 2})
 
@@ -105,7 +105,7 @@ def test_run_validation_never_touches_train_split_unless_asked(monkeypatch, tmp_
     monkeypatch.setattr(gv, 'load_adapter_model',
                         lambda adapter_dir, base_model=None, **kw: (FakeModel(), FakeTokenizer()))
     monkeypatch.setattr(gv, 'generate_one', lambda *a, **kw: 'п')
-    monkeypatch.setattr(lst, 'structural_targets', lambda author: {
+    monkeypatch.setattr(structure, 'structural_targets', lambda author: {
         'avg_lines_per_poem': 1, 'avg_tokens_per_line': 1,
         'avg_stanzas_per_poem': 1, 'avg_lines_per_stanza': 1})
 

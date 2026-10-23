@@ -34,7 +34,7 @@ from pathlib import Path
 import judge_classifier as jc
 import style_metrics as sm
 from make_splits import load_splits, load_stripped_songs
-from sft_data import select_target_authors
+from targets import select_target_authors
 
 csv.field_size_limit(min(sys.maxsize, 2 ** 31 - 1))
 

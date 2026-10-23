@@ -383,3 +383,14 @@ def test_render_slot_spec_hides_source_words_in_explicit_mode(racin_slots):
         assert word not in explicit
     implicit = cs.render_slot_spec(racin_slots, 'en', 'implicit')
     assert all(word in implicit for word in MASK_WORDS)
+
+
+def test_legacy_fallback_needs_no_probe():
+    # candidate_selection is shared by three pipelines; it must not reach
+    # back into the LLM-infill probe harness
+    import ast
+    from pathlib import Path
+    tree = ast.parse(Path(cs.__file__).read_text(encoding='utf-8'))
+    modules = {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
+    modules |= {n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module}
+    assert not any(m.endswith('llm_probe') for m in modules)

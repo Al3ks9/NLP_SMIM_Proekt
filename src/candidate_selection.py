@@ -399,6 +399,21 @@ def tier_cross_author_similar(
     return scored
 
 
+def load_target_words(n: int = 15, *, author: str) -> list[str]:
+    """Author's distinctive vocabulary from our TF-IDF output: the global
+    top-n words the probe harness used before per-slot selection existed."""
+    import csv
+    path = DATA / 'tfidf_results.csv'
+    if not path.exists():
+        return ['вик', 'мрачен', 'сокол', 'младост', 'самотен', 'тивка']
+    words = []
+    with open(path, encoding='utf-8') as f:
+        for row in csv.DictReader(f):
+            if row['author'] == author and int(row['rank']) <= n:
+                words.append(row['word'])
+    return words
+
+
 def tier_legacy_fallback(source_lemma, source_pos, target_author, prev_pos,
                          next_pos, tfidf, embeddings, cooc_index, transitions) -> list:
     """
@@ -406,10 +421,6 @@ def tier_legacy_fallback(source_lemma, source_pos, target_author, prev_pos,
     before this pipeline existed. Deliberately noisy in the log — reaching this
     tier means nothing in the corpus was grounded enough to answer the slot.
     """
-    # Imported here, not at module scope: llm_probe imports this module, so a
-    # top-level import would be circular.
-    from llm_probe import load_target_words
-
     words = load_target_words(author=target_author)
     if not words:
         log.warning('tier=legacy_fallback no TF-IDF words found for author=%r — '
@@ -708,14 +719,3 @@ def render_slot_spec(slots: list, lang: str = 'mk', style: str = 'implicit') -> 
                 'зборови:\n' + body)
     return ('For each marked word, choose one of the suggested replacements:\n'
             + body)
-
-
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
-    from llm_probe import MASK_WORDS, SOURCE_AUTHOR, TARGET_AUTHOR, load_stanza
-
-    stanza = load_stanza()
-    slots = build_slots(stanza, MASK_WORDS, SOURCE_AUTHOR, TARGET_AUTHOR)
-    print(json.dumps(slots, ensure_ascii=False, indent=2))
-    for slot in slots:
-        print(log_slot(slot))

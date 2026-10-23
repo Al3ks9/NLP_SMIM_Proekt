@@ -39,7 +39,7 @@ import sys
 from pathlib import Path
 
 from make_splits import poems_in_split
-from sft_data import select_target_authors
+from targets import select_target_authors
 import llm_style_transfer as lst
 
 ROOT = Path(__file__).resolve().parent.parent

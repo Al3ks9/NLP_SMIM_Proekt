@@ -13,7 +13,7 @@ there is one implementation of each.
 Every metric is oriented so that higher is better and, where it is bounded,
 lands in [0, 1] -- so a reward can be a plain weighted sum without remembering
 which components need flipping. The two-sided structural deltas
-(llm_style_transfer.validate_structure) are the exception; structure_fit()
+(structure.validate_structure) are the exception; structure_fit()
 converts them into that orientation.
 
 No GPU and no LLM call: char n-gram stylometry (models/classifier.pkl),
@@ -27,7 +27,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-import llm_style_transfer as lst
+import structure
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
@@ -144,13 +144,13 @@ def language_metrics(text: str) -> dict:
 
 def structure_fit(text: str, target_author: str) -> dict:
     """
-    llm_style_transfer.validate_structure's signed deltas, plus a
+    structure.validate_structure's signed deltas, plus a
     higher-is-better fit score per dimension: 1 / (1 + |delta| / scale), where
     scale is max(target value, a per-dimension floor). 1.0 = exactly on
     target, 0.5 = off by one scale unit.
     """
-    targets = lst.structural_targets(target_author)
-    fit = lst.validate_structure(text, targets)
+    targets = structure.structural_targets(target_author)
+    fit = structure.validate_structure(text, targets)
     scores = {}
     for key, target_col in (('lines', 'avg_lines_per_poem'),
                             ('stanzas', 'avg_stanzas_per_poem'),

@@ -7,6 +7,7 @@ import csv
 import pytest
 
 import sft_data
+import targets
 
 
 class FakeTokenizer:
@@ -62,7 +63,7 @@ def test_render_inference_prompt_opens_the_assistant_turn_without_content():
 # ── select_target_authors ────────────────────────────────────────────────────────
 
 def _stub_profiles(monkeypatch, rows):
-    monkeypatch.setattr(sft_data, 'load_profile_rows', lambda: rows)
+    monkeypatch.setattr(targets, 'load_profile_rows', lambda: rows)
 
 
 def test_select_target_authors_picks_the_most_prolific(monkeypatch):

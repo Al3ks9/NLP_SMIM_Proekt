@@ -36,7 +36,7 @@ import torch
 from transformers import AutoTokenizer
 from peft import PeftModel
 
-import llm_style_transfer as lst
+import structure
 import model_families as mf
 from generate_synthetic import build_pairs, sample_source_poems
 from sft_data import DEFAULT_MODEL_NAME, render_inference_prompt, select_target_authors
@@ -239,8 +239,8 @@ def run_validation(adapter_dir: Path, split: str = 'val', num_source_poems: int 
                 temperature=temperature, top_p=top_p,
                 repetition_penalty=repetition_penalty,
                 no_repeat_ngram_size=no_repeat_ngram_size, top_k=top_k)
-            targets = lst.structural_targets(target_author)
-            fit = lst.validate_structure(generated, targets)
+            targets = structure.structural_targets(target_author)
+            fit = structure.validate_structure(generated, targets)
 
             writer.writerow({
                 'example_id': f'{poem["poem_id"]}_{target_author}_{sample_index}',
