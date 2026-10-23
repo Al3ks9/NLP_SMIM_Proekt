@@ -49,7 +49,7 @@ def test_seq_length_choice_is_the_smallest_that_truncates_nothing():
 def test_check_load_runs_on_a_real_architecture_checkpoint(tmp_path):   # review C2
     import dataclasses
     from students.shared import model_families as mf
-    from test_model_families import _tiny_gemma4_checkpoint
+    from tiny_gemma4 import _tiny_gemma4_checkpoint
     _tiny_gemma4_checkpoint(tmp_path / 'ckpt')
     family = dataclasses.replace(mf.get_family('gemma4'), hf_name=str(tmp_path / 'ckpt'))
     report = {'checks': {}}

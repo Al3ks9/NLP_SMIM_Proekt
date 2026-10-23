@@ -19,8 +19,8 @@ From: python:3.11-slim
 #   singularity build --fakeroot singularity/qwen-sft.sif src/students/shared/hpc/qwen-sft.def
 #
 # Run, e.g. from src/students/qwen/hpc/train_sft.slurm:
-#   singularity exec --nv singularity/qwen-sft.sif \
-#       python src/students/shared/train_sft.py --num-train-epochs 3 ...
+#   singularity exec --nv --env PYTHONPATH=src singularity/qwen-sft.sif \
+#       python -m students.shared.train_sft --num-train-epochs 3 ...
 #
 # This cluster's local disk under /tmp is small (a few GB free) and the
 # pulled layers plus the synced venv (torch + CUDA libs alone are several GB)
@@ -91,6 +91,6 @@ assert torch.version.cuda is not None, 'torch was resolved without a CUDA build'
     container. Needs the NVIDIA driver from the host: run with --nv.
 
     Examples:
-        singularity exec --nv qwen-sft.sif python src/common/corpus/make_splits.py
-        singularity exec --nv qwen-sft.sif python src/students/shared/train_sft.py --num-train-epochs 3
-        singularity run --nv qwen-sft.sif src/students/shared/generate_validation.py --split val
+        singularity exec --nv --env PYTHONPATH=src qwen-sft.sif python -m common.corpus.make_splits
+        singularity exec --nv --env PYTHONPATH=src qwen-sft.sif python -m students.shared.train_sft --num-train-epochs 3
+        singularity run --nv --env PYTHONPATH=src qwen-sft.sif -m students.shared.generate_validation --split val

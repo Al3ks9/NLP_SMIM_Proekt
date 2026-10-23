@@ -58,7 +58,7 @@ def load_policy(sft_merged: Path, attn_implementation: str, family: mf.ModelFami
     family = family or mf.get_family(mf.DEFAULT_FAMILY)
     if not (sft_merged / 'merge_info.json').exists():
         raise SystemExit(f'{sft_merged}/merge_info.json missing -- build the start policy with '
-                         '`python src/students/shared/merge_sft_adapter.py` (GRPO must start from SFT, not base)')
+                         '`python -m students.shared.merge_sft_adapter` (GRPO must start from SFT, not base)')
     mf.assert_family_matches(family, sft_merged)
     tokenizer = AutoTokenizer.from_pretrained(str(sft_merged))
     if tokenizer.pad_token is None:

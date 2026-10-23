@@ -27,7 +27,7 @@ Exit 1 if any check fails. src/students/gemma/hpc/gemma_compat.slurm then runs
 train_grpo.py --smoke on the merged model.
 
 Usage (inside the container, see src/students/gemma/hpc/gemma_compat.slurm):
-    python src/students/gemma/gemma_compat.py [--work-dir models/gemma4-compat]
+    python -m students.gemma.gemma_compat [--work-dir models/gemma4-compat]
 """
 
 import json

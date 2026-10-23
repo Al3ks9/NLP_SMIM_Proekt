@@ -112,3 +112,22 @@ def test_hpc_scripts_reference_live_modules():
     if common_sh and 'PYTHONPATH=/workspace/src' not in common_sh[0].read_text(encoding='utf-8'):
         problems.append('grpo_common.sh: run_in_container lacks PYTHONPATH=/workspace/src')
     assert not problems, '\n'.join(problems)
+
+
+def test_docs_run_modules_not_paths():
+    """`python src/.../x.py` fails inside the container (the project isn't
+    installed there; imports resolve only via -m with PYTHONPATH=src)."""
+    import re
+    texts = [ROOT / 'CLAUDE.md'] + [p for p in SRC.rglob('*') if p.is_file()
+                                     and p.suffix in ('.py', '.sh', '.slurm', '.def', '.md')]
+    hits = [f'{p.relative_to(ROOT)}: {m}' for p in texts
+            for m in re.findall(r'python3? src/[\w/]+\.py', p.read_text(encoding='utf-8'))]
+    assert not hits, '\n'.join(hits)
+
+
+def test_claude_md_paths_exist():
+    import re
+    text = (ROOT / 'CLAUDE.md').read_text(encoding='utf-8')
+    paths = set(re.findall(r'(?<![\w/])((?:src|tests)/[\w/.-]+\.(?:py|sh|slurm|def))', text))
+    missing = sorted(p for p in paths if not (ROOT / p).exists())
+    assert not missing, '\n'.join(missing)

@@ -23,9 +23,9 @@ Reading it:
 
 Run on the cluster (src/students/qwen/hpc/diagnose_merge.slurm), for Gemma and, as the
 control whose merge is known to reproduce SFT's scores, Qwen:
-    python src/students/qwen/diagnose_merge.py --family gemma4 \
+    python -m students.qwen.diagnose_merge --family gemma4 \
         --adapter models/gemma4-compat/sft --merged models/gemma4-compat/merged
-    python src/students/qwen/diagnose_merge.py --family qwen3 \
+    python -m students.qwen.diagnose_merge --family qwen3 \
         --adapter models/qwen3-lora-sft --merged models/qwen3-sft-merged
 """
 
