@@ -9,16 +9,16 @@
 #
 # Validation generation (Qwen SFT pipeline stage 6, see CLAUDE.md): loads the
 # base Qwen/Qwen3-4B model plus the trained LoRA adapter from
-# models/qwen3-lora-sft (src/train_sft.py's output) and runs style transfer
+# models/qwen3-lora-sft (src/students/shared/train_sft.py's output) and runs style transfer
 # over real poems from the val split, for manual inspection. Unlike
 # generate_synthetic.slurm (which just makes HTTPS calls to Gemini and needs
 # no GPU), this loads the model locally via transformers/peft, so it needs
 # the same GPU + Singularity/CUDA runtime as train_sft.slurm -- see that
-# script and singularity/qwen-sft.def for why.
+# script and src/students/shared/hpc/qwen-sft.def for why.
 #
 # Usage:
-#   sbatch slurm/generate_validation.slurm
-#   sbatch slurm/generate_validation.slurm --split test --num-source-poems 100   # extra args forwarded to generate_validation.py
+#   sbatch src/students/qwen/hpc/generate_validation.slurm
+#   sbatch src/students/qwen/hpc/generate_validation.slurm --split test --num-source-poems 100   # extra args forwarded to generate_validation.py
 
 set -euo pipefail
 
@@ -27,12 +27,12 @@ set -euo pipefail
 # path, not this file's real location. $SLURM_SUBMIT_DIR is the directory
 # sbatch was invoked from, and is correct regardless of the spool copy.
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/generate_validation.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 mkdir -p logs
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
 if [[ ! -f "$SIF" ]]; then
-    echo "Missing $SIF -- build it first: ./singularity/build.sh" >&2
+    echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2
     exit 1
 fi
 
@@ -53,9 +53,9 @@ singularity exec --nv \
     -B "$PWD:/workspace" \
     "$SIF" \
     bash -c '
-        export PYTHONUNBUFFERED=1
+        export PYTHONUNBUFFERED=1 PYTHONPATH=/workspace/src
         export TOKENIZERS_PARALLELISM=false
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
-        /opt/venv/bin/python src/generate_validation.py "$@"
+        /opt/venv/bin/python -m students.shared.generate_validation "$@"
     ' _ "$@"

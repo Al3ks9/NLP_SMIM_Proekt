@@ -8,8 +8,8 @@
 #SBATCH --output=logs/%A_%a.out
 #
 # Generates the SFT synthetic dataset (Qwen SFT pipeline stage 3, see
-# CLAUDE.md) by calling scripts/generate_synthetic_parallel.sh, which itself
-# runs one src/generate_synthetic.py process per target author.
+# CLAUDE.md) by calling src/gemma_teacher/generate_synthetic_parallel.sh, which itself
+# runs one src/gemma_teacher/generate_synthetic.py process per target author.
 #
 # No GPU is requested, on purpose: generate_synthetic.py -> run_transfer()
 # -> llm_client.call() hits the `google` backend, a plain HTTPS call to
@@ -29,26 +29,26 @@
 # Needs GOOGLE_API_KEY (or GEMINI_API_KEY) reachable by llm_client.py's
 # _key_from_env -- either exported in the submitting shell (sbatch exports it
 # by default) or in a `.env` file at the repo root (gitignored; see
-# src/llm_client.py). The latter is more robust across resubmits/requeues.
+# src/common/llm_client.py). The latter is more robust across resubmits/requeues.
 #
 # Usage:
-#   sbatch slurm/generate_synthetic.slurm [poems-per-author] [num-target-authors] [samples-per-pair] [seed]
-#   sbatch slurm/generate_synthetic.slurm 100 10 1 42
+#   sbatch src/gemma_teacher/hpc/generate_synthetic.slurm [poems-per-author] [num-target-authors] [samples-per-pair] [seed]
+#   sbatch src/gemma_teacher/hpc/generate_synthetic.slurm 100 10 1 42
 
 set -euo pipefail
 
-# See slurm/train_sft.slurm for why $0 can't be used here: Slurm copies the
+# See src/students/qwen/hpc/train_sft.slurm for why $0 can't be used here: Slurm copies the
 # script into a per-job spool dir before running it, so dirname "$0" would
 # resolve to that spool path, not this file's real location.
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/generate_synthetic.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 mkdir -p logs
 
 if [[ -z "${GOOGLE_API_KEY:-}${GEMINI_API_KEY:-}" && ! -f .env ]]; then
-    echo "No GOOGLE_API_KEY/GEMINI_API_KEY in the environment and no .env file at the repo root -- set one before submitting (see src/llm_client.py's _key_from_env)." >&2
+    echo "No GOOGLE_API_KEY/GEMINI_API_KEY in the environment and no .env file at the repo root -- set one before submitting (see src/common/llm_client.py's _key_from_env)." >&2
     exit 1
 fi
 
 echo "Host: $(hostname)"
 
-scripts/generate_synthetic_parallel.sh "$@"
+src/gemma_teacher/generate_synthetic_parallel.sh "$@"

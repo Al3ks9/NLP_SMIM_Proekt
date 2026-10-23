@@ -84,13 +84,13 @@ def test_lora_targets_returns_the_configured_targets_when_they_match():
 
 
 def test_slurm_family_table_matches_the_registry():
-    """slurm/grpo_common.sh maps FAMILY -> TAG / BASE_LABEL in bash (the
+    """src/students/shared/hpc/grpo_common.sh maps FAMILY -> TAG / BASE_LABEL in bash (the
     jobs need them before the container starts); it must agree with
     FAMILIES, or a job would look for the wrong models/ dir or CSV."""
     import subprocess
     for key, fam in mf.FAMILIES.items():
         out = subprocess.run(
-            ['bash', '-c', f'source slurm/grpo_common.sh && FAMILY={key} family_vars && '
+            ['bash', '-c', f'source src/students/shared/hpc/grpo_common.sh && FAMILY={key} family_vars && '
                            'echo "$TAG $BASE_LABEL"'],
             cwd=ROOT, capture_output=True, text=True, check=True).stdout.split()
         assert out == [fam.tag, mf.base_label(fam)], key
@@ -98,7 +98,7 @@ def test_slurm_family_table_matches_the_registry():
 
 def test_slurm_family_table_rejects_unknown_families():
     import subprocess
-    r = subprocess.run(['bash', '-c', 'source slurm/grpo_common.sh && FAMILY=llama family_vars'],
+    r = subprocess.run(['bash', '-c', 'source src/students/shared/hpc/grpo_common.sh && FAMILY=llama family_vars'],
                        cwd=ROOT, capture_output=True, text=True)
     assert r.returncode != 0 and 'llama' in r.stderr
 

@@ -14,23 +14,23 @@
 # does not apply between A100s). ~2 h per system.
 #
 # Usage:
-#   sbatch slurm/eval_test.slurm base          # untuned Qwen3-4B
-#   sbatch slurm/eval_test.slurm sft           # SFT (merged = GRPO's start policy)
-#   sbatch slurm/eval_test.slurm grpo-v1
-#   sbatch slurm/eval_test.slurm grpo-v2
-#   sbatch slurm/eval_test.slurm score         # after all four: scores + rewards -> test_comparison_*.csv
+#   sbatch src/students/qwen/hpc/eval_test.slurm base          # untuned Qwen3-4B
+#   sbatch src/students/qwen/hpc/eval_test.slurm sft           # SFT (merged = GRPO's start policy)
+#   sbatch src/students/qwen/hpc/eval_test.slurm grpo-v1
+#   sbatch src/students/qwen/hpc/eval_test.slurm grpo-v2
+#   sbatch src/students/qwen/hpc/eval_test.slurm score         # after all four: scores + rewards -> test_comparison_*.csv
 #
 # Writes data/validation_generations/<label>_test.csv (tracked). Push back the
 # CSVs (and the score step's two comparison CSVs).
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/eval_test.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 FAMILY=qwen3
-source slurm/grpo_common.sh
+source src/students/shared/hpc/grpo_common.sh
 grpo_preflight
 
-export SYSTEM="${1:?usage: sbatch slurm/eval_test.slurm base|sft|grpo-v1|grpo-v2|score}"
+export SYSTEM="${1:?usage: sbatch src/students/qwen/hpc/eval_test.slurm base|sft|grpo-v1|grpo-v2|score}"
 case "$SYSTEM" in
     base|score) ;;
     sft)     [[ -d models/qwen3-sft-merged ]] || { echo "Missing models/qwen3-sft-merged" >&2; exit 1; } ;;
@@ -41,14 +41,14 @@ esac
 
 run_in_container '
     G=data/validation_generations
-    GEN="$PY src/generate_validation.py --family qwen3 --split test"
+    GEN="$PY -m students.shared.generate_validation --family qwen3 --split test"
     case "$SYSTEM" in
         base)    $GEN --no-adapter ;;
         sft)     $GEN --no-adapter --base-model models/qwen3-sft-merged ;;
         grpo-v1) $GEN --adapter models/qwen3-grpo ;;
         grpo-v2) $GEN --adapter models/qwen3-grpo-v2 ;;
         score)
-            $PY src/compare_generations.py --rewards --corpus-reference \
+            $PY -m students.shared.compare_generations --rewards --corpus-reference \
                 --runs $G/base-Qwen3-4B_test.csv $G/qwen3-sft-merged_test.csv \
                        $G/qwen3-grpo_test.csv $G/qwen3-grpo-v2_test.csv \
                 --labels base sft grpo-v1 grpo-v2 \

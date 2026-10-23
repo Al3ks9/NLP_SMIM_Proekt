@@ -14,17 +14,17 @@
 # already used elsewhere on this cluster.
 #
 # Usage:
-#   ./singularity/build.sh
+#   ./src/students/shared/hpc/build.sh
 
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../../../.."
 
 export SINGULARITY_TMPDIR="$PWD/singularity/.build_tmp"
 export SINGULARITY_CACHEDIR="$PWD/singularity/.build_cache"
 mkdir -p "$SINGULARITY_TMPDIR" "$SINGULARITY_CACHEDIR"
 
 echo "Building singularity/qwen-sft.sif (tmpdir=$SINGULARITY_TMPDIR, cachedir=$SINGULARITY_CACHEDIR)"
-singularity build --fakeroot singularity/qwen-sft.sif singularity/qwen-sft.def
+singularity build --fakeroot singularity/qwen-sft.sif src/students/shared/hpc/qwen-sft.def
 
 echo "Built singularity/qwen-sft.sif:"
 ls -lh singularity/qwen-sft.sif

@@ -19,19 +19,19 @@
 #     content reward instead of 5 %.
 #
 # Output: models/qwen3-grpo-v2/. Evaluate with
-#   ADAPTER=models/qwen3-grpo-v2 sbatch slurm/eval_grpo.slurm
+#   ADAPTER=models/qwen3-grpo-v2 sbatch src/students/qwen/hpc/eval_grpo.slurm
 # Extra args are appended (and override the ones below).
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/train_grpo_v2.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 FAMILY=qwen3   # this run is the Qwen v1-vs-v2 comparison
-source slurm/grpo_common.sh
+source src/students/shared/hpc/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py --family qwen3
-    $PY src/train_grpo.py \
+    $PY -m students.shared.merge_sft_adapter --family qwen3
+    $PY -m students.shared.train_grpo \
         --output-dir models/qwen3-grpo-v2 \
         --style-weight 0.3 --content-weight 0.7 \
         --style-weights "{\"classifier\": 5.6}" \

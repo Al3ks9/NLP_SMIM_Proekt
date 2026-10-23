@@ -12,15 +12,15 @@
 # group-normalised advantage) -> data/grpo/reward_groups.csv. Run before the
 # long job to choose --style-weight / --content-weight.
 #
-# Usage: sbatch slurm/reward_groups.slurm [--num-prompts 20 --num-generations 4]
+# Usage: sbatch src/students/qwen/hpc/reward_groups.slurm [--num-prompts 20 --num-generations 4]
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/reward_groups.slurm ]] || cd ..
-source slurm/grpo_common.sh
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
+source src/students/shared/hpc/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py --family "$FAMILY"
-    $PY src/evaluate_reward.py --family "$FAMILY" --groups "$@"
+    $PY -m students.shared.merge_sft_adapter --family "$FAMILY"
+    $PY -m students.shared.evaluate_reward --family "$FAMILY" --groups "$@"
 ' "$@"

@@ -11,8 +11,8 @@
 # dataset. No multi-GPU / distributed setup -- one process, one device,
 # matching this project's single-GPU target.
 #
-# Runs inside the Singularity image built from singularity/qwen-sft.def
-# (build once with ./singularity/build.sh) rather than the bare `uv`
+# Runs inside the Singularity image built from src/students/shared/hpc/qwen-sft.def
+# (build once with ./src/students/shared/hpc/build.sh) rather than the bare `uv`
 # environment -- see that file for why: it's built straight from this
 # project's own pyproject.toml/uv.lock, so it can't drift from `uv run`
 # outside a container, and it carries its own CUDA runtime (via torch's
@@ -20,9 +20,9 @@
 # (bound in via --nv).
 #
 # Usage:
-#   sbatch slurm/train_sft.slurm
-#   sbatch slurm/train_sft.slurm --num-train-epochs 5 --learning-rate 1e-4   # extra args forwarded to train_sft.py
-#   FAMILY=gemma4 sbatch slurm/train_sft.slurm      # Gemma 4 E4B student (--max-seq-length defaults per family: qwen3 1024, gemma4 4096)
+#   sbatch src/students/qwen/hpc/train_sft.slurm
+#   sbatch src/students/qwen/hpc/train_sft.slurm --num-train-epochs 5 --learning-rate 1e-4   # extra args forwarded to train_sft.py
+#   FAMILY=gemma4 sbatch src/students/qwen/hpc/train_sft.slurm      # Gemma 4 E4B student (--max-seq-length defaults per family: qwen3 1024, gemma4 4096)
 
 set -euo pipefail
 
@@ -31,14 +31,14 @@ set -euo pipefail
 # path, not this file's real location. $SLURM_SUBMIT_DIR is the directory
 # sbatch was invoked from, and is correct regardless of the spool copy.
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/train_sft.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 mkdir -p logs
-FAMILY="${FAMILY:-qwen3}"   # student model family, src/model_families.py
+FAMILY="${FAMILY:-qwen3}"   # student model family, src/students/shared/model_families.py
 export FAMILY
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
 if [[ ! -f "$SIF" ]]; then
-    echo "Missing $SIF -- build it first: ./singularity/build.sh" >&2
+    echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2
     exit 1
 fi
 
@@ -50,7 +50,7 @@ echo "Host: $(hostname)"
 # Matches this cluster's other singularity jobs: exec --nv with explicit -B
 # binds for the HF model/dataset cache and the repo, then a bash -c that cds
 # in and runs. No conda `source activate` needed here (unlike an
-# NGC/conda-based image like medgemma.sif) -- singularity/qwen-sft.def bakes
+# NGC/conda-based image like medgemma.sif) -- src/students/shared/hpc/qwen-sft.def bakes
 # a plain venv at /opt/venv, invoked by its absolute path below so this
 # doesn't depend on %environment's PATH tweak being sourced by `exec`.
 #
@@ -62,11 +62,11 @@ singularity exec --nv \
     -B "$PWD:/workspace" \
     "$SIF" \
     bash -c '
-        export PYTHONUNBUFFERED=1
+        export PYTHONUNBUFFERED=1 PYTHONPATH=/workspace/src
         export TOKENIZERS_PARALLELISM=false
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
-        /opt/venv/bin/python src/train_sft.py \
+        /opt/venv/bin/python -m students.shared.train_sft \
             --family "$FAMILY" \
             --num-train-epochs 3 \
             --per-device-train-batch-size 4 \

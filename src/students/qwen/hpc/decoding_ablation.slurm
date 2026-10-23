@@ -17,17 +17,17 @@
 # direction check, not a headline number.
 #
 # Usage:
-#   sbatch slurm/decoding_ablation.slurm
-#   sbatch slurm/decoding_ablation.slurm 20     # source poems per setting
+#   sbatch src/students/qwen/hpc/decoding_ablation.slurm
+#   sbatch src/students/qwen/hpc/decoding_ablation.slurm 20     # source poems per setting
 
 set -euo pipefail
 
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/decoding_ablation.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 mkdir -p logs
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
-[[ -f "$SIF" ]] || { echo "Missing $SIF -- build it first: ./singularity/build.sh" >&2; exit 1; }
+[[ -f "$SIF" ]] || { echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2; exit 1; }
 [[ -d models/qwen3-lora-sft ]] || { echo "Missing models/qwen3-lora-sft." >&2; exit 1; }
 
 N_POEMS="${1:-6}"
@@ -44,7 +44,7 @@ singularity exec --nv \
     "$SIF" \
     bash -c '
         set -euo pipefail
-        export PYTHONUNBUFFERED=1
+        export PYTHONUNBUFFERED=1 PYTHONPATH=/workspace/src
         export TOKENIZERS_PARALLELISM=false
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
@@ -53,7 +53,7 @@ singularity exec --nv \
         run () {  # run <name> <extra generate_validation.py args...>
             local name="$1"; shift
             echo "=== $name ==="
-            /opt/venv/bin/python src/generate_validation.py \
+            /opt/venv/bin/python -m students.shared.generate_validation \
                 --split val --num-source-poems "$N" \
                 --output "$OUT/$name.csv" "$@"
         }

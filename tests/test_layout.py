@@ -79,3 +79,36 @@ def test_no_flat_imports():
     stale = [f'{p.relative_to(ROOT)}: {name}' for p in _sources()
              for name in _imports(p) if name.split('.')[0] in FLAT_MODULES]
     assert not stale, '\n'.join(stale)
+
+
+def _shell_files():
+    return sorted(set(SRC.rglob('hpc/*')) | set(SRC.rglob('*.sh')))
+
+
+def test_hpc_scripts_reference_live_modules():
+    """Every Slurm/shell file next to a pipeline runs modules that exist,
+    names no pre-restructure path, and (if it runs the container) puts
+    /workspace/src on PYTHONPATH -- the .sif images don't install the project."""
+    import importlib.util
+    import re
+    files = _shell_files()
+    assert files, 'no hpc/ or .sh files under src/'
+    problems = []
+    for path in files:
+        text = path.read_text(encoding='utf-8')
+        rel = path.relative_to(ROOT)
+        for mod in re.findall(r'-m ([a-z_]+(?:\.[a-z_]+)+)', text):
+            if importlib.util.find_spec(mod) is None:
+                problems.append(f'{rel}: -m {mod} does not exist')
+        for pattern in (r'\bsrc/\w+\.py', r'(?<![\w/])slurm/', r'(?<![\w/])scripts/',
+                        r'singularity/(qwen-sft\.def|build\.sh)'):
+            for hit in re.findall(pattern, text):
+                problems.append(f'{rel}: stale path {hit!r}')
+        runs_container = 'singularity exec' in text or 'grpo_common.sh' in text
+        if runs_container and path.suffix == '.slurm' and 'grpo_common.sh' not in text \
+                and 'PYTHONPATH=/workspace/src' not in text:
+            problems.append(f'{rel}: runs the container without PYTHONPATH=/workspace/src')
+    common_sh = [p for p in files if p.name == 'grpo_common.sh']
+    if common_sh and 'PYTHONPATH=/workspace/src' not in common_sh[0].read_text(encoding='utf-8'):
+        problems.append('grpo_common.sh: run_in_container lacks PYTHONPATH=/workspace/src')
+    assert not problems, '\n'.join(problems)

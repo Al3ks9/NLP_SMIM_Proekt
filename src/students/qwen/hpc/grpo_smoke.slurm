@@ -12,16 +12,16 @@
 # GRPO steps with the real rewards on the real model. Exits non-zero if the
 # fixtures' ordering expectations or the smoke assertions fail.
 #
-# Usage: sbatch slurm/grpo_smoke.slurm
+# Usage: sbatch src/students/qwen/hpc/grpo_smoke.slurm
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/grpo_smoke.slurm ]] || cd ..
-source slurm/grpo_common.sh
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
+source src/students/shared/hpc/grpo_common.sh
 grpo_preflight
 
 run_in_container '
-    $PY src/merge_sft_adapter.py --family "$FAMILY"
-    $PY src/evaluate_reward.py --fixtures
-    $PY src/train_grpo.py --family "$FAMILY" --smoke "$@"
+    $PY -m students.shared.merge_sft_adapter --family "$FAMILY"
+    $PY -m students.shared.evaluate_reward --fixtures
+    $PY -m students.shared.train_grpo --family "$FAMILY" --smoke "$@"
 ' "$@"

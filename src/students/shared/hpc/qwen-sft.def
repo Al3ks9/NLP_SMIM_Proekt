@@ -1,8 +1,8 @@
 Bootstrap: docker
 From: python:3.11-slim
 
-# Container for the Qwen3 LoRA SFT pipeline (src/make_splits.py,
-# src/generate_synthetic.py, src/train_sft.py, src/generate_validation.py --
+# Container for the Qwen3 LoRA SFT pipeline (src/common/corpus/make_splits.py,
+# src/gemma_teacher/generate_synthetic.py, src/students/shared/train_sft.py, src/students/shared/generate_validation.py --
 # see CLAUDE.md's "Qwen3 LoRA SFT training pipeline" section) and, since the
 # environment is built straight from pyproject.toml/uv.lock, every other
 # script in this repo too.
@@ -16,11 +16,11 @@ From: python:3.11-slim
 #
 # Build (run from the repo root; needs --fakeroot or root -- see the cluster
 # note below about redirecting build tmp/cache off the local disk):
-#   singularity build --fakeroot singularity/qwen-sft.sif singularity/qwen-sft.def
+#   singularity build --fakeroot singularity/qwen-sft.sif src/students/shared/hpc/qwen-sft.def
 #
-# Run, e.g. from slurm/train_sft.slurm:
+# Run, e.g. from src/students/qwen/hpc/train_sft.slurm:
 #   singularity exec --nv singularity/qwen-sft.sif \
-#       python src/train_sft.py --num-train-epochs 3 ...
+#       python src/students/shared/train_sft.py --num-train-epochs 3 ...
 #
 # This cluster's local disk under /tmp is small (a few GB free) and the
 # pulled layers plus the synced venv (torch + CUDA libs alone are several GB)
@@ -91,6 +91,6 @@ assert torch.version.cuda is not None, 'torch was resolved without a CUDA build'
     container. Needs the NVIDIA driver from the host: run with --nv.
 
     Examples:
-        singularity exec --nv qwen-sft.sif python src/make_splits.py
-        singularity exec --nv qwen-sft.sif python src/train_sft.py --num-train-epochs 3
-        singularity run --nv qwen-sft.sif src/generate_validation.py --split val
+        singularity exec --nv qwen-sft.sif python src/common/corpus/make_splits.py
+        singularity exec --nv qwen-sft.sif python src/students/shared/train_sft.py --num-train-epochs 3
+        singularity run --nv qwen-sft.sif src/students/shared/generate_validation.py --split val

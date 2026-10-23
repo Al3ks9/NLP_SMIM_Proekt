@@ -10,7 +10,7 @@ HF_CACHE="${HF_HOME:-$HOME/.cache/huggingface}"
 CLASSLA_DIR="${CLASSLA_RESOURCES_DIR:-$HOME/classla_resources}"
 
 # FAMILY (qwen3 | gemma4, default qwen3) picks the student model; every job
-# forwards it as --family. TAG / BASE_LABEL mirror src/model_families.py's
+# forwards it as --family. TAG / BASE_LABEL mirror src/students/shared/model_families.py's
 # tag and base_label() -- tests/test_model_families.py keeps them in sync.
 FAMILY="${FAMILY:-qwen3}"
 export FAMILY
@@ -28,13 +28,13 @@ family_vars() {
 # any Gemma SFT exists).
 grpo_preflight() {
     family_vars || exit 1
-    [[ -f "$SIF" ]] || { echo "Missing $SIF -- build it first: ./singularity/build.sh" >&2; exit 1; }
+    [[ -f "$SIF" ]] || { echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2; exit 1; }
     if [[ "${REQUIRE_SFT:-1}" == 1 && ! -d models/$TAG-lora-sft ]]; then
-        echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch slurm/train_sft.slurm first." >&2
+        echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/qwen/hpc/train_sft.slurm first." >&2
         exit 1
     fi
-    [[ -d "$CLASSLA_DIR/mk" ]] || { echo "Missing classla mk models in $CLASSLA_DIR -- see slurm/grpo_common.sh" >&2; exit 1; }
-    [[ -f data/reward_calibration.json ]] || { echo "Missing data/reward_calibration.json -- run: uv run python src/build_reward_calibration.py" >&2; exit 1; }
+    [[ -d "$CLASSLA_DIR/mk" ]] || { echo "Missing classla mk models in $CLASSLA_DIR -- see src/students/shared/hpc/grpo_common.sh" >&2; exit 1; }
+    [[ -f data/reward_calibration.json ]] || { echo "Missing data/reward_calibration.json -- run: uv run python -m students.shared.build_reward_calibration" >&2; exit 1; }
     mkdir -p "$HF_CACHE" logs
     echo "Host: $(hostname)"
 }
@@ -49,7 +49,7 @@ run_in_container() {
         "$SIF" \
         bash -c "
             set -euo pipefail
-            export PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false
+            export PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=/workspace/src
             export HF_HOME=/root/.cache/huggingface CLASSLA_RESOURCES_DIR=/root/classla_resources
             cd /workspace
             nvidia-smi -L || true

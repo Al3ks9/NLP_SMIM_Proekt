@@ -19,10 +19,10 @@
 # ever discarded or regenerated.
 #
 # Usage:
-#   scripts/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed] [split]
-#   scripts/generate_synthetic_parallel.sh 20 10 1 42
-#   scripts/generate_synthetic_parallel.sh 50 10 1 42 val   # Gemma teacher on the val pairs -> data/synthetic/teacher_val.csv
-#   scripts/generate_synthetic_parallel.sh 50 10 1 42 test  # ... on the test pairs -> data/synthetic/teacher_test.csv
+#   src/gemma_teacher/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed] [split]
+#   src/gemma_teacher/generate_synthetic_parallel.sh 20 10 1 42
+#   src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 val   # Gemma teacher on the val pairs -> data/synthetic/teacher_val.csv
+#   src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 test  # ... on the test pairs -> data/synthetic/teacher_test.csv
 #
 # split=val writes to its own main file and parts dir (merge_synthetic_parts.py
 # paths_for_split), so val rows can never reach synthetic_dataset.csv, which
@@ -35,7 +35,7 @@ shopt -s nullglob
 # unbound under `set -u`, even after `arr=()`. Safer to skip nounset than to
 # hand-guard every array expansion in this script for a 12-year-old shell.
 
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 POEMS_PER_AUTHOR="${1:-20}"
 NUM_TARGET_AUTHORS="${2:-10}"
@@ -44,18 +44,18 @@ SEED="${4:-42}"
 SPLIT="${5:-train}"
 
 # Sets MAIN, ERRORS, PARTS_DIR, ERROR_PARTS_DIR, LOG_DIR for this split.
-eval "$(uv run python src/merge_synthetic_parts.py paths --split "$SPLIT")"
+eval "$(uv run python -m gemma_teacher.merge_synthetic_parts paths --split "$SPLIT")"
 echo "Split: $SPLIT -> $MAIN"
 mkdir -p "$PARTS_DIR" "$ERROR_PARTS_DIR" "$LOG_DIR"
 
 merge_all() {
     local dataset_parts=("$PARTS_DIR"/*.csv)
     if [ ${#dataset_parts[@]} -gt 0 ]; then
-        uv run python src/merge_synthetic_parts.py merge --kind dataset --output-path "$MAIN" "${dataset_parts[@]}"
+        uv run python -m gemma_teacher.merge_synthetic_parts merge --kind dataset --output-path "$MAIN" "${dataset_parts[@]}"
     fi
     local error_parts=("$ERROR_PARTS_DIR"/*.csv)
     if [ ${#error_parts[@]} -gt 0 ]; then
-        uv run python src/merge_synthetic_parts.py merge --kind errors --output-path "$ERRORS" "${error_parts[@]}"
+        uv run python -m gemma_teacher.merge_synthetic_parts merge --kind errors --output-path "$ERRORS" "${error_parts[@]}"
     fi
 }
 
@@ -67,8 +67,7 @@ AUTHORS=()
 while IFS= read -r author; do
     AUTHORS+=("$author")
 done < <(uv run python -c "
-import sys; sys.path.insert(0, 'src')
-from sft_data import select_target_authors
+from common.stylometry.targets import select_target_authors
 for a in select_target_authors($NUM_TARGET_AUTHORS):
     print(a)
 ")
@@ -81,10 +80,10 @@ for author in "${AUTHORS[@]}"; do
     errors="$ERROR_PARTS_DIR/${slug}.csv"
     log="$LOG_DIR/${slug}.log"
 
-    uv run python src/merge_synthetic_parts.py seed --author "$author" --main "$MAIN" --part "$part"
+    uv run python -m gemma_teacher.merge_synthetic_parts seed --author "$author" --main "$MAIN" --part "$part"
 
     echo "Launching $author -> $part (log: $log)"
-    uv run python src/generate_synthetic.py \
+    uv run python -m gemma_teacher.generate_synthetic \
         --target-authors "$author" \
         --poems-per-author "$POEMS_PER_AUTHOR" \
         --samples-per-pair "$SAMPLES_PER_PAIR" \

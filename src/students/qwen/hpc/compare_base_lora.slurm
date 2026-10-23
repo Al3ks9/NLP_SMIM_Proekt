@@ -7,7 +7,7 @@
 #SBATCH --nodelist=gpgpu01
 #SBATCH --output=logs/%A_%a.out
 #
-# The A/B generation run behind src/compare_generations.py: the untuned base
+# The A/B generation run behind src/students/shared/compare_generations.py: the untuned base
 # model and the LoRA-tuned model over the SAME val pairs, prompt format, seeds
 # and decoding settings, back to back in one job on one GPU, so the only
 # difference between the two output CSVs is the adapter.
@@ -19,27 +19,27 @@
 # confound the comparison it is supposed to isolate.
 #
 # Usage:
-#   sbatch slurm/compare_base_lora.slurm
-#   sbatch slurm/compare_base_lora.slurm --num-source-poems 25   # forwarded to both runs
-#   FAMILY=gemma4 sbatch slurm/compare_base_lora.slurm            # Gemma 4 E4B: base vs its SFT adapter
+#   sbatch src/students/qwen/hpc/compare_base_lora.slurm
+#   sbatch src/students/qwen/hpc/compare_base_lora.slurm --num-source-poems 25   # forwarded to both runs
+#   FAMILY=gemma4 sbatch src/students/qwen/hpc/compare_base_lora.slurm            # Gemma 4 E4B: base vs its SFT adapter
 
 set -euo pipefail
 
 # $0 is unreliable here -- see generate_validation.slurm's note on the spool copy.
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/compare_base_lora.slurm ]] || cd ..
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 mkdir -p logs
-source slurm/grpo_common.sh   # FAMILY -> TAG (family_vars)
+source src/students/shared/hpc/grpo_common.sh   # FAMILY -> TAG (family_vars)
 family_vars || exit 1
 
 SIF="${SIF:-singularity/qwen-sft.sif}"
 if [[ ! -f "$SIF" ]]; then
-    echo "Missing $SIF -- build it first: ./singularity/build.sh" >&2
+    echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2
     exit 1
 fi
 
 if [[ ! -d models/$TAG-lora-sft ]]; then
-    echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch slurm/train_sft.slurm first." >&2
+    echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/qwen/hpc/train_sft.slurm first." >&2
     exit 1
 fi
 
@@ -54,13 +54,13 @@ singularity exec --nv \
     "$SIF" \
     bash -c '
         set -euo pipefail
-        export PYTHONUNBUFFERED=1
+        export PYTHONUNBUFFERED=1 PYTHONPATH=/workspace/src
         export TOKENIZERS_PARALLELISM=false
         export HF_HOME=/root/.cache/huggingface
         cd /workspace
         /opt/venv/bin/python -c "import torch; print(\"CUDA available:\", torch.cuda.is_available(), \"--\", torch.cuda.get_device_name(0) if torch.cuda.is_available() else \"no GPU visible\")"
         echo "=== baseline: untuned base model ==="
-        /opt/venv/bin/python src/generate_validation.py --family "$FAMILY" --no-adapter --split val "$@"
+        /opt/venv/bin/python -m students.shared.generate_validation --family "$FAMILY" --no-adapter --split val "$@"
         echo "=== tuned: LoRA adapter ==="
-        /opt/venv/bin/python src/generate_validation.py --family "$FAMILY" --split val "$@"
+        /opt/venv/bin/python -m students.shared.generate_validation --family "$FAMILY" --split val "$@"
     ' _ "$@"

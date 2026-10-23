@@ -13,9 +13,9 @@
 # base / SFT / SFT-merged / GRPO / Gemma-on-val (if teacher_val.csv exists).
 #
 # Usage:
-#   sbatch slurm/eval_grpo.slurm
-#   ADAPTER=models/qwen3-grpo/checkpoint-200 sbatch slurm/eval_grpo.slurm
-#   FAMILY=gemma4 sbatch slurm/eval_grpo.slurm      # Gemma 4 E4B student: gemma4-e4b-* paths
+#   sbatch src/students/qwen/hpc/eval_grpo.slurm
+#   ADAPTER=models/qwen3-grpo/checkpoint-200 sbatch src/students/qwen/hpc/eval_grpo.slurm
+#   FAMILY=gemma4 sbatch src/students/qwen/hpc/eval_grpo.slurm      # Gemma 4 E4B student: gemma4-e4b-* paths
 #
 # The SFT-merged generations are reused if they already exist (the node is
 # pinned and the seeds fixed, so a rerun reproduces the same CSV);
@@ -25,8 +25,8 @@
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
-[[ -f slurm/eval_grpo.slurm ]] || cd ..
-source slurm/grpo_common.sh
+[[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
+source src/students/shared/hpc/grpo_common.sh
 grpo_preflight
 
 export REGEN_BASELINE="${REGEN_BASELINE:-0}"
@@ -42,13 +42,13 @@ fi
 
 run_in_container '
     G=data/validation_generations
-    $PY src/merge_sft_adapter.py --family "$FAMILY"
+    $PY -m students.shared.merge_sft_adapter --family "$FAMILY"
     if [[ "${REGEN_BASELINE:-0}" == 1 || ! -f $G/$TAG-sft-merged_val.csv ]]; then
-        $PY src/generate_validation.py --family "$FAMILY" --no-adapter --base-model models/$TAG-sft-merged --split val "$@"
+        $PY -m students.shared.generate_validation --family "$FAMILY" --no-adapter --base-model models/$TAG-sft-merged --split val "$@"
     else
         echo "Reusing $G/$TAG-sft-merged_val.csv (REGEN_BASELINE=1 to regenerate)"
     fi
-    $PY src/generate_validation.py --family "$FAMILY" --adapter "$ADAPTER" --split val "$@"
+    $PY -m students.shared.generate_validation --family "$FAMILY" --adapter "$ADAPTER" --split val "$@"
     RUNS=() LABELS=()
     for pair in "$BASE_LABEL:base" "$TAG-lora-sft:sft" "$TAG-sft-merged:sft-merged"; do
         if [[ -f $G/${pair%%:*}_val.csv ]]; then RUNS+=("$G/${pair%%:*}_val.csv"); LABELS+=("${pair##*:}"); fi
@@ -61,7 +61,7 @@ run_in_container '
     if [[ -f data/synthetic/teacher_val.csv ]]; then
         RUNS+=(data/synthetic/teacher_val.csv); LABELS+=(gemma)
     fi
-    $PY src/compare_generations.py --rewards --corpus-reference \
+    $PY -m students.shared.compare_generations --rewards --corpus-reference \
         --runs "${RUNS[@]}" --labels "${LABELS[@]}" \
         --rows-out $G/${CMP}_rows.csv --report-out $G/${CMP}_summary.csv
 ' "$@"
