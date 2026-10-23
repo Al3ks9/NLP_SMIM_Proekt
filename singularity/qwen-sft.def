@@ -52,7 +52,9 @@ From: python:3.11-slim
     # the lock is the single source of truth this project already commits to
     # (see CLAUDE.md); if the build fails here, `uv lock` is out of sync with
     # pyproject.toml and needs regenerating first, not patching around here.
-    UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen --python 3.11
+    # --no-install-project: src/ isn't in the build context; jobs bind the repo
+    # at /workspace and reach the code through PYTHONPATH=/workspace/src.
+    UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen --no-install-project --python 3.11
 
     # Sanity check baked in at build time -- fails the build loudly instead of
     # producing an image that only breaks once someone actually runs it on a GPU.
