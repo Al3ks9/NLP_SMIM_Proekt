@@ -14,7 +14,7 @@ build, so both sides of the comparison are tagged the same way.
 Deterministic given --seed. Writes data/reward_calibration.json (tracked).
 
 Usage:
-    uv run python src/build_reward_calibration.py
+    uv run python -m students.shared.build_reward_calibration
 """
 
 import argparse

@@ -2,8 +2,8 @@
 Style transfer: rewrite a poem in the style of a target Macedonian poet.
 
 Usage:
-    uv run python style_transfer.py                    # interactive demo
-    uv run python style_transfer.py "text" "Author"    # CLI mode
+    uv run python -m word_substitution.style_transfer                    # interactive demo
+    uv run python -m word_substitution.style_transfer "text" "Author"    # CLI mode
 """
 
 import csv

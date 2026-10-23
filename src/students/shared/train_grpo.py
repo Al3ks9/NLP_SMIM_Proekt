@@ -2,27 +2,27 @@
 GRPO fine-tuning of the SFT Qwen3-4B style-transfer model (stage 2).
 
 Start policy = the SFT adapter merged into the base weights
-(src/merge_sft_adapter.py -> models/qwen3-sft-merged), plus a FRESH LoRA.
+(src/students/shared/merge_sft_adapter.py -> models/qwen3-sft-merged), plus a FRESH LoRA.
 With beta > 0, TRL's KL reference is the same model with the adapter off --
 i.e. exactly the SFT model. The base weights stay frozen.
 
-Prompts: train-split (source poem, target author) pairs (src/grpo_data.py),
-in the SFT chat format. Rewards: src/grpo_rewards.py's style_reward and
+Prompts: train-split (source poem, target author) pairs (src/students/shared/grpo_data.py),
+in the SFT chat format. Rewards: src/students/shared/grpo_rewards.py's style_reward and
 content_reward, combined by TRL as reward_weights=[style_weight,
 content_weight]. Every component is logged via TRL's log_metric and written
 per completion to <output-dir>/reward_components.jsonl.
 
 --smoke runs 3 tiny steps and asserts the loop works end to end (see
 run_smoke_checks). No evaluation inside training: checkpoints are evaluated
-afterwards with generate_validation.py (slurm/eval_grpo.slurm).
+afterwards with generate_validation.py (src/students/qwen/hpc/eval_grpo.slurm).
 
 --family gemma4 trains the Gemma 4 E4B student instead (start policy
 models/gemma4-e4b-sft-merged, output models/gemma4-e4b-grpo; model_families.py).
 
 Usage:
-    uv run python src/train_grpo.py --smoke
-    uv run python src/train_grpo.py --max-steps 500
-    uv run python src/train_grpo.py --family gemma4
+    uv run python -m students.shared.train_grpo --smoke
+    uv run python -m students.shared.train_grpo --max-steps 500
+    uv run python -m students.shared.train_grpo --family gemma4
 """
 
 import argparse
@@ -58,7 +58,7 @@ def load_policy(sft_merged: Path, attn_implementation: str, family: mf.ModelFami
     family = family or mf.get_family(mf.DEFAULT_FAMILY)
     if not (sft_merged / 'merge_info.json').exists():
         raise SystemExit(f'{sft_merged}/merge_info.json missing -- build the start policy with '
-                         '`python src/merge_sft_adapter.py` (GRPO must start from SFT, not base)')
+                         '`python src/students/shared/merge_sft_adapter.py` (GRPO must start from SFT, not base)')
     mf.assert_family_matches(family, sft_merged)
     tokenizer = AutoTokenizer.from_pretrained(str(sft_merged))
     if tokenizer.pad_token is None:

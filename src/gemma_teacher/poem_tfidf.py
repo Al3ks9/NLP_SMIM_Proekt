@@ -12,7 +12,7 @@ tfidf_score — 'lemma' (not 'word') because that is honestly what this is,
 distinct from tfidf_results.csv's surface-form 'word' column.
 
 Run once (or whenever pos_tagged.csv is rebuilt):
-    uv run python src/poem_tfidf.py
+    uv run python -m gemma_teacher.poem_tfidf
 
 top_content_words() reads the CSV back for callers (llm_style_transfer.py) —
 never recomputed inline per request.

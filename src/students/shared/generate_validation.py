@@ -1,6 +1,6 @@
 """
 Validation generation (Qwen SFT pipeline, stage 6): load the base model plus a
-trained LoRA adapter (src/train_sft.py's output) and run style transfer over
+trained LoRA adapter (src/students/shared/train_sft.py's output) and run style transfer over
 real poems from one split -- val by default, never the split trained on --
 producing candidates for manual inspection now and, unmodified, for the GRPO
 reward stage this pipeline is meant to plug into next (see CLAUDE.md's
@@ -20,9 +20,9 @@ output -- the A/B baseline compare_generations.py scores the tuned run
 against.
 
 Usage:
-    uv run python src/generate_validation.py \\
+    uv run python -m students.shared.generate_validation \\
         --adapter models/qwen3-lora-sft --split val --num-source-poems 50
-    uv run python src/generate_validation.py --no-adapter --split val --num-source-poems 50
+    uv run python -m students.shared.generate_validation --no-adapter --split val --num-source-poems 50
 """
 
 import argparse

@@ -11,9 +11,9 @@ Reads GOOGLE_API_KEY (or GEMINI_API_KEY) from the environment, falling back to
 a .env file at the repo root.
 
 Usage:
-    uv run python src/probe_google_api.py                 # list gemma models, then probe the best one
-    uv run python src/probe_google_api.py --list          # list only
-    uv run python src/probe_google_api.py --model gemma-4-31b-it
+    uv run python -m llm_infill.probe_google_api                 # list gemma models, then probe the best one
+    uv run python -m llm_infill.probe_google_api --list          # list only
+    uv run python -m llm_infill.probe_google_api --model gemma-4-31b-it
 """
 
 import argparse

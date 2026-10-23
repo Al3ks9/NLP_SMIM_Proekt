@@ -2,7 +2,7 @@
 Merge per-target-author part CSVs back into the canonical
 data/synthetic/synthetic_dataset.csv / synthetic_errors.csv.
 
-Companion to scripts/generate_synthetic_parallel.sh: running one
+Companion to src/gemma_teacher/generate_synthetic_parallel.sh: running one
 generate_synthetic.py process per target author in parallel means each must
 write to its own --output-path/--errors-path (concurrent appends to one CSV
 aren't safe once a row -- a generated poem -- can exceed the OS's atomic

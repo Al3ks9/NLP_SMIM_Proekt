@@ -1,6 +1,6 @@
 """
 Base-vs-tuned comparison for the Qwen SFT pipeline (stage 7): score one or
-more generation runs with src/style_metrics.py and print/write the aggregate
+more generation runs with src/common/evaluation/style_metrics.py and print/write the aggregate
 table.
 
 A run is any CSV with generated_poem + source_poem_id + target_author columns
@@ -20,9 +20,9 @@ Two views are printed:
   authors and a difference can't come from an easier sample.
 
 Usage:
-    uv run python src/compare_generations.py                      # auto-discover val runs
-    uv run python src/compare_generations.py --include-teacher --corpus-reference
-    uv run python src/compare_generations.py --runs a.csv b.csv --labels base tuned
+    uv run python -m students.shared.compare_generations                      # auto-discover val runs
+    uv run python -m students.shared.compare_generations --include-teacher --corpus-reference
+    uv run python -m students.shared.compare_generations --runs a.csv b.csv --labels base tuned
 """
 
 import argparse

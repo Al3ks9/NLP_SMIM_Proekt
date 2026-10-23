@@ -6,7 +6,7 @@ multilingual tuning on a low-resource language like Macedonian.
 
 Usage:
     export OPENROUTER_API_KEY=sk-or-...
-    uv run python src/probe_nemotron.py
+    uv run python -m llm_infill.probe_nemotron
 
 Costs 5 requests against the OpenRouter free quota (50/day without credits).
 """

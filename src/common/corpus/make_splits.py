@@ -27,7 +27,7 @@ author's poems shuffled in poem_id order before slicing -- rerunning with the
 same seed reproduces the exact same assignment.
 
 Run once (or whenever stripped_songs.csv changes):
-    uv run python src/make_splits.py
+    uv run python -m common.corpus.make_splits
 """
 
 import csv
@@ -153,7 +153,7 @@ def load_splits() -> dict:
     def build():
         if not SPLITS_PATH.exists():
             raise FileNotFoundError(
-                f'{SPLITS_PATH} does not exist -- run `uv run python src/make_splits.py` first.')
+                f'{SPLITS_PATH} does not exist -- run `uv run python -m common.corpus.make_splits` first.')
         with open(SPLITS_PATH, encoding='utf-8') as f:
             return {r['poem_id']: r['split'] for r in csv.DictReader(f)}
     return _cached('splits', build)

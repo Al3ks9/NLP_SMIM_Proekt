@@ -21,11 +21,11 @@ Reading it:
       this architecture: a real bug
   adapter_bf16 != adapter_fp32                      -> bf16 forward noise
 
-Run on the cluster (slurm/diagnose_merge.slurm), for Gemma and, as the
+Run on the cluster (src/students/qwen/hpc/diagnose_merge.slurm), for Gemma and, as the
 control whose merge is known to reproduce SFT's scores, Qwen:
-    python scripts/diagnose_merge.py --family gemma4 \
+    python src/students/qwen/diagnose_merge.py --family gemma4 \
         --adapter models/gemma4-compat/sft --merged models/gemma4-compat/merged
-    python scripts/diagnose_merge.py --family qwen3 \
+    python src/students/qwen/diagnose_merge.py --family qwen3 \
         --adapter models/qwen3-lora-sft --merged models/qwen3-sft-merged
 """
 

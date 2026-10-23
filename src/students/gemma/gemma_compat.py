@@ -21,13 +21,13 @@ form and Gemma's --max-seq-length):
                adapter's log-prob (the merge is correct), and the saved merge
                reloads through AutoModelForCausalLM. The bf16 merge's gap is
                recorded, not gated: bf16 storage loses part of a 3-step
-               adapter's weight change (scripts/diagnose_merge.py)
+               adapter's weight change (src/students/qwen/diagnose_merge.py)
 
-Exit 1 if any check fails. slurm/gemma_compat.slurm then runs
+Exit 1 if any check fails. src/students/gemma/hpc/gemma_compat.slurm then runs
 train_grpo.py --smoke on the merged model.
 
-Usage (inside the container, see slurm/gemma_compat.slurm):
-    python src/gemma_compat.py [--work-dir models/gemma4-compat]
+Usage (inside the container, see src/students/gemma/hpc/gemma_compat.slurm):
+    python src/students/gemma/gemma_compat.py [--work-dir models/gemma4-compat]
 """
 
 import json
@@ -236,7 +236,7 @@ def check_sft_merge(report: dict, family, work_dir: Path, max_seq_length: int) -
 
     # Information only: what bf16 storage costs. On the first compat run a
     # 3-step Gemma adapter kept ~85 % of its log-prob shift after a bf16 merge
-    # (Qwen's full SFT merge loses ~0); scripts/diagnose_merge.py measures it
+    # (Qwen's full SFT merge loses ~0); src/students/qwen/diagnose_merge.py measures it
     # on the real adapter before GRPO.
     adapter_model, _ = gv.load_adapter_model(sft_dir, family=family)
     lp_adapter16 = lp(adapter_model)

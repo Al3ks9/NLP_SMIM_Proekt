@@ -1,7 +1,7 @@
 """
 Synthetic style-transfer dataset generation (Qwen SFT pipeline, stage 2).
 
-Samples source poems from the train split (src/make_splits.py) and, for each,
+Samples source poems from the train split (src/common/corpus/make_splits.py) and, for each,
 runs llm_style_transfer.run_transfer() against a fixed pool of target authors --
 the existing Gemma pipeline, unmodified. Every generated example is appended to
 data/synthetic/synthetic_dataset.csv with enough metadata to trace it back to
@@ -21,7 +21,7 @@ logged to data/synthetic/synthetic_errors.csv and skipped rather than aborting
 the whole batch.
 
 Usage:
-    uv run python src/generate_synthetic.py \\
+    uv run python -m gemma_teacher.generate_synthetic \\
         --num-target-authors 10 --poems-per-author 100 --samples-per-pair 1 --seed 42
 
 --poems-per-author is the number of source poems sampled ONCE from train and
@@ -219,7 +219,7 @@ if __name__ == '__main__':
                        choices=sorted(lst.llm_client.BACKENDS))
     parser.add_argument('--output-path', type=Path, default=OUTPUT_PATH,
                        help='dataset CSV to append to -- override so parallel '
-                            'per-author invocations (see scripts/generate_synthetic_parallel.sh) '
+                            'per-author invocations (see src/gemma_teacher/generate_synthetic_parallel.sh) '
                             'write to separate files instead of racing on one')
     parser.add_argument('--errors-path', type=Path, default=ERRORS_PATH,
                        help='errors CSV to append to -- same override as --output-path')

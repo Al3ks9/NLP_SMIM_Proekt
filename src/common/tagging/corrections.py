@@ -8,7 +8,7 @@ those files are lost the next time the corpus is re-tagged.
 The workflow:
 
   1. review `data/pos_flags.csv`, filling in `correction` / `lemma_fix` / `scope`
-  2. `uv run python src/apply_corrections.py` — harvests those edits into
+  2. `uv run python -m common.tagging.apply_corrections` — harvests those edits into
      `pos_corrections.csv` and patches `pos_tagged.csv`
   3. `pos_tag_corpus.py` re-applies the whole file on every later run
 

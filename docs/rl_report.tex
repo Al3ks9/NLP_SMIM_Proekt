@@ -17,6 +17,7 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\graphicspath{{../data/}}
 \usepackage{hyperref}
 \usepackage{geometry}
 \geometry{margin=2.3cm}
@@ -349,7 +350,7 @@ and the line-level content reward scores that barely above an unrelated poem.
     also used to make decisions (decoding, v2's reward). The final evaluation
     on the untouched test split --- base, SFT, GRPO v1 and v2 on 466 (test
     poem, target) pairs with the same protocol --- is running
-    (\texttt{slurm/eval\_test.slurm}) and will replace these as the reported
+    (\texttt{src/students/qwen/hpc/eval\_test.slurm}) and will replace these as the reported
     figures.
   \item \textbf{Second student.} The same SFT and GRPO-v2 pipeline is being
     run with Gemma~4 E4B, a student of matched size from the teacher's own
@@ -372,13 +373,13 @@ only.
 
 {\raggedright\paragraph{Reproducibility.} Splits: \texttt{make\_splits.py}. Teacher data:
 \texttt{generate\_synthetic\_parallel.sh}. SFT, GRPO and evaluation:
-\texttt{slurm/train\_sft.slurm}, \texttt{train\_grpo.slurm},
+\texttt{src/students/qwen/hpc/train\_sft.slurm}, \texttt{train\_grpo.slurm},
 \texttt{train\_grpo\_v2.slurm}, \texttt{eval\_grpo.slurm}. Tables:
 \texttt{compare\_generations.py} with \texttt{--rewards} and
 \texttt{--corpus-reference} over the tracked
 generation CSVs in \texttt{data/validation\_generations/}, which reproduces
 every number on CPU. Figure~\ref{fig:curves}:
-\texttt{scripts/plot\_grpo\_curves.py}. Every training run records its
+\texttt{src/students/qwen/plot\_grpo\_curves.py}. Every training run records its
 arguments, commit, merge provenance and library versions in
 \texttt{run\_config.json}.\par}
 

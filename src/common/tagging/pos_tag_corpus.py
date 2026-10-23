@@ -181,7 +181,7 @@ for poem_id, author, title, word, lemma, pos, xpos, feats, sid in tokens:
             'word': word,
             'lemma': lemma,
             'pos': pos,
-            # Left blank for you to fill in; see src/corrections.py.
+            # Left blank for you to fill in; see src/common/tagging/corrections.py.
             'correction': '',
             'lemma_fix': '',
             'scope': '',

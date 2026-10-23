@@ -3,7 +3,7 @@ Print candidate_selection's per-slot candidates for the probe harness's demo
 stanza (llm_probe's MASK_WORDS, SOURCE_AUTHOR -> TARGET_AUTHOR).
 
 Usage:
-    uv run python src/show_slots.py
+    uv run python -m llm_infill.show_slots
 """
 
 import json

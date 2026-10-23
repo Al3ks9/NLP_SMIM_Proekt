@@ -9,7 +9,7 @@ Outputs:
   skg_final.gexf        — SKG with added semantic_similarity edges between
                           same-POS word nodes whose cosine similarity ≥ threshold
 
-Run once: uv run python add_embeddings.py
+Run once: uv run python -m common.knowledge_graph.add_embeddings
 """
 
 import csv

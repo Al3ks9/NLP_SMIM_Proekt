@@ -7,9 +7,9 @@ an 8B model writes Macedonian verse well enough — that is what this measures.
 
 Usage:
     ollama pull qwen3:8b
-    uv run python src/probe_qwen.py                    # English instructions (default)
-    uv run python src/probe_qwen.py --mk               # Macedonian instructions
-    uv run python src/probe_qwen.py --model qwen3:14b  # any local ollama tag
+    uv run python -m llm_infill.probe_qwen                    # English instructions (default)
+    uv run python -m llm_infill.probe_qwen --mk               # Macedonian instructions
+    uv run python -m llm_infill.probe_qwen --model qwen3:14b  # any local ollama tag
 
 English instructions are the default: measured better than Macedonian ones on
 qwen3:8b (implicit-mask fills 0/3 -> 2/3, morphology 1/4 -> 2/4). Use --mk to

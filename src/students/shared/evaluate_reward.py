@@ -3,14 +3,14 @@ Standalone GRPO reward inspector -- run it before any long GRPO job to check
 that the reward behaves sensibly.
 
 Single generation:
-    uv run python src/evaluate_reward.py --source-poem-id 301 \\
+    uv run python -m students.shared.evaluate_reward --source-poem-id 301 \\
         --target-author "Адем Гајтани" --generated-file poem.txt
-    uv run python src/evaluate_reward.py \\
+    uv run python -m students.shared.evaluate_reward \\
         --generations-csv data/validation_generations/qwen3-lora-sft_val.csv --row 0
 
 Hand-built fixture cases (tests/fixtures/reward_cases.json), with ordering
 checks; exits 1 if an expectation fails:
-    uv run python src/evaluate_reward.py --fixtures
+    uv run python -m students.shared.evaluate_reward --fixtures
 
 Within-group reward spread from the SFT policy (GPU; see --groups help).
 """

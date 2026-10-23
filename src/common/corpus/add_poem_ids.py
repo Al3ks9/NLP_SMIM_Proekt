@@ -8,7 +8,7 @@ not partial coverage). Idempotent: running it again on an already-migrated file 
 a message and does nothing.
 
 Run once:
-    uv run python src/add_poem_ids.py
+    uv run python -m common.corpus.add_poem_ids
 """
 
 import csv

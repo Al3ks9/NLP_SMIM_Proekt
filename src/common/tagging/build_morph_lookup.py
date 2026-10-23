@@ -13,7 +13,7 @@ The pooled index exists because per-author data is sparse: 81.5% of
 (author, lemma, pos) cells hold exactly one feats value, and pooling makes 118%
 more forms retrievable.
 
-Run: uv run python src/build_morph_lookup.py
+Run: uv run python -m common.tagging.build_morph_lookup
 """
 
 import csv

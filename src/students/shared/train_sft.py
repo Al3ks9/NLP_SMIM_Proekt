@@ -2,7 +2,7 @@
 LoRA supervised fine-tuning of Qwen/Qwen3-4B on the synthetic style-transfer
 dataset (Qwen SFT pipeline, stage 3-4).
 
---family gemma4 trains the Gemma 4 E4B student instead (src/model_families.py):
+--family gemma4 trains the Gemma 4 E4B student instead (src/students/shared/model_families.py):
 text-only load, prompt-completion rows with completion_only_loss (TRL has no
 Gemma 4 training template), output models/gemma4-e4b-lora-sft. The notes
 below describe the default Qwen family.
@@ -39,8 +39,8 @@ are RMSNorm layers, not nn.Linear, and are deliberately excluded; Qwen3MLP
 inherits GemmaMLP: gate_proj/up_proj/down_proj), not assumed from a generic
 Llama-family default.
 
-Usage (single A100 80GB; see slurm/train_sft.slurm for the cluster job):
-    uv run python src/train_sft.py \\
+Usage (single A100 80GB; see src/students/qwen/hpc/train_sft.slurm for the cluster job):
+    uv run python -m students.shared.train_sft \\
         --num-train-epochs 3 --per-device-train-batch-size 4 \\
         --gradient-accumulation-steps 4 --learning-rate 2e-4
 """

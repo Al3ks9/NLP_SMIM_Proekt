@@ -12,8 +12,8 @@ Idempotent: re-running with the same adapter is a no-op; a merge from a
 different adapter is refused without --force.
 
 Usage:
-    uv run python src/merge_sft_adapter.py                   # models/qwen3-lora-sft -> models/qwen3-sft-merged
-    uv run python src/merge_sft_adapter.py --family gemma4   # models/gemma4-e4b-lora-sft -> models/gemma4-e4b-sft-merged
+    uv run python -m students.shared.merge_sft_adapter                   # models/qwen3-lora-sft -> models/qwen3-sft-merged
+    uv run python -m students.shared.merge_sft_adapter --family gemma4   # models/gemma4-e4b-lora-sft -> models/gemma4-e4b-sft-merged
 
 The base model loads through its family's loader (Gemma 4: text-only), so a
 merged Gemma dir is a plain gemma4_text causal LM that AutoModelForCausalLM

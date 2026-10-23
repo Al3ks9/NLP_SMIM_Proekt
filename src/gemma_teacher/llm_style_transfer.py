@@ -15,7 +15,7 @@ exemplar_selection.py) rather than recomputing any of it; this module owns the
 LLM calls, prompt assembly, structural validation, and per-run audit logging.
 
 Usage:
-    uv run python src/llm_style_transfer.py \\
+    uv run python -m gemma_teacher.llm_style_transfer \\
         --source-author "Кочо Рацин" --source-title "..." \\
         --target-author "Блаже Конески"
 """

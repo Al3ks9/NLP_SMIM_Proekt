@@ -26,7 +26,7 @@ models/judge_classifier.pkl (gitignored); `--rebuild` refits and prints its
 held-out accuracy on the val+test poems.
 
 Usage:
-    uv run python src/judge_classifier.py --rebuild
+    uv run python -m common.evaluation.judge_classifier --rebuild
 """
 
 import argparse

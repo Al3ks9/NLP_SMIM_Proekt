@@ -6,7 +6,7 @@ the likeliest candidate for the filling stage.
 
 Usage:
     export OPENROUTER_API_KEY=sk-or-...
-    uv run python src/probe_gemma.py
+    uv run python -m llm_infill.probe_gemma
 
 Costs 5 requests against the OpenRouter free quota (50/day without credits).
 """

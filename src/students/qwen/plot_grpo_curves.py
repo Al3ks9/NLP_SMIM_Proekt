@@ -9,7 +9,7 @@ ungated content and the gates are. Also prints first-/last-50-step means.
 
 The jsonl files are copied back from the cluster (models/qwen3-grpo*/) and
 gitignored (~50 MB each):
-    uv run --with matplotlib python scripts/plot_grpo_curves.py \   # plotting only: not a project dep
+    uv run --with matplotlib python src/students/qwen/plot_grpo_curves.py \   # plotting only: not a project dep
         --v1 models/reward_components_grpo_v1.jsonl \
         --v2 models/reward_components_grpo_v2.jsonl
 """

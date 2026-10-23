@@ -1,7 +1,7 @@
 """
 Line-level semantic similarity between a source poem and a generated poem
-(GRPO content reward, src/grpo_rewards.py; baseline in
-src/build_reward_calibration.py).
+(GRPO content reward, src/students/shared/grpo_rewards.py; baseline in
+src/students/shared/build_reward_calibration.py).
 
 BERTScore-style over lines rather than one whole-poem embedding: the
 multilingual mpnet model truncates at 128 tokens (many poems are longer), and

@@ -1,7 +1,7 @@
 """Harvest hand corrections from pos_flags.csv and apply them to pos_tagged.csv.
 
 Run after filling in the `correction` / `lemma_fix` / `scope` columns of
-`data/pos_flags.csv`. See src/corrections.py for the workflow and scope rules.
+`data/pos_flags.csv`. See src/common/tagging/corrections.py for the workflow and scope rules.
 
 With no new edits in pos_flags.csv this re-applies pos_corrections.csv to
 pos_tagged.csv as-is. That is the path for a correction the flag rules never
@@ -13,7 +13,7 @@ and a lemma fix rewrites the same lemma.
 It cannot *undo* a correction, though. Deleting a row stops it being applied
 again but does not restore what classla originally produced -- pos_tagged.csv
 is already patched. That needs a full re-tag:
-    uv run python src/pos_tag_corpus.py
+    uv run python -m common.tagging.pos_tag_corpus
 """
 
 import csv
@@ -123,7 +123,7 @@ deferred = [r for r in edited
             or r['pos'] not in KEEP or r['xpos'] == 'Rg']
 if deferred:
     print(f"\n{len(deferred)} correction(s) stored but not applied here — they need "
-          "a full re-tag:\n  uv run python src/pos_tag_corpus.py")
+          "a full re-tag:\n  uv run python -m common.tagging.pos_tag_corpus")
     for r in deferred[:10]:
         why = ('row-scoped' if r['scope'].strip().lower() == 'row'
                else 'not a content token until corrected')
