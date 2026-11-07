@@ -1,6 +1,7 @@
 """
 Shared LLM call wrapper: 'ollama' (local, no limits), 'openrouter' (remote,
-quota-limited) and 'google' (Gemini API, direct) backends behind one
+quota-limited), 'google' (Gemini API, direct) and 'vllm' (the same Gemma 4
+31B served on our own A100, src/gemma_teacher/hpc/vllm_teacher.slurm) backends behind one
 call(model, prompt, backend=...) interface.
 
 Extracted from llm_probe.py so production code (llm_style_transfer.py) has an
@@ -28,6 +29,7 @@ log = logging.getLogger('llm_client')
 OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 OLLAMA_URL = os.environ.get('OLLAMA_HOST', 'http://localhost:11434') + '/api/chat'
 GOOGLE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
+VLLM_URL = os.environ.get('VLLM_HOST', 'http://localhost:8000') + '/v1/chat/completions'
 
 # 408/429/5xx are transient (rate limit, upstream overload, timeout) and worth
 # retrying; other 4xx (400 bad request, 403 bad key) mean every retry would
@@ -205,7 +207,74 @@ def call_google(model: str, prompt: str, temperature: float = 0.3,
     )
 
 
-BACKENDS = {'ollama': call_ollama, 'openrouter': call_openrouter, 'google': call_google}
+# Gemma 4 31B on a local vLLM server: the google backend's model without its
+# quota (429) and its intermittent 500s/timeouts, which left the teacher's val
+# run 12 pairs short. Matching the API's behaviour:
+#
+# - thinking is switched ON (chat_template_kwargs.enable_thinking), because
+#   the API cannot switch it off -- a teacher that skipped reasoning would be
+#   a different teacher;
+# - no max_tokens by default, so vLLM grants max_model_len minus the prompt
+#   (the server runs at 32768, the API's output ceiling);
+# - the model name is the API's ('gemma-4-31b-it', via --served-model-name),
+#   so poem_summary_cache.json keys still hit.
+#
+# The reasoning comes back as a <|channel>thought ... <channel|> block. With
+# the server's gemma4 reasoning parser it is moved to message.reasoning_content
+# and content is clean; without it (or if the parser misses) it is inline in
+# content. skip_special_tokens is off so the delimiters survive either way,
+# and _strip_channel removes the block. An opening delimiter with no close
+# means the budget ran out mid-thought: no answer, retried like call_google's
+# starved case.
+_CHANNEL_BLOCK = re.compile(r'<\|channel>.*?<channel\|>', re.S)
+_GEMMA_END_TOKENS = ('<turn|>', '<eos>')
+
+
+def _strip_channel(text: str) -> str:
+    text = _CHANNEL_BLOCK.sub('', text)
+    if '<|channel>' in text:
+        return ''
+    text = text.strip()
+    for token in _GEMMA_END_TOKENS:
+        if text.endswith(token):
+            text = text[:-len(token)].rstrip()
+    return text
+
+
+def call_vllm(model: str, prompt: str, temperature: float = 0.3,
+              max_tokens: int = None, attempts: int = 2) -> str:
+    """One chat completion from a local vLLM OpenAI-compatible server
+    (VLLM_HOST, default localhost:8000), thinking on, reasoning removed."""
+    body = {
+        'model': model,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': temperature,
+        'skip_special_tokens': False,
+        'chat_template_kwargs': {'enable_thinking': True},
+    }
+    if max_tokens is not None:
+        body['max_tokens'] = max_tokens
+
+    for attempt in range(1, attempts + 1):
+        # A 16k-token reasoning trace on a shared GPU takes many minutes.
+        payload = _post(VLLM_URL, body, headers={}, timeout=3600)
+        choices = payload.get('choices') or []
+        if not choices:
+            raise RuntimeError(f'No choices in response: {json.dumps(payload)[:400]}')
+        text = _strip_channel(choices[0].get('message', {}).get('content') or '')
+        if text:
+            return _strip_think(text)
+        finish = choices[0].get('finish_reason')
+        if attempt < attempts:
+            log.info('call_vllm: no answer (finish_reason=%s) -- retrying %d/%d',
+                     finish, attempt + 1, attempts)
+
+    raise RuntimeError(f'No answer after {attempts} attempt(s) (finish_reason={finish!r}): '
+                       'thinking consumed the whole budget.')
+
+
+BACKENDS = {'ollama': call_ollama, 'openrouter': call_openrouter, 'google': call_google,
+            'vllm': call_vllm}
 
 
 def call(model: str, prompt: str, backend: str = 'ollama', **kw) -> str:

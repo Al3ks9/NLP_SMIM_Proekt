@@ -262,3 +262,61 @@ def test_post_backoff_grows_exponentially(monkeypatch):
     with pytest.raises(RuntimeError):
         lc._post('http://x', {}, {}, timeout=10, max_retries=3)
     assert delays == [lc.BASE_DELAY * 1, lc.BASE_DELAY * 2, lc.BASE_DELAY * 4]
+
+
+# ── vllm backend (Gemma 4 31B on our own A100) ───────────────────────────────
+#
+# Same model as the google backend, minus its quota and 500s. The API always
+# reasons, so the local teacher must too -- and its reasoning block has to be
+# removed whether or not the server's gemma4 reasoning parser caught it.
+
+def _vllm_response(content, finish='stop'):
+    return {'choices': [{'message': {'content': content}, 'finish_reason': finish}]}
+
+
+def test_call_vllm_returns_parsed_content(monkeypatch):
+    # Server-side reasoning parser worked: content is the bare answer.
+    monkeypatch.setattr(lc, '_post', lambda *a, **kw: _vllm_response('Под врба војникот спие,'))
+    assert lc.call_vllm('gemma-4-31b-it', 'prompt') == 'Под врба војникот спие,'
+
+
+def test_call_vllm_strips_an_inline_thinking_block(monkeypatch):
+    # No parser (or it missed): the channel block arrives inside content.
+    monkeypatch.setattr(lc, '_post', lambda *a, **kw: _vllm_response(
+        "<|channel>thought\n'гие' isn't a word.<channel|>Под врба војникот спие,<turn|>"))
+    assert lc.call_vllm('gemma-4-31b-it', 'prompt') == 'Под врба војникот спие,'
+
+
+def test_call_vllm_retries_then_raises_when_thinking_never_closed(monkeypatch):
+    calls = []
+
+    def fake_post(*a, **kw):
+        calls.append(1)
+        return _vllm_response('<|channel>thought\nstill thinking...', finish='length')
+
+    monkeypatch.setattr(lc, '_post', fake_post)
+    with pytest.raises(RuntimeError, match='length'):
+        lc.call_vllm('gemma-4-31b-it', 'prompt')
+    assert len(calls) == 2
+
+
+def test_call_vllm_requests_thinking_and_keeps_delimiters(monkeypatch):
+    sent = {}
+
+    def fake_post(url, body, headers, timeout):
+        sent.update(url=url, body=body)
+        return _vllm_response('ok')
+
+    monkeypatch.setattr(lc, '_post', fake_post)
+    lc.call_vllm('gemma-4-31b-it', 'prompt')
+    body = sent['body']
+    assert sent['url'].endswith('/v1/chat/completions')
+    assert body['model'] == 'gemma-4-31b-it'   # same id as the API -> summary cache hits
+    assert body['chat_template_kwargs'] == {'enable_thinking': True}
+    assert body['skip_special_tokens'] is False
+    assert 'max_tokens' not in body             # server grants max_model_len - prompt
+    assert body['messages'] == [{'role': 'user', 'content': 'prompt'}]
+
+
+def test_vllm_is_a_registered_backend():
+    assert lc.BACKENDS['vllm'] is lc.call_vllm

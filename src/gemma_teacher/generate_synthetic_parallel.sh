@@ -23,10 +23,14 @@
 #   src/gemma_teacher/generate_synthetic_parallel.sh 20 10 1 42
 #   src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 val   # Gemma teacher on the val pairs -> data/synthetic/teacher_val.csv
 #   src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 test  # ... on the test pairs -> data/synthetic/teacher_test.csv
+#   BACKEND=vllm src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 test   # local server, see src/gemma_teacher/hpc/vllm_teacher.slurm
 #
-# split=val writes to its own main file and parts dir (merge_synthetic_parts.py
-# paths_for_split), so val rows can never reach synthetic_dataset.csv, which
-# train_sft.py trains on.
+# split=val/test writes to its own main file and parts dir
+# (merge_synthetic_parts.py paths_for_split), so those rows can never reach
+# synthetic_dataset.csv, which train_sft.py trains on.
+#
+# BACKEND / MODEL (environment) override generate_synthetic.py's --backend /
+# --model; unset, its defaults (google, gemma-4-31b-it) apply.
 
 set -eo pipefail
 shopt -s nullglob
@@ -42,6 +46,10 @@ NUM_TARGET_AUTHORS="${2:-10}"
 SAMPLES_PER_PAIR="${3:-1}"
 SEED="${4:-42}"
 SPLIT="${5:-train}"
+
+LLM_ARGS=()
+if [ -n "$BACKEND" ]; then LLM_ARGS+=(--backend "$BACKEND"); fi
+if [ -n "$MODEL" ]; then LLM_ARGS+=(--model "$MODEL"); fi
 
 # Sets MAIN, ERRORS, PARTS_DIR, ERROR_PARTS_DIR, LOG_DIR for this split.
 eval "$(uv run python -m gemma_teacher.merge_synthetic_parts paths --split "$SPLIT")"
@@ -89,6 +97,7 @@ for author in "${AUTHORS[@]}"; do
         --samples-per-pair "$SAMPLES_PER_PAIR" \
         --seed "$SEED" \
         --split "$SPLIT" \
+        ${LLM_ARGS[@]+"${LLM_ARGS[@]}"} \
         --output-path "$part" \
         --errors-path "$errors" \
         > "$log" 2>&1 &

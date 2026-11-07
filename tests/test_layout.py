@@ -104,7 +104,10 @@ def test_hpc_scripts_reference_live_modules():
                         r'singularity/(qwen-sft\.def|build\.sh)'):
             for hit in re.findall(pattern, text):
                 problems.append(f'{rel}: stale path {hit!r}')
-        runs_container = 'singularity exec' in text or 'grpo_common.sh' in text
+        # Only the project's own image runs project code; vllm.sif is the
+        # stock vLLM server, talked to over HTTP.
+        runs_container = ('singularity exec' in text and 'qwen-sft.sif' in text) \
+            or 'grpo_common.sh' in text
         if runs_container and path.suffix == '.slurm' and 'grpo_common.sh' not in text \
                 and 'PYTHONPATH=/workspace/src' not in text:
             problems.append(f'{rel}: runs the container without PYTHONPATH=/workspace/src')

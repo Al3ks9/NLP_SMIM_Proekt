@@ -224,9 +224,9 @@ if __name__ == '__main__':
     parser.add_argument('--errors-path', type=Path, default=ERRORS_PATH,
                        help='errors CSV to append to -- same override as --output-path')
     parser.add_argument('--split', default='train', choices=['train', 'val', 'test'],
-                       help="source-poem split. 'val' is only for the teacher comparison "
-                            "run -- write it to data/synthetic/teacher_val.csv, never to "
-                            "synthetic_dataset.csv (train_sft.py reads that file)")
+                       help="source-poem split. 'val'/'test' are only for the teacher "
+                            "comparison runs -- write them to data/synthetic/teacher_<split>.csv, "
+                            "never to synthetic_dataset.csv (train_sft.py reads that file)")
     args = parser.parse_args()
 
     try:
