@@ -1,0 +1,83 @@
+% !TEX program = xelatex
+%
+% Bachelor's thesis. English drafts live next to this file; the Macedonian
+% translation of each chapter goes in mk/ under the same name. \mktrue
+% compiles the Macedonian thesis, using mk/<chapter>.tex where it exists and
+% the English draft otherwise. Compile: xelatex main && bibtex main && xelatex
+% main && xelatex main (not pdflatex: native Cyrillic via fontspec/polyglossia).
+\documentclass[12pt,a4paper]{report}
+
+\newif\ifmk
+\mkfalse   % \mktrue for the Macedonian thesis
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\ifmk
+  \setmainlanguage{macedonian}
+  \setotherlanguage{english}
+\else
+  \setmainlanguage{english}
+  \setotherlanguage{macedonian}
+\fi
+\setmainfont{Times New Roman}
+\setmonofont{Courier New}
+\newfontfamily\cyrillicfont{Times New Roman}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\graphicspath{{figures/}{../../data/figures/}}
+\usepackage[numbers]{natbib}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{xcolor}
+\sloppy
+
+\newcommand{\pending}[1]{\textcolor{orange}{[\emph{#1}]}}
+\newcommand{\chapterfile}[1]{%
+  \ifmk\IfFileExists{mk/#1.tex}{\input{mk/#1}}{\input{#1}}\else\input{#1}\fi}
+
+\begin{document}
+
+\begin{titlepage}
+\centering
+\vspace*{2cm}
+{\large Универзитет „Св. Кирил и Методиј“ во Скопје\\
+Факултет за информатички науки и компјутерско инженерство\par}
+\vspace{3cm}
+{\Large Дипломска работа\par}
+\vspace{1cm}
+{\LARGE\bfseries Способноста на мали јазични модели за промена на стил на македонски
+автори со примена на учење со поттикнување\par}
+\vspace{3cm}
+{\large \pending{Ментор: …}\hfill \pending{Кандидат: …}\par}
+\vfill
+{\large Скопје, 2026\par}
+\end{titlepage}
+
+\begin{abstract}
+\pending{Апстракт --- written last (problem, method, the negative result with three or four numbers).}
+\end{abstract}
+
+\tableofcontents
+
+\chapterfile{ch1_introduction}
+\chapterfile{ch2_background}
+\chapterfile{ch3_data}
+\chapterfile{ch4_stylometry}
+\chapterfile{ch5_path}
+\chapterfile{ch6_method}
+\chapterfile{ch7_evaluation}
+\chapterfile{ch8_results}
+\chapterfile{ch9_discussion}
+\chapterfile{ch10_conclusion}
+
+\appendix
+\chapterfile{app_examples}
+\chapterfile{app_prompts}
+\chapterfile{app_reproducibility}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

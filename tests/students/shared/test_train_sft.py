@@ -184,7 +184,7 @@ def test_gemma_train_builds_prompt_completion_datasets(monkeypatch, tmp_path):
     monkeypatch.setattr(ts, 'SFTTrainer', _FakeTrainer)
     monkeypatch.setattr(ts, 'load_model_and_tokenizer', lambda *a, **kw: ('MODEL', _FakeTokenizer()))
 
-    def fake_build_datasets(path, eval_split='val', fmt='messages', tokenizer=None):
+    def fake_build_datasets(path, eval_split='val', fmt='messages', tokenizer=None, **kw):
         seen['fmt'], seen['tokenizer'] = fmt, tokenizer
         return 'TRAIN_DS', None
     monkeypatch.setattr(ts, 'build_datasets', fake_build_datasets)
@@ -215,3 +215,37 @@ def test_max_seq_length_defaults_per_family():   # review I2
     assert ts.parse_args([]).max_seq_length == 1024
     assert ts.parse_args(['--family', 'gemma4']).max_seq_length == 4096
     assert ts.parse_args(['--family', 'gemma4', '--max-seq-length', '2048']).max_seq_length == 2048
+
+
+# ── --train-fraction (data-scaling run) ────────────────────────────────────────
+
+def _target_rows():
+    return [{'target_author': a, 'i': i} for a in ('A', 'B') for i in range(10)]
+
+
+def test_subsample_per_target_half():
+    rows = _target_rows()
+    half = ts.subsample_per_target(rows, 0.5, seed=42)
+    assert sorted(r['target_author'] for r in half) == ['A'] * 5 + ['B'] * 5
+    assert half == ts.subsample_per_target(rows, 0.5, seed=42)
+    assert half == [r for r in rows if r in half]                  # original order kept
+
+
+def test_fraction_one_is_identity():
+    rows = _target_rows()
+    assert ts.subsample_per_target(rows, 1.0, seed=42) == rows
+
+
+def test_build_datasets_applies_train_fraction_to_train_only(monkeypatch, tmp_path):
+    monkeypatch.setattr(ts, 'load_synthetic_rows',
+                        lambda split, path: _target_rows() if split == 'train' else [{'v': 1}] * 4)
+    monkeypatch.setattr(ts, 'build_hf_dataset', lambda rows: rows)
+    train_ds, eval_ds = ts.build_datasets(tmp_path / 's.csv', eval_split='val', train_fraction=0.5)
+    assert len(train_ds) == 10 and len(eval_ds) == 4
+
+
+def test_train_fraction_gets_its_own_default_output_dir():
+    full = ts.parse_args([])
+    half = ts.parse_args(['--train-fraction', '0.5'])
+    assert full.train_fraction == 1.0
+    assert half.output_dir != full.output_dir and half.output_dir.name.endswith('-frac0.5')

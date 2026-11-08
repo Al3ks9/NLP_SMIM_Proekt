@@ -134,3 +134,14 @@ def test_claude_md_paths_exist():
     paths = set(re.findall(r'(?<![\w/])((?:src|tests)/[\w/.-]+\.(?:py|sh|slurm|def))', text))
     missing = sorted(p for p in paths if not (ROOT / p).exists())
     assert not missing, '\n'.join(missing)
+
+
+def test_eval_test_slurm_honours_family():
+    """The test-split job serves both students: FAMILY picks the models/ dirs
+    through grpo_common.sh's $TAG, and Qwen's v1/v2 systems stay reachable."""
+    text = (SRC / 'students' / 'qwen' / 'hpc' / 'eval_test.slurm').read_text(encoding='utf-8')
+    assert '\nFAMILY=qwen3\n' not in text
+    assert 'source src/students/shared/hpc/grpo_common.sh' in text
+    assert 'models/$TAG-sft-merged' in text and 'models/$TAG-grpo' in text
+    assert 'grpo-v1)' in text and 'grpo-v2)' in text
+    assert '--family "$FAMILY"' in text

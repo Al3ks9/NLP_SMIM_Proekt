@@ -63,8 +63,8 @@ teacher (Gemma~4 31B behind a rate-limited API, about three minutes per poem
 including obligatory reasoning) needs the whole stylometric pipeline at
 inference time; the student needs none of it.
 
-\paragraph{Data.} \texttt{make\_splits.py} splits the 1{,}239 poems of the 38
-profiled authors 80/10/10 per author (seed 42) into 987 train, 126 val and 126
+\paragraph{Data.} \texttt{make\_splits.py} splits the 1{,}239 poems of all 38
+authors (24 of them with style profiles) 80/10/10 per author (seed 42) into 987 train, 126 val and 126
 test poems; the unit is the poem, since (author, title) is not unique in the
 corpus. The ten target authors are the ten with the most poems: Блаже
 Конески, Пијан Славеј, Ефтим Клетников, Ристо Лазаров, Веле Смилевски,

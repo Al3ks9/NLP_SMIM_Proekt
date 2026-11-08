@@ -1,0 +1,112 @@
+\chapter{Introduction}\label{ch:intro}
+
+\section{Motivation}
+
+A poet's style is the part of a poem that survives a change of subject: the
+words they reach for, how long their lines run, whether they rhyme and how,
+which images return. Rewriting a poem so that its content stays and its
+voice becomes another poet's is a hard test of whether a language model has
+learned that layer of language rather than its surface. This is the task of
+\emph{text style transfer}, here in its most demanding form: the ``style''
+is not a register such as formal or informal, but one particular author.
+
+Most work on style transfer and on language models in general is done in
+English, where data is plentiful. Macedonian is a low-resource language: it
+has few annotated corpora, few tools, and it is a small share of what
+general-purpose models are trained on. Poetry makes this worse. A poet
+writes a few hundred poems in a lifetime, often far fewer, so even a
+complete collection of an author's work is a small dataset by the standards
+of machine learning. The corpus this thesis is built on holds 1,239 poems
+and song lyrics by 38 Macedonian authors; the best represented author has
+182 poems, the next two 160 and 134, and half of the authors
+have seventeen or fewer.
+
+Large models can be prompted to write in a given style, but they are
+expensive to run and are not under the user's control. Small models of a
+few billion parameters can be trained and run on a single GPU, which makes
+them the practical choice for a language community without large
+computational resources. Whether they can learn a task as fine-grained as
+an individual poet's voice, from so little data, is the question this
+thesis sets out to answer.
+
+\section{Research question}
+
+The thesis asks:
+
+\begin{quote}
+\emph{Can a small language model, given only a source poem and the name of
+a Macedonian author, rewrite the poem in that author's style, and does
+reinforcement learning improve the result?}
+\end{quote}
+
+Two parts of the question need making precise. ``In that author's style''
+is measured in two ways that do not depend on each other: automatically,
+by stylometric features and by an author classifier that the training never
+sees, and by human judgement. ``Reinforcement learning'' is Group Relative
+Policy Optimization (GRPO) \pending{cite: Shao et al.\ 2024}, applied on top
+of supervised fine-tuning with a reward built from the same stylometric
+profile of each author.
+
+\section{Approach and main finding}
+
+The work reached its final form after several approaches that did not work.
+Replacing selected words of the source poem with words typical of the
+target author, inflected to fit, preserves the poem but changes little of
+its style. Asking small local models to fill such slots fails at
+Macedonian itself. What did work was a large model, Gemma~4 31B
+\pending{cite}, prompted with a detailed scaffold: a summary of the source
+poem, a prose description of the target author's style, a vocabulary
+palette and example lines, and explicit structural targets. That model
+became the \emph{teacher}. Its outputs, about 115 per target author for ten
+target authors, are the training data for two \emph{students} of similar
+size, Qwen3-4B \pending{cite} and Gemma~4 E4B, which see only the source
+poem and the author's name. Each student is fine-tuned with LoRA
+\pending{cite: Hu et al.\ 2022} on the teacher's poems and then trained
+further with GRPO.
+
+The main finding is negative. The students learn the task's form: they
+write Macedonian, they write poems rather than prose, they change the
+source rather than copy it. They do not learn the voices. An independent
+author classifier recognises the intended author in 16.7\% of the
+fine-tuned Qwen student's poems on the held-out test pairs, against 66.3\%
+for real, unseen poems by the same authors; after GRPO the figure falls to
+12.4\%, even though the reward it optimises improves.
+\pending{Gemma student and teacher numbers on test; human ratings.} The
+outputs that are identified belong almost entirely to the three authors
+with the most poems in the corpus. The thesis argues that the limit is the
+data rather than the method: a stronger student, a better-tuned reward and
+the teacher itself all run into the same small, uneven corpus.
+
+\section{Contributions}
+
+\begin{itemize}
+  \item A cleaned and part-of-speech-tagged corpus of Macedonian poetry,
+        with poem-level identifiers, documented tagging corrections and a
+        fixed train/validation/test split by author.
+  \item Per-author stylometric profiles and a style-transfer reward built
+        from them: part-of-speech distributions, lexical diversity, line
+        and stanza structure, rhyme, characteristic vocabulary and an
+        author classifier, with gates against copying the source and
+        against degenerate output.
+  \item A teacher--student pipeline that distils a large, heavily prompted
+        model into two small students, followed by GRPO, run with matched
+        settings for both students so that their results can be compared.
+  \item An evaluation that separates real gains from reward gaming: the
+        classifier used as a reward is never used to judge the outcome,
+        a second classifier trained on different features is.
+  \item A human evaluation of the teacher, both students and real poems on
+        the same test pairs, with the real poems as a blind control.
+\end{itemize}
+
+\section{Structure of the thesis}
+
+Chapter~\ref{ch:background} reviews text style transfer, stylometry,
+knowledge distillation and reinforcement learning for language models.
+Chapter~\ref{ch:data} describes the corpus and its preparation, and
+Chapter~\ref{ch:stylometry} the stylometric profiles and classifiers the
+rest of the work relies on. Chapter~\ref{ch:path} summarises the earlier
+approaches and why they were abandoned. Chapter~\ref{ch:method} presents the
+teacher, the students and the reward; Chapter~\ref{ch:eval} the
+evaluation protocol. Chapter~\ref{ch:results} reports the results,
+Chapter~\ref{ch:discussion} discusses why the students fall short, and
+Chapter~\ref{ch:conclusion} concludes.

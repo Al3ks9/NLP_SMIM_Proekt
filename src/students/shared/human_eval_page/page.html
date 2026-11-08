@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="mk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Оценување на песни</title>
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1d1b; --muted: #6b6a66; --line: #dddad2; --box: #ffffff;
+          --accent: #2f7d5b; --accent-fg: #ffffff; --focus: #eef5f1; --warn: #fff3cd; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1c1e; --fg: #e8e6e1; --muted: #9a988f; --line: #3a3b3e; --box: #232427;
+            --accent: #5fb38c; --accent-fg: #10120f; --focus: #263029; --warn: #4a3f1c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  #app { max-width: 1100px; margin: 0 auto; padding: 16px; }
+  .top { display: flex; justify-content: flex-end; gap: 8px; min-height: 8px; }
+  .warn { flex: 1; background: var(--warn); padding: 8px 12px; border-radius: 6px; }
+  .head { font-weight: 600; margin: 8px 0 4px; }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; margin-bottom: 12px; }
+  .bar div { height: 6px; background: var(--accent); border-radius: 3px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .two { grid-template-columns: 1fr; } }
+  .box { background: var(--box); border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+  .tag { font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: .02em; }
+  .poem { white-space: pre-line; font-family: Georgia, "Times New Roman", serif; font-size: 15px; line-height: 1.5; }
+  details { margin-bottom: 12px; } summary { cursor: pointer; color: var(--muted); margin-bottom: 8px; }
+  .scales { margin: 12px 0; }
+  .hint { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .scale { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; flex-wrap: wrap; }
+  .scale.focus { background: var(--focus); }
+  .q { flex: 0 0 290px; }
+  @media (max-width: 720px) { .q { flex-basis: 100%; } }
+  button { font: inherit; color: var(--fg); background: var(--box); border: 1px solid var(--line);
+           border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  .dot { width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+  .dot.on, .primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  textarea, input { width: 100%; font: inherit; color: var(--fg); background: var(--box);
+                    border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+  .nav { display: flex; justify-content: space-between; margin: 12px 0 32px; }
+  .reveal { margin-top: 12px; font-weight: 600; border-color: var(--accent); }
+  .start { max-width: 560px; margin: 48px auto; display: grid; gap: 12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const DATA = /*__DATA__*/;
+/*__JS__*/
+</script>
+</body>
+</html>

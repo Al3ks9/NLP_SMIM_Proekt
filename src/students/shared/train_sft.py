@@ -48,6 +48,7 @@ Usage (single A100 80GB; see src/students/qwen/hpc/train_sft.slurm for the clust
 import argparse
 import json
 import logging
+import random
 from pathlib import Path
 
 import torch
@@ -115,15 +116,34 @@ def _to_dataset(rows: list, fmt: str, tokenizer):
     return build_hf_dataset(rows, fmt=fmt, tokenizer=tokenizer)
 
 
+def subsample_per_target(rows: list, fraction: float, seed: int) -> list:
+    """round(fraction * n) rows (at least one) per target author, seeded, in
+    the original order -- the data-scaling run keeps every target, with less
+    of each."""
+    if fraction >= 1.0:
+        return rows
+    by_target = {}
+    for i, r in enumerate(rows):
+        by_target.setdefault(r['target_author'], []).append(i)
+    rng = random.Random(seed)
+    keep = set()
+    for target in sorted(by_target):
+        idx = by_target[target]
+        keep.update(rng.sample(idx, max(1, round(fraction * len(idx)))))
+    return [r for i, r in enumerate(rows) if i in keep]
+
+
 def build_datasets(synthetic_path: Path, eval_split: str = 'val', fmt: str = 'messages',
-                   tokenizer=None):
+                   tokenizer=None, train_fraction: float = 1.0, seed: int = 42):
     """(train_dataset, eval_dataset). eval_dataset is None when eval_split is
     falsy or the synthetic CSV has no rows for it. fmt / tokenizer go to
-    sft_data.build_hf_dataset ('prompt_completion' for Gemma)."""
+    sft_data.build_hf_dataset ('prompt_completion' for Gemma). train_fraction
+    subsamples the train rows per target (subsample_per_target); eval is untouched."""
     train_rows = load_synthetic_rows(split='train', path=synthetic_path)
     if not train_rows:
         raise ValueError(f'no split="train" rows in {synthetic_path} -- run '
                          'generate_synthetic.py first')
+    train_rows = subsample_per_target(train_rows, train_fraction, seed)
     train_dataset = _to_dataset(train_rows, fmt, tokenizer)
 
     eval_dataset = None
@@ -183,7 +203,8 @@ def train(args) -> Path:
     fmt = ('prompt_completion' if mf.get_family(args.family).loss_masking == 'completion_only'
            else 'messages')
     train_dataset, eval_dataset = build_datasets(args.synthetic_data, eval_split=args.eval_split,
-                                                 fmt=fmt, tokenizer=tokenizer)
+                                                 fmt=fmt, tokenizer=tokenizer,
+                                                 train_fraction=args.train_fraction, seed=args.seed)
 
     lora_config = build_lora_config(
         args.lora_r, args.lora_alpha, args.lora_dropout, args.target_modules)
@@ -223,6 +244,9 @@ def parse_args(argv=None):
     parser.add_argument('--synthetic-data', type=Path, default=DEFAULT_SYNTHETIC_PATH)
     parser.add_argument('--output-dir', type=Path, default=None,
                        help='default: models/<family tag>-lora-sft')
+    parser.add_argument('--train-fraction', type=float, default=1.0,
+                        help='train on this share of the synthetic train rows, per target '
+                             '(data-scaling run); <1 defaults --output-dir to <sft dir>-frac<f>')
     parser.add_argument('--eval-split', default='val',
                        help="synthetic-CSV split used as eval_dataset (loss monitoring "
                             "only, never trained on); pass '' to disable")
@@ -274,6 +298,9 @@ def resolve(args):
         args.model_name = fam.hf_name
     if args.output_dir is None:
         args.output_dir = mf.default_dirs(fam)['sft']
+        if args.train_fraction < 1.0:   # never overwrite the full-data adapter
+            args.output_dir = args.output_dir.with_name(
+                f'{args.output_dir.name}-frac{args.train_fraction:g}')
     if args.target_modules is None:
         args.target_modules = fam.target_modules
     if args.max_seq_length is None:

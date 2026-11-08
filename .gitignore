@@ -86,3 +86,13 @@ models/judge_classifier.pkl
 models/reward_components*.jsonl
 
 .vscode/
+# human-evaluation page dry runs (src/students/shared/human_eval.py)
+data/human_eval/dryrun/
+
+# thesis build artefacts (docs/thesis/main.tex)
+docs/thesis/*.aux
+docs/thesis/*.log
+docs/thesis/*.out
+docs/thesis/*.toc
+docs/thesis/*.bbl
+docs/thesis/*.blg
