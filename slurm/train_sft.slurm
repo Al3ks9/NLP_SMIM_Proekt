@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=qwen3-lora-sft
-#SBATCH --partition=openlab-queue
+#SBATCH --partition=cybermacs-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=64G

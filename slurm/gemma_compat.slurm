@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=gemma4-compat
-#SBATCH --partition=openlab-queue
+#SBATCH --partition=cybermacs-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
