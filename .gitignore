@@ -96,3 +96,6 @@ docs/thesis/*.out
 docs/thesis/*.toc
 docs/thesis/*.bbl
 docs/thesis/*.blg
+docs/thesis/*.synctex.gz
+docs/thesis/*.fls
+docs/thesis/*.fdb_latexmk

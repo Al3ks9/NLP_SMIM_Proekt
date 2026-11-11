@@ -1,16 +1,146 @@
+% !TEX root = main.tex
 \chapter{Background}\label{ch:background}
 
 \section{Text style transfer}
-\pending{Supervised, unsupervised, prompting, infilling (PEGF).}
+
+Text style transfer rewrites a text so that one attribute, its style,
+changes while its content stays \citep{jin2022survey}. What counts as style
+varies from task to task: sentiment, formality, politeness, or the manner of
+a particular author. The last kind is the oldest example in the field:
+\citet{xu2012shakespeare} paraphrased modern English into Shakespeare's
+English and back, using the parallel modern versions of his plays.
+
+\paragraph{Supervised transfer.} When parallel data exists, pairs of texts
+with the same content in two styles, the task is ordinary sequence-to-sequence
+learning. The best known dataset of this kind, GYAFC, has about 110,000
+informal--formal sentence pairs written by crowd workers
+\citep{rao2018gyafc}. Parallel data for an individual author's style
+practically never exists: nobody writes the same poem twice in two poets'
+voices.
+
+\paragraph{Unsupervised transfer.} Most of the literature therefore works
+with non-parallel data, texts in each style that are not translations of
+each other. One line of work separates content from style in a latent
+representation and decodes the content with a different style
+\citep{shen2017crossalign}. Another edits the text directly: it deletes the
+words that mark the source style and fills the gaps with words typical of
+the target style \citep{li2018delete}. A third treats transfer as
+paraphrasing: a paraphrase model first strips the style, and a model trained
+on one style's texts then rewrites the neutral paraphrase in that style
+\citep{krishna2020strap}. Reinforcement learning was used here as well, with
+rewards for the target style and for preserving content
+\citep{luo2019dualrl}.
+
+\paragraph{Prompting large models.} Large language models can perform
+style transfer with no training at all, given an instruction and a few
+examples \citep{reif2022recipe}. Infilling methods combine the editing view
+with prompting: the words that carry style are marked or masked, and a
+language model chooses their replacements, so that the rest of the text,
+and with it the content, is left untouched \citep{pegf}. The second of the
+earlier approaches in this thesis (Chapter~\ref{ch:path}) follows this
+design.
+
+\paragraph{Poetry and author style.} Poetry adds constraints that prose
+does not have: lines, stanzas, metre and rhyme. \citet{tikhonov2018guesswho}
+generated poetry in the style of particular authors, in English and in
+Russian, and evaluated the results both automatically and with human
+readers. Their models generate new poems from an author's
+corpus; the task in this thesis is harder in one respect, because the
+generated poem must also keep the content of a given source poem written
+by someone else.
 
 \section{Stylometry and authorship attribution}
-\pending{to write}
 
-\section{Knowledge distillation and LoRA}
-\pending{to write}
+Stylometry measures style with countable features of a text, and its
+central application is authorship attribution: deciding who wrote a text
+\citep{stamatatos2009survey}. The classic study of the disputed
+\emph{Federalist} papers showed that the frequencies of common function
+words, which an author uses without thinking about them, identify the
+author better than the content does \citep{mosteller1964}. Burrows' Delta
+\citep{burrows2002delta}, a distance over standardised frequencies of the
+most frequent words, became the standard baseline. Modern attribution
+combines many feature types (word and character $n$-grams, part-of-speech
+patterns, vocabulary richness, sentence and line length) with a supervised
+classifier \citep{stamatatos2009survey}. Vocabulary richness is length
+dependent, so a measure that does not grow with the text is needed to
+compare short poems with long ones; the moving-average type--token ratio
+(MATTR) computes the ratio over a sliding window of fixed size
+\citep{covington2010mattr}.
+
+This thesis uses stylometry in two roles. A profile of each author's
+features defines what the reward asks for, and an author classifier
+measures whether a generated poem reads as that author's. When the same
+classifier is both rewarded and used to measure success, a model can learn
+to satisfy the classifier without writing like the author, so the
+evaluation uses a second classifier that the training never sees
+(Chapter~\ref{ch:stylometry}).
+
+\section{Knowledge distillation and low-rank adaptation}
+
+Knowledge distillation trains a small \emph{student} model to imitate a
+larger \emph{teacher} \citep{hinton2015distilling}. For text generation the
+simplest and most effective form trains the student on the teacher's
+outputs, as if they were the reference data (sequence-level distillation,
+\citealp{kim2016seqkd}). Large language models have made this a common way
+of building training data: a strong model writes examples of a task, and a
+smaller model is fine-tuned on them \citep{wang2023selfinstruct}. The
+students in this thesis are trained the same way, on poems written by the
+teacher.
+
+Fine-tuning all the weights of a model with billions of parameters needs
+more memory than a single GPU has. Low-rank adaptation (LoRA,
+\citealp{hu2022lora}) freezes the original weights and learns, for chosen
+weight matrices, a correction in the form of a product of two small
+matrices. The trainable parameters are a fraction of a percent of the
+model, and after training the correction can be merged into the weights.
 
 \section{Reinforcement learning for language models}
-\pending{RLHF/PPO, GRPO.}
+
+Supervised fine-tuning teaches a model to imitate examples. Reinforcement
+learning instead lets the model generate, scores each output with a
+\emph{reward}, and changes the model so that high-reward outputs become more
+likely. For language models the reward was first learned from human
+preferences between pairs of outputs \citep{christiano2017deep,
+ziegler2019finetuning}; this reinforcement learning from human feedback
+(RLHF) is how instruction-following assistants are trained
+\citep{ouyang2022instructgpt}. The optimisation algorithm in that work is
+Proximal Policy Optimization (PPO, \citealp{schulman2017ppo}), which needs,
+besides the model being trained, a second network of similar size to
+estimate the value of each state.
+
+Group Relative Policy Optimization (GRPO, \citealp{shao2024deepseekmath})
+removes that second network. For each prompt it samples a group of
+outputs, scores them, and uses each output's reward relative to the mean
+and standard deviation of its group as the advantage. A penalty on the
+divergence from a reference model keeps the trained model close to where
+it started. GRPO was introduced for mathematical reasoning and later used
+to train reasoning models with rewards that can be checked automatically
+\citep{deepseek2025r1}. Here the reward is computed, not learned from
+preferences: it is the stylometric profile of the target author together
+with a measure of content preservation.
+
+Any reward is only an approximation of what is wanted, and a model that
+optimises it hard enough finds ways to score well without doing the task.
+This \emph{reward hacking} \citep{skalse2022hacking} grows with the strength
+of the optimisation \citep{gao2023overoptimization}, and it is why the
+reward and the evaluation in this thesis use different measurements.
+Training uses the TRL library \citep{vonwerra2020trl}.
 
 \section{Macedonian NLP}
-\pending{CLASSLA and available resources.}
+
+Macedonian is a South Slavic language written in Cyrillic, with rich verb
+morphology, a postposed definite article with three forms, and almost no
+noun cases. It has far fewer resources than English or than the larger
+Slavic languages. The CLASSLA project provides tagging and lemmatisation
+for South Slavic languages, built on the Stanza toolkit
+\citep{qi2020stanza, ljubesic2019neural, tercon2023classla}; its
+Macedonian models assign each token a lemma, a universal part-of-speech
+tag, and a MULTEXT-East morphosyntactic description
+\citep{erjavec2012multext}. Large general-purpose models do write
+Macedonian, but with deviations in grammar and word agreement
+\citep{arizankovska2024chatgpt}, and the small open models used as
+students in this thesis were trained on very little of it.
+The first open foundation model built specifically for Macedonian, with an
+8-billion-parameter model, a corpus of 3.5 billion words, an instruction
+dataset and a seven-task benchmark, appeared only in 2025
+\citep{krsteski2025macedonian}.

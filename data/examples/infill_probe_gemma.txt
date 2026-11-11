@@ -1,0 +1,197 @@
+  [candidates] slot source_word=чемрее pos=VERB chosen=мрзне score=0.7089 morph_tier=relaxed semantic_tier=primary
+  [candidates] slot source_word=проклета pos=ADJ chosen=мојата score=0.335 morph_tier=relaxed semantic_tier=primary
+  [candidates] slot source_word=незнаен pos=ADJ chosen=мој score=0.4404 morph_tier=relaxed semantic_tier=primary
+
+========================================================================
+MODEL: gemma-4-31b-it  (backend: google, instructions: en)
+========================================================================
+
+── 1. fluency ──────────────────────────────────────────────────
+
+==PROMPT==
+Write four lines of verse in Macedonian about the river Vardar. Reply with the verse only, no explanation.
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 1.5s (attempt 1/5)
+HTTP 503: {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+ -- retrying in 2.2s (attempt 2/5)
+Вардар силно низ нас тече,
+преку полиња се влече,
+од планини до морето оди,
+и живот во срцата роди.
+
+  [timing] 236.1s
+
+  [script OK] cyr_ratio=1.0 latin=0 mk_only=[] neighbouring=[] (fyi, not a defect)
+
+── 2. infill_implicit ──────────────────────────────────────────
+
+==PROMPT==
+Here is a text:
+Натаму – в поле битолско
+[чемрее] врба [проклета] –
+под врбата [незнаен] гроб,
+в гроб лежи војник непознат.
+
+The target style is that of the Macedonian poet Блаже Конески.
+For each marked word, choose one of the suggested replacements:
+  [чемрее] (VERB) → мрзне, гласи, спремам
+  [проклета] (ADJ) → мојата, клета, скришна
+  [незнаен] (ADJ) → мој, безгласен, каков
+
+The words marked in [brackets] are style words that must be replaced. Replace ONLY those words with words fitting the target style. Leave every other word exactly as it is. Keep the same line structure. Reply with the new Macedonian text only — no brackets, no explanation.
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 1.3s (attempt 1/5)
+Натаму – в поле битолско
+гласи врба клета –
+под врбата безгласен гроб,
+в гроб лежи војник непознат.
+
+  [timing] 51.5s
+
+  [script OK] cyr_ratio=1.0 latin=0 mk_only=[] neighbouring=[] (fyi, not a defect)
+  [infill] lines=4->4 content_kept=1.0 markers_left=0 preamble=False
+
+── 3. infill_explicit ──────────────────────────────────────────
+
+==PROMPT==
+Here is a text:
+Натаму – в поле битолско
+[MASK] врба [MASK] –
+под врбата [MASK] гроб,
+в гроб лежи војник непознат.
+
+The target style is that of the Macedonian poet Блаже Конески.
+For each marked word, choose one of the suggested replacements:
+  [MASK] 1 (VERB) → мрзне, гласи, спремам
+  [MASK] 2 (ADJ) → мојата, клета, скришна
+  [MASK] 3 (ADJ) → мој, безгласен, каков
+
+Replace each [MASK] with a word fitting the target style. Leave every other word exactly as it is. Keep the same line structure. Reply with the new Macedonian text only, no explanation.
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 2.0s (attempt 1/5)
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 2.5s (attempt 2/5)
+HTTP 503: {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+ -- retrying in 4.1s (attempt 3/5)
+Натаму – в поле битолско
+гласи врба скришна –
+под врбата безгласен гроб,
+в гроб лежи војник непознат.
+
+  [timing] 112.3s
+
+  [script OK] cyr_ratio=1.0 latin=0 mk_only=[] neighbouring=[] (fyi, not a defect)
+  [infill] lines=4->4 content_kept=1.0 markers_left=0 preamble=False
+
+── 4. vanilla ──────────────────────────────────────────────────
+
+==PROMPT==
+Here is a text:
+Натаму – в поле битолско
+чемрее врба проклета –
+под врбата незнаен гроб,
+в гроб лежи војник непознат.
+
+The target style is that of the Macedonian poet Блаже Конески. Words characteristic of that style: вик, мрачен, сосем, вод, син, некаква, гласи, сокол, тивка, младост, ужас, самотен, мрзне, тешкото, ах.
+
+Rewrite the text in the target style, preserving its content. Reply with the new Macedonian text only, no explanation.
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 1.9s (attempt 1/5)
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 2.1s (attempt 2/5)
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 4.5s (attempt 3/5)
+HTTP 500: {
+  "error": {
+    "code": 500,
+    "message": "Internal error encountered.",
+    "status": "INTERNAL"
+  }
+}
+ -- retrying in 8.1s (attempt 4/5)
+Таму, во мрачното битолско поле,
+гласи тивка, сосем самотна врба –
+под неа, во тешкото молчење,
+лежи син, заборавена младост, ах, непознат.
+
+  [timing] 147.1s
+
+  [script OK] cyr_ratio=1.0 latin=0 mk_only=[] neighbouring=[] (fyi, not a defect)
+  [infill] lines=4->4 content_kept=0.375 markers_left=0 preamble=False
+
+── 5. morphology ───────────────────────────────────────────────
+
+==PROMPT==
+Answer in Macedonian with the requested forms only, one per line, no explanation.
+1. Put the verb "оди" in the correct form: "Јас ___ по патот."
+2. Put the adjective "тивок" in the correct form: "___ ноќ."
+3. Put the noun "река" in the definite plural form.
+4. Put the verb "пее" in the past definite tense, third person singular.
+одам
+тива
+реките
+спее
+
+  [timing] 27.3s
+
+  [script OK] cyr_ratio=1.0 latin=0 mk_only=[] neighbouring=[] (fyi, not a defect)
+
+========================================================================
+Done. 5 calls, 574.4s total, 114.9s/call.
+At that rate: ~28.7 min per poem at full PEGF (~15 calls), ~23.9 h for a 50-poem eval.
+
+exit 0

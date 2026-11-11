@@ -8,7 +8,7 @@
 \documentclass[12pt,a4paper]{report}
 
 \newif\ifmk
-\mkfalse   % \mktrue for the Macedonian thesis
+\ifdefined\thesismk\mktrue\else\mkfalse\fi   % main_mk.tex builds the Macedonian thesis
 
 \usepackage{fontspec}
 \usepackage{polyglossia}
@@ -22,6 +22,7 @@
 \setmainfont{Times New Roman}
 \setmonofont{Courier New}
 \newfontfamily\cyrillicfont{Times New Roman}
+\newfontfamily\cyrillicfonttt{Courier New}[Script=Cyrillic]
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}

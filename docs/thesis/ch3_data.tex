@@ -1,16 +1,139 @@
+% !TEX root = main.tex
 \chapter{Data}\label{ch:data}
 
 \section{The corpus}
-\pending{1,239 poems by 38 authors; 24 authors with at least 5 poems are profiled.}
+
+The corpus holds 1,239 Macedonian poems and song lyrics by 38 authors,
+130,059 whitespace-separated tokens in all. Every poem has four fields: a
+numeric identifier, the author, the title and the text, in Cyrillic script
+with one verse per line and blank lines between stanzas. A typical poem is
+short: the median poem has 17 lines and 81 tokens.
+
+The authors are very unevenly represented (Table~\ref{tab:authors}). Three
+of them, Блаже Конески, Пијан Славеј and Ефтим Клетников, account for 476
+poems, 38\% of the corpus. The next author has 70. Half of the 38 authors
+have 17 poems or fewer, and eight have only one or two. Only 24 authors have
+at least five poems; these are the authors for whom a stylometric profile
+is built (Chapter~\ref{ch:stylometry}), and the remaining 14 appear in the
+data only as poems, never as targets of style transfer.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Author & Corpus & Train split & Teacher examples \\
+\midrule
+Блаже Конески       & 182 & 146 & 109 \\
+Пијан Славеј        & 160 & 128 & 108 \\
+Ефтим Клетников     & 134 & 108 & 110 \\
+Славко Јаневски     &  70 &  56 & 120 \\
+Влада Урошевиќ      &  61 &  49 & 114 \\
+Катица Ќулавкова    &  60 &  48 & 114 \\
+Братислав Ташковски &  56 &  44 & 114 \\
+Веле Смилевски      &  49 &  39 & 118 \\
+Ристо Лазаров       &  48 &  38 & 120 \\
+Адем Гајтани        &  45 &  37 & 119 \\
+\midrule
+Other 28 authors    & 374 & 294 & --- \\
+\bottomrule
+\end{tabular}
+\caption{Poems per author for the ten target authors: in the whole corpus,
+in the training split, and synthetic training examples written by the
+teacher model with that author as the target (Chapter~\ref{ch:method}).}
+\label{tab:authors}
+\end{table}
 
 \section{Cleaning}
-\pending{Script artifacts, poem ids.}
+
+\paragraph{Poem identifiers.} An author and a title do not identify a poem:
+about fifteen (author, title) pairs are shared by several different poems,
+Блаже Конески alone having four poems titled \emph{Песна}. Every poem is
+therefore given a stable numeric identifier, and every later stage, from
+the splits to the generated outputs, refers to poems by that identifier.
+
+\paragraph{Script artefacts.} 52 poems contain a Latin or Greek letter. In
+about 22 of them the letter is an artefact of digitisation: a character
+that looks like a Cyrillic one but has a different code point, such as a
+Greek \emph{о} standing for the vocative \emph{о}, or words that mix two
+scripts, such as \emph{штο} or \emph{ΚАМЕН}. The rest are intentional:
+Roman numerals and about thirty poems with whole words in Latin script.
+The two cases are kept apart. Artefacts are flagged during tagging and
+corrected by hand (below); intentional foreign words are left as they are.
 
 \section{Tagging and corrections}
-\pending{CLASSLA, the three normalizations, hand corrections.}
+
+The corpus is tagged with CLASSLA-Stanza \pending{cite: Ljubešić and Dobrovoljc
+2019; Terčon and Ljubešić 2023}, using its Macedonian models, which give for
+every token a lemma, a universal part-of-speech tag, a MULTEXT-East
+morphosyntactic tag \pending{cite: Erjavec 2012} and morphological features.
+A hand check of 70 randomly chosen tokens against their lines put the
+accuracy of the part-of-speech tag at about 96\%. The stylometric work uses only content
+words (nouns, proper nouns, verbs, adjectives and adverbs): 70,531 tokens.
+
+Three corrections are applied on top of the tagger's output:
+
+\begin{enumerate}
+  \item \emph{Hand corrections.} A file of corrections, each keyed on a
+        word and the tag judged wrong, is applied first, so that correctly
+        tagged occurrences of the same word are never rewritten. A
+        correction can change the tag, the lemma, or drop the token (for
+        noise such as timestamps). There are currently 90.
+  \item \emph{Relativisers.} The tagger labels the relativisers
+        \emph{што}, \emph{кога}, \emph{како}, \emph{колку} and \emph{каде}
+        as adverbs. Left in, they were the five most frequent ``content''
+        words in the corpus, 1,478 tokens or 19\% of all adverbs, and
+        distorted every part-of-speech ratio built on adverbs. They carry a
+        bare adverb tag without a degree, which real adverbs always have,
+        and are filtered on that.
+  \item \emph{Verbal adverbs.} Forms in \emph{-јќи} (\emph{барајќи}) are
+        left unlemmatised by the tagger. They are re-lemmatised to their
+        base verb; where the ending is ambiguous (\emph{велејќи} from
+        \emph{вели}, but \emph{знаејќи} from \emph{знае}) the more frequent
+        verb lemma in the corpus is chosen.
+\end{enumerate}
+
+Every tagging run also writes an audit of suspicious tokens, 1,813 at present,
+grouped by reason: the two tag layers disagree on the word
+class (675 tokens), a lowercase word is tagged as a proper noun (430), the
+tagger gives no tag (357, mostly dialectal clippings such as \emph{ко} and
+\emph{сал}), a form is tagged differently from its majority reading
+elsewhere in the corpus (311), and script artefacts (40). The audit is the
+review queue for new hand corrections; nothing is filtered on it directly.
+Rules that flagged tokens for being rare were tried and dropped: in poetry
+rare words and lines without a verb are normal, and such rules were right
+about 5\% of the time.
 
 \section{Splits}
-\pending{987 / 126 / 126 poems, per author.}
+
+The poems are split into training, validation and test sets in the ratio
+80/10/10 within each author, with a fixed random seed: 987, 126 and 126
+poems. Splitting by author guarantees that every author with at least three
+poems has at least one poem in each set; the eight authors with one or two
+poems go entirely to the training set. The split is by poem, so two poems
+that share an author and a title can fall into different sets.
+
+The split is computed once and read by every later stage. Everything that
+is learned from data (style profiles, classifiers, the teacher's examples,
+both students and the reward) uses training poems only. The validation set
+is used for model selection and for every comparison made during
+development; the test set is used once, for the final numbers in
+Chapter~\ref{ch:results}.
 
 \section{How little data there is}
-\pending{Poems per author; teacher examples per target.}
+
+For a task as specific as writing like one poet, this is very little data.
+Even the best represented author has 146 poems in the training split, and
+seven of the ten target authors have between 37 and 56
+(Table~\ref{tab:authors}). By comparison, style-transfer benchmarks such as
+\pending{cite: GYAFC (Rao and Tetreault 2018)} have tens of thousands of
+parallel sentence pairs for a single, much coarser style distinction.
+
+The synthetic data does not remove this limit. The teacher writes about
+115 examples for each target author, a balanced set, but each example is
+built from the same training poems: the description of the author's style,
+the vocabulary and the example lines in the teacher's prompt all come from
+them. An author with 37 poems in the training split is therefore
+represented by 37 poems' worth of style, however many examples are written
+from it. Chapter~\ref{ch:discussion} returns to this: the students
+identifiably imitate only the three authors with more than a hundred
+training poems.

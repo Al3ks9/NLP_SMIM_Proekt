@@ -1,3 +1,4 @@
+% !TEX root = main.tex
 \chapter{Introduction}\label{ch:intro}
 
 \section{Motivation}
@@ -43,7 +44,7 @@ Two parts of the question need making precise. ``In that author's style''
 is measured in two ways that do not depend on each other: automatically,
 by stylometric features and by an author classifier that the training never
 sees, and by human judgement. ``Reinforcement learning'' is Group Relative
-Policy Optimization (GRPO) \pending{cite: Shao et al.\ 2024}, applied on top
+Policy Optimization (GRPO) \citep{shao2024deepseekmath}, applied on top
 of supervised fine-tuning with a reward built from the same stylometric
 profile of each author.
 
@@ -54,14 +55,14 @@ Replacing selected words of the source poem with words typical of the
 target author, inflected to fit, preserves the poem but changes little of
 its style. Asking small local models to fill such slots fails at
 Macedonian itself. What did work was a large model, Gemma~4 31B
-\pending{cite}, prompted with a detailed scaffold: a summary of the source
+\citep{gemma4}, prompted with a detailed scaffold: a summary of the source
 poem, a prose description of the target author's style, a vocabulary
 palette and example lines, and explicit structural targets. That model
 became the \emph{teacher}. Its outputs, about 115 per target author for ten
 target authors, are the training data for two \emph{students} of similar
-size, Qwen3-4B \pending{cite} and Gemma~4 E4B, which see only the source
+size, Qwen3-4B \citep{yang2025qwen3} and Gemma~4 E4B, which see only the source
 poem and the author's name. Each student is fine-tuned with LoRA
-\pending{cite: Hu et al.\ 2022} on the teacher's poems and then trained
+\citep{hu2022lora} on the teacher's poems and then trained
 further with GRPO.
 
 The main finding is negative. The students learn the task's form: they
@@ -70,12 +71,19 @@ source rather than copy it. They do not learn the voices. An independent
 author classifier recognises the intended author in 16.7\% of the
 fine-tuned Qwen student's poems on the held-out test pairs, against 66.3\%
 for real, unseen poems by the same authors; after GRPO the figure falls to
-12.4\%, even though the reward it optimises improves.
-\pending{Gemma student and teacher numbers on test; human ratings.} The
-outputs that are identified belong almost entirely to the three authors
-with the most poems in the corpus. The thesis argues that the limit is the
-data rather than the method: a stronger student, a better-tuned reward and
-the teacher itself all run into the same small, uneven corpus.
+12.4\%, even though the reward it optimises improves. The teacher, with the
+full description of the author in front of it, reaches 53.6\%.
+\pending{Gemma student numbers on test; human ratings.} The students'
+identified outputs belong almost entirely to the three authors with the most
+poems in the corpus, while the teacher also imitates some authors with fewer
+than forty.
+
+The thesis argues that the limit is the data rather than the method. The
+corpus is enough for the teacher to imitate an author when the evidence of
+that author's style is in every prompt; it is not enough for a student to
+learn that style and keep it in its weights from about 115 examples per
+author. A stronger student, a better-tuned reward and reinforcement learning
+do not get past that limit.
 
 \section{Contributions}
 
