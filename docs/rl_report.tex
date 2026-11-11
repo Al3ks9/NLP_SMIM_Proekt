@@ -1,10 +1,10 @@
 % !TEX program = xelatex
 %
 % Distillation and reinforcement learning for Macedonian poetic style
-% transfer: SFT and GRPO (v1, v2) of a Qwen3-4B student. Split out of
+% transfer: SFT and GRPO (v1, v2) of a Qwen3-4B student, and a Gemma 4 E4B
+% student on the same pipeline (sec:gemma). Split out of
 % report.tex. Compile with `xelatex rl_report.tex` (native Cyrillic via
-% fontspec/polyglossia), not pdflatex. The Gemma 4 E4B student is reported
-% separately once trained.
+% fontspec/polyglossia), not pdflatex.
 \documentclass[11pt]{article}
 
 \usepackage{fontspec}
@@ -401,7 +401,8 @@ Metric & Qwen3-4B & (merged) & v1 & v2 & poems \\
 \bottomrule
 \end{tabular}
 \caption{The four Qwen systems on the 466 test pairs; same protocol and
-footnotes as Table~\ref{tab:main}. The teacher was not run on test.}
+footnotes as Table~\ref{tab:main}. The teacher and the second student are in
+Table~\ref{tab:gemma}.}
 \label{tab:test}
 \end{table}
 
@@ -437,19 +438,78 @@ seven are at 0--4\,\% on the judge for every system. GRPO lowers Конески 
 the judge (0.652 $\to$ 0.457 v1, 0.478 v2) even where v2 raises it on the
 classifier (0.587 $\to$ 0.652).
 
+\subsection{Second student and the teacher on test}\label{sec:gemma}
+
+To tell properties of Qwen3-4B from properties of the method, the same
+synthetic data, task format, hyperparameters and GRPO-v2 reward were applied
+to Gemma~4 E4B, a student of matched size from the teacher's own family.
+Table~\ref{tab:gemma} reports it on the same 466 test pairs, together with the
+teacher, which was also run on them.
+
+\begin{table}[ht]
+\centering\small
+\begin{tabular}{lrrrrr}
+\toprule
+& Base & SFT & GRPO & Teacher & Real \\
+Metric & Gemma E4B & (merged) & (v2 reward) & Gemma 31B & poems \\
+\midrule
+\multicolumn{6}{l}{\emph{Reward} ($\alpha=\beta=0.5$, neutral weights)} \\
+\quad $R^{g}_{\mathrm{style}}$ / $R^{g}_{\mathrm{content}}$ & .000/.000$^\ddagger$ & .439/.149 & .446/\textbf{.348} & \textbf{.684}/.121 & --- \\
+\quad $R$                                   & .000$^\ddagger$ & .294 & .397 & \textbf{.403} & --- \\
+\quad items where $R$ beats SFT             & 0\% & --- & \textbf{87\%} & --- & --- \\
+\midrule
+\multicolumn{6}{l}{\emph{Task and copying}} \\
+\quad line novelty                          & .948 & 1.000 & .997 & 1.000 & --- \\
+\quad outputs with a copied line (lower)    & 61.4\% & 10.7\% & 35.4\% & \textbf{2.8\%} & --- \\
+\quad content-word recall                   & .540 & .181 & \textbf{.245} & .169 & --- \\
+\midrule
+\multicolumn{6}{l}{\emph{Degeneracy}} \\
+\quad line uniqueness                       & .990 & .946 & .935 & \textbf{.999} & .969 \\
+\quad degenerate outputs (lower)            & 1.1\% & 17.6\% & 30.5\% & \textbf{0.4\%} & 6.6\% \\
+\midrule
+\multicolumn{6}{l}{\emph{Target style}} \\
+\quad classifier top-1 = target             & .024 & .135 & .120 & \textbf{.599} & .883$^\dagger$ \\
+\quad judge top-1 = target                  & .099 & .148 & .122 & \textbf{.536} & .663$^\dagger$ \\
+\quad share read as Конески (classifier)    & 28.1\% & 29.6\% & 33.3\% & 20.0\% & --- \\
+\quad structural fit                        & .694 & .904 & .831 & \textbf{.949} & .768 \\
+\bottomrule
+\end{tabular}
+\caption{The Gemma~4 E4B student and the teacher on the 466 test pairs; same
+protocol and footnotes as Table~\ref{tab:test}. $^\ddagger$ every base output
+is gated to zero: all 466 carry markdown, and a quarter are not in Cyrillic.}
+\label{tab:gemma}
+\end{table}
+
+\paragraph{The second student reproduces the Qwen result.} Gemma's SFT model
+is level with Qwen's on author identification (paired difference in judge
+top-1 $-0.019$ $[-0.054, +0.017]$) and slightly ahead on $R$ (+0.028). GRPO
+then does to Gemma what it did to Qwen: $R$ rises by $+0.103$
+$[+0.094, +0.111]$ and beats SFT on 87\,\% of items, almost entirely through
+the content term (0.149 $\to$ 0.348, by paraphrasing the source more closely,
+with a copied line in 35\,\% of outputs), while author identification does not
+improve (judge $-0.026$ $[-0.058, +0.006]$, classifier $-0.015$
+$[-0.052, +0.021]$) and degenerate output rises from 17.6\,\% to 30.5\,\%.
+Against Qwen's v2 run, trained on the same reward, Gemma's GRPO model is ahead
+on $R$ by $+0.045$ and level on the judge ($-0.002$ $[-0.028, +0.026]$). The
+per-target pattern is also the same: Конески (judge top-1 0.565 SFT, 0.478
+GRPO), Пијан Славеј (0.419, 0.465) and Клетников (0.383, 0.255) carry the
+aggregate, and the other seven targets are at 0--9\,\% for both. Style
+collapse and the missing gain in author identity therefore belong to the data
+and the method, not to Qwen3-4B. The untuned Gemma model fails the task's
+format rather than its content: it answers with markdown in every case.
+
+\paragraph{The teacher on test.} With the full scaffolded prompt, the teacher
+reaches judge top-1 0.536 (val 0.506), the highest $R^{g}_{\mathrm{style}}$ of any system, and
+almost no copying or repetition. Its $R$ (0.403) is no higher than GRPO's,
+because it paraphrases the source loosely ($R^{g}_{\mathrm{content}}$ 0.121).
+The gap between it and both students on the judge (0.536 against
+0.12--0.17) is the gap that distillation from about a thousand examples does
+not close.
+
 % ═══════════════════════════════════════════════════════════════════════════
 \section{Status and next steps}\label{sec:next}
 
 \begin{itemize}\itemsep2pt
-  \item {\raggedright\textbf{Teacher on test.} Table~\ref{tab:test} has no teacher column:
-    the API's quota made a 466-pair teacher run impractical. A local vLLM
-    server for the same Gemma~4 31B weights
-    (\texttt{src/gemma\_teacher/hpc/vllm\_teacher.slurm}) is written but not
-    yet run on the cluster.\par}
-  \item \textbf{Second student.} The same SFT and GRPO-v2 pipeline is being
-    run with Gemma~4 E4B, a student of matched size from the teacher's own
-    family, to separate properties of Qwen3-4B from properties of the method.
-    It will be reported, and compared with these results, separately.
   \item \textbf{Human evaluation.} A blind rating by native speakers
     (language, coherence, poetic quality, faithfulness to the source, author
     attribution, usability) is planned, with the target's own closest real

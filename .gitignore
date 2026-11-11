@@ -99,3 +99,7 @@ docs/thesis/*.blg
 docs/thesis/*.synctex.gz
 docs/thesis/*.fls
 docs/thesis/*.fdb_latexmk
+docs/*.aux
+docs/*.log
+docs/*.out
+.score_test.log

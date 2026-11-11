@@ -1,0 +1,634 @@
+{
+ "page_version": "226517c4a269",
+ "items": {
+  "9ed4d96a3c": {
+   "system": "teacher",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани"
+  },
+  "80ba2bce62": {
+   "system": "qwen-sft",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани"
+  },
+  "3a58000aba": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани"
+  },
+  "c9c480632c": {
+   "system": "gemma-sft",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани"
+  },
+  "273691aa74": {
+   "system": "gemma-grpo",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани"
+  },
+  "a75309f30f": {
+   "system": "real-poem",
+   "source_poem_id": "738",
+   "target_author": "Адем Гајтани",
+   "control_poem_id": "228"
+  },
+  "4e87d30232": {
+   "system": "teacher",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани"
+  },
+  "cfbc7fa0ea": {
+   "system": "qwen-sft",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани"
+  },
+  "53a2c3dca0": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани"
+  },
+  "12ec1f8558": {
+   "system": "gemma-sft",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани"
+  },
+  "327f8137bb": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани"
+  },
+  "e8e3023821": {
+   "system": "real-poem",
+   "source_poem_id": "1143",
+   "target_author": "Адем Гајтани",
+   "control_poem_id": "213"
+  },
+  "8fbb52bdbb": {
+   "system": "teacher",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески"
+  },
+  "f022d68e65": {
+   "system": "qwen-sft",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески"
+  },
+  "cc9bf1bb3f": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески"
+  },
+  "dbf0498b6f": {
+   "system": "gemma-sft",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески"
+  },
+  "67de375af5": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески"
+  },
+  "e92424947a": {
+   "system": "real-poem",
+   "source_poem_id": "1041",
+   "target_author": "Блаже Конески",
+   "control_poem_id": "185"
+  },
+  "8896565201": {
+   "system": "teacher",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески"
+  },
+  "fa6c0954e7": {
+   "system": "qwen-sft",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески"
+  },
+  "689f97be70": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески"
+  },
+  "79cb97172b": {
+   "system": "gemma-sft",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески"
+  },
+  "26a4e3ad81": {
+   "system": "gemma-grpo",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески"
+  },
+  "18ab323d44": {
+   "system": "real-poem",
+   "source_poem_id": "172",
+   "target_author": "Блаже Конески",
+   "control_poem_id": "608"
+  },
+  "8a80acae2a": {
+   "system": "teacher",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски"
+  },
+  "d9b268afb3": {
+   "system": "qwen-sft",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски"
+  },
+  "3de111f159": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски"
+  },
+  "45d5e1cbe2": {
+   "system": "gemma-sft",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски"
+  },
+  "9de69840d0": {
+   "system": "gemma-grpo",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски"
+  },
+  "33a7b37d99": {
+   "system": "real-poem",
+   "source_poem_id": "207",
+   "target_author": "Братислав Ташковски",
+   "control_poem_id": "1065"
+  },
+  "d580123e2b": {
+   "system": "teacher",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски"
+  },
+  "4b31f903f5": {
+   "system": "qwen-sft",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски"
+  },
+  "ea8d85c703": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски"
+  },
+  "c29a8f9ed9": {
+   "system": "gemma-sft",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски"
+  },
+  "1c8432248d": {
+   "system": "gemma-grpo",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски"
+  },
+  "efb913931f": {
+   "system": "real-poem",
+   "source_poem_id": "192",
+   "target_author": "Братислав Ташковски",
+   "control_poem_id": "1063"
+  },
+  "35ee4ec09c": {
+   "system": "teacher",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски"
+  },
+  "1f095de989": {
+   "system": "qwen-sft",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски"
+  },
+  "f99475e617": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски"
+  },
+  "377c90918c": {
+   "system": "gemma-sft",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски"
+  },
+  "83a7d19132": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски"
+  },
+  "81a217ec17": {
+   "system": "real-poem",
+   "source_poem_id": "1154",
+   "target_author": "Веле Смилевски",
+   "control_poem_id": "272"
+  },
+  "ec0a677831": {
+   "system": "teacher",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски"
+  },
+  "6899a20941": {
+   "system": "qwen-sft",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски"
+  },
+  "accc0fba72": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски"
+  },
+  "dce490a0b5": {
+   "system": "gemma-sft",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски"
+  },
+  "f833d16303": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски"
+  },
+  "72f63d49c9": {
+   "system": "real-poem",
+   "source_poem_id": "1125",
+   "target_author": "Веле Смилевски",
+   "control_poem_id": "307"
+  },
+  "1ddc03ddb4": {
+   "system": "teacher",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ"
+  },
+  "1cf2f8ac68": {
+   "system": "qwen-sft",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ"
+  },
+  "dcb69c98e5": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ"
+  },
+  "8804548f4d": {
+   "system": "gemma-sft",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ"
+  },
+  "27eeee8e14": {
+   "system": "gemma-grpo",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ"
+  },
+  "d2dd96c973": {
+   "system": "real-poem",
+   "source_poem_id": "869",
+   "target_author": "Влада Урошевиќ",
+   "control_poem_id": "407"
+  },
+  "56cf3bfd0e": {
+   "system": "teacher",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ"
+  },
+  "00e71fcef5": {
+   "system": "qwen-sft",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ"
+  },
+  "57eff7a16d": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ"
+  },
+  "e73aa2b464": {
+   "system": "gemma-sft",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ"
+  },
+  "6e0b241026": {
+   "system": "gemma-grpo",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ"
+  },
+  "d597881eb7": {
+   "system": "real-poem",
+   "source_poem_id": "652",
+   "target_author": "Влада Урошевиќ",
+   "control_poem_id": "447"
+  },
+  "889ae4cfa9": {
+   "system": "teacher",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников"
+  },
+  "b2648f99e5": {
+   "system": "qwen-sft",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников"
+  },
+  "48c8486741": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников"
+  },
+  "53cc25e6b7": {
+   "system": "gemma-sft",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников"
+  },
+  "b44ce8c78c": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников"
+  },
+  "c098dc73ce": {
+   "system": "real-poem",
+   "source_poem_id": "1110",
+   "target_author": "Ефтим Клетников",
+   "control_poem_id": "926"
+  },
+  "77fdf94b06": {
+   "system": "teacher",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников"
+  },
+  "86627a5d5b": {
+   "system": "qwen-sft",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников"
+  },
+  "d6b9d8f375": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников"
+  },
+  "d4c7583d44": {
+   "system": "gemma-sft",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников"
+  },
+  "16458968be": {
+   "system": "gemma-grpo",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников"
+  },
+  "cd35ed360b": {
+   "system": "real-poem",
+   "source_poem_id": "652",
+   "target_author": "Ефтим Клетников",
+   "control_poem_id": "953"
+  },
+  "9f786389f6": {
+   "system": "teacher",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова"
+  },
+  "4af435fcd8": {
+   "system": "qwen-sft",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова"
+  },
+  "1c75136c34": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова"
+  },
+  "85eb2463de": {
+   "system": "gemma-sft",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова"
+  },
+  "7275d67995": {
+   "system": "gemma-grpo",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова"
+  },
+  "669391c294": {
+   "system": "real-poem",
+   "source_poem_id": "469",
+   "target_author": "Катица Ќулавкова",
+   "control_poem_id": "1099"
+  },
+  "b3d1b7b519": {
+   "system": "teacher",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова"
+  },
+  "69b62efb9f": {
+   "system": "qwen-sft",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова"
+  },
+  "d6175a6043": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова"
+  },
+  "72a8d988d8": {
+   "system": "gemma-sft",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова"
+  },
+  "512bd905fe": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова"
+  },
+  "b735c3c6ed": {
+   "system": "real-poem",
+   "source_poem_id": "1064",
+   "target_author": "Катица Ќулавкова",
+   "control_poem_id": "1141"
+  },
+  "68f3c24b73": {
+   "system": "teacher",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј"
+  },
+  "edb0149e90": {
+   "system": "qwen-sft",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј"
+  },
+  "47e08a31c6": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј"
+  },
+  "5f5cbbce89": {
+   "system": "gemma-sft",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј"
+  },
+  "c31b72cd54": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј"
+  },
+  "9417769968": {
+   "system": "real-poem",
+   "source_poem_id": "1041",
+   "target_author": "Пијан Славеј",
+   "control_poem_id": "800"
+  },
+  "5991579eb0": {
+   "system": "teacher",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј"
+  },
+  "aecd6e6a4a": {
+   "system": "qwen-sft",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј"
+  },
+  "8d37bf7702": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј"
+  },
+  "3e8129f025": {
+   "system": "gemma-sft",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј"
+  },
+  "cd2efc4a0e": {
+   "system": "gemma-grpo",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј"
+  },
+  "e7e935640b": {
+   "system": "real-poem",
+   "source_poem_id": "1110",
+   "target_author": "Пијан Славеј",
+   "control_poem_id": "813"
+  },
+  "b7c8705bd0": {
+   "system": "teacher",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров"
+  },
+  "0e98b559c4": {
+   "system": "qwen-sft",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров"
+  },
+  "10d9d11c22": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров"
+  },
+  "27643057a2": {
+   "system": "gemma-sft",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров"
+  },
+  "389d6d60cf": {
+   "system": "gemma-grpo",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров"
+  },
+  "010c719dbe": {
+   "system": "real-poem",
+   "source_poem_id": "156",
+   "target_author": "Ристо Лазаров",
+   "control_poem_id": "1161"
+  },
+  "24aa4da4ca": {
+   "system": "teacher",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров"
+  },
+  "dcd1129651": {
+   "system": "qwen-sft",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров"
+  },
+  "c6efd3b909": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров"
+  },
+  "cccb52c4b5": {
+   "system": "gemma-sft",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров"
+  },
+  "542a0a47af": {
+   "system": "gemma-grpo",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров"
+  },
+  "4dfdca3dc9": {
+   "system": "real-poem",
+   "source_poem_id": "172",
+   "target_author": "Ристо Лазаров",
+   "control_poem_id": "1163"
+  },
+  "e5157a8344": {
+   "system": "teacher",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски"
+  },
+  "435308d15b": {
+   "system": "qwen-sft",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски"
+  },
+  "e66860a838": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски"
+  },
+  "3f29344d0f": {
+   "system": "gemma-sft",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски"
+  },
+  "50825e2260": {
+   "system": "gemma-grpo",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски"
+  },
+  "793fe7c48b": {
+   "system": "real-poem",
+   "source_poem_id": "545",
+   "target_author": "Славко Јаневски",
+   "control_poem_id": "320"
+  },
+  "5952b1dda7": {
+   "system": "teacher",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски"
+  },
+  "d9edf2d4cb": {
+   "system": "qwen-sft",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски"
+  },
+  "b2b506107d": {
+   "system": "qwen-grpo-v2",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски"
+  },
+  "44003d7b85": {
+   "system": "gemma-sft",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски"
+  },
+  "c779349513": {
+   "system": "gemma-grpo",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски"
+  },
+  "f3fe9c8a87": {
+   "system": "real-poem",
+   "source_poem_id": "774",
+   "target_author": "Славко Јаневски",
+   "control_poem_id": "356"
+  }
+ },
+ "systems": {
+  "teacher": "data/synthetic/teacher_test.csv",
+  "qwen-sft": "data/validation_generations/qwen3-sft-merged_test.csv",
+  "qwen-grpo-v2": "data/validation_generations/qwen3-grpo-v2_test.csv",
+  "gemma-sft": "data/validation_generations/gemma4-e4b-sft-merged_test.csv",
+  "gemma-grpo": "data/validation_generations/gemma4-e4b-grpo_test.csv"
+ },
+ "seed": 42,
+ "reveal": false
+}
