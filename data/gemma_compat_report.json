@@ -7,7 +7,7 @@
     "template": "pass",
     "lengths": "pass",
     "generate": "pass",
-    "sft_merge": "fail: adapter -1071.337 vs merged -1115.133 over 323 tokens (0.1356/token, tolerance 0.02)"
+    "sft_merge": "pass"
   },
   "loader_used": "gemma4_text",
   "missing_keys": [],
@@ -17,7 +17,7 @@
     "template": "end_of_turn='<turn|>'",
     "lengths": "max_seq_length=4096 ({'n': 1146, 'p50': 537, 'p95': 899, 'p99': 1961, 'max': 3370, 'n_over_1024': 31, 'n_over_2048': 10, 'n_over_4096': 0})",
     "generate": "419 chars",
-    "sft_merge": "adapter -1071.337 vs merged -1115.133 over 323 tokens (0.1356/token, tolerance 0.02)"
+    "sft_merge": "adapter -1011.451 vs merged -1011.451 over 323 tokens (0.0000/token, tolerance 0.02)"
   },
   "lora_match_counts": {
     "q_proj": 42,
@@ -46,8 +46,11 @@
     "raw": "## Претсетна игра (Во стил на Блаже Конески)\n\nКој ја плете таму таа песна,\nво сенките на изгубеното време,\nсо свирка што е само ехо,\nза забуна која не се смее?\n\nКој ја води таа ноќна танцувачка,\nсо чекор што го знае само метем,\nна патот што ги потрошиле раните,\nдо границата на невидењето?\n\nКој таму, во таа мрачна тишина,\nшто дише со прашина и желба?\nКој таму, во таа нејасна мапа,\nшто знае што се крие зад таа облека?<turn|>"
   },
   "merge_logprob": {
-    "adapter": -1071.336669921875,
-    "merged": -1115.132568359375,
-    "n_tokens": 323
+    "n_tokens": 323,
+    "adapter_fp32": -1011.4510498046875,
+    "merged_fp32": -1011.4505615234375,
+    "adapter_bf16": -1072.350341796875,
+    "merged_saved_bf16": -1114.4130859375,
+    "bf16_merge_gap_per_token": -0.13022521405766255
   }
 }
