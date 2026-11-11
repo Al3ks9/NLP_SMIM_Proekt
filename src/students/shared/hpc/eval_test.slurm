@@ -15,13 +15,13 @@
 # qwen3) picks the student, as in eval_grpo.slurm.
 #
 # Usage:
-#   sbatch src/students/qwen/hpc/eval_test.slurm base          # untuned base model
-#   sbatch src/students/qwen/hpc/eval_test.slurm sft           # SFT (merged = GRPO's start policy)
-#   sbatch src/students/qwen/hpc/eval_test.slurm grpo          # models/$TAG-grpo
-#   sbatch src/students/qwen/hpc/eval_test.slurm grpo-v1       # Qwen only: models/qwen3-grpo
-#   sbatch src/students/qwen/hpc/eval_test.slurm grpo-v2       # Qwen only: models/qwen3-grpo-v2
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/eval_test.slurm base|sft|grpo
-#   sbatch src/students/qwen/hpc/eval_test.slurm score         # after the systems: scores + rewards -> test_comparison_*.csv
+#   sbatch src/students/shared/hpc/eval_test.slurm base          # untuned base model
+#   sbatch src/students/shared/hpc/eval_test.slurm sft           # SFT (merged = GRPO's start policy)
+#   sbatch src/students/shared/hpc/eval_test.slurm grpo          # models/$TAG-grpo
+#   sbatch src/students/shared/hpc/eval_test.slurm grpo-v1       # Qwen only: models/qwen3-grpo
+#   sbatch src/students/shared/hpc/eval_test.slurm grpo-v2       # Qwen only: models/qwen3-grpo-v2
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/eval_test.slurm base|sft|grpo
+#   sbatch src/students/shared/hpc/eval_test.slurm score         # after the systems: scores + rewards -> test_comparison_*.csv
 #
 # Writes data/validation_generations/<label>_test.csv (tracked). `score`
 # scores every *_test.csv there (both students, word substitution) plus the
@@ -33,7 +33,7 @@ set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"
 [[ -f pyproject.toml ]] || { echo "Submit from the repo root: sbatch <path to this .slurm>" >&2; exit 1; }
 
-export SYSTEM="${1:?usage: sbatch src/students/qwen/hpc/eval_test.slurm base|sft|grpo|grpo-v1|grpo-v2|score}"
+export SYSTEM="${1:?usage: sbatch src/students/shared/hpc/eval_test.slurm base|sft|grpo|grpo-v1|grpo-v2|score}"
 # base and score need no SFT adapter
 case "$SYSTEM" in base|score) export REQUIRE_SFT=0 ;; esac
 source src/students/shared/hpc/grpo_common.sh

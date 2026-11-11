@@ -11,9 +11,9 @@
 # hyperparameters (src/students/qwen/hpc/train_grpo_v2.slurm), so Qwen-v2 vs Gemma isolates
 # the student model. Spec: docs/superpowers/specs/2026-10-02-gemma4-student-design.md.
 #
-# Needs models/gemma4-e4b-lora-sft (FAMILY=gemma4 sbatch src/students/qwen/hpc/train_sft.slurm).
+# Needs models/gemma4-e4b-lora-sft (FAMILY=gemma4 sbatch src/students/shared/hpc/train_sft.slurm).
 # Output: models/gemma4-e4b-grpo/. Evaluate with
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/eval_grpo.slurm
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/eval_grpo.slurm
 # Extra args are appended (and override the ones below).
 #
 # Resumes automatically from the newest models/gemma4-e4b-grpo/checkpoint-N

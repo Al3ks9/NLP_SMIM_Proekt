@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-base-vs-lora
+#SBATCH --job-name=student-base-vs-lora
 #SBATCH --partition=openlab-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
@@ -19,9 +19,9 @@
 # confound the comparison it is supposed to isolate.
 #
 # Usage:
-#   sbatch src/students/qwen/hpc/compare_base_lora.slurm
-#   sbatch src/students/qwen/hpc/compare_base_lora.slurm --num-source-poems 25   # forwarded to both runs
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/compare_base_lora.slurm            # Gemma 4 E4B: base vs its SFT adapter
+#   sbatch src/students/shared/hpc/compare_base_lora.slurm
+#   sbatch src/students/shared/hpc/compare_base_lora.slurm --num-source-poems 25   # forwarded to both runs
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/compare_base_lora.slurm            # Gemma 4 E4B: base vs its SFT adapter
 
 set -euo pipefail
 
@@ -39,7 +39,7 @@ if [[ ! -f "$SIF" ]]; then
 fi
 
 if [[ ! -d models/$TAG-lora-sft ]]; then
-    echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/qwen/hpc/train_sft.slurm first." >&2
+    echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/shared/hpc/train_sft.slurm first." >&2
     exit 1
 fi
 

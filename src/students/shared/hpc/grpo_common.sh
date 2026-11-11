@@ -30,7 +30,7 @@ grpo_preflight() {
     family_vars || exit 1
     [[ -f "$SIF" ]] || { echo "Missing $SIF -- build it first: ./src/students/shared/hpc/build.sh" >&2; exit 1; }
     if [[ "${REQUIRE_SFT:-1}" == 1 && ! -d models/$TAG-lora-sft ]]; then
-        echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/qwen/hpc/train_sft.slurm first." >&2
+        echo "Missing models/$TAG-lora-sft -- run FAMILY=$FAMILY sbatch src/students/shared/hpc/train_sft.slurm first." >&2
         exit 1
     fi
     [[ -d "$CLASSLA_DIR/mk" ]] || { echo "Missing classla mk models in $CLASSLA_DIR -- see src/students/shared/hpc/grpo_common.sh" >&2; exit 1; }

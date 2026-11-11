@@ -105,7 +105,7 @@ All commands from the repo root. "Where" = CPU (laptop), API (Gemini key in
 | Result | Command | Output | Where |
 |---|---|---|---|
 | Qwen val comparison (base, SFT, GRPO v1/v2, teacher, real poems) | `uv run python -m students.shared.compare_generations --rewards --corpus-reference --runs …_val.csv … data/synthetic/teacher_val.csv` | `data/validation_generations/judge_v2_comparison_*.csv` | CPU |
-| Qwen test comparison | `sbatch src/students/qwen/hpc/eval_test.slurm score` (CPU-equivalent: same `compare_generations` call) | `data/validation_generations/test_comparison_*.csv` | done |
+| Qwen test comparison | `sbatch src/students/shared/hpc/eval_test.slurm score` (CPU-equivalent: same `compare_generations` call) | `data/validation_generations/test_comparison_*.csv` | done |
 | Decoding baseline, checkpoint 300 | — | `data/validation_generations/judge_comparison_*.csv` | done |
 | GRPO training curves | `uv run --with matplotlib python -m students.qwen.plot_grpo_curves` | `data/figures/grpo_training_curves.pdf` | CPU (reads `models/reward_components_grpo_v1.jsonl` / `_v2.jsonl`, present locally) |
 | Judge held-out accuracy | `uv run python -m common.evaluation.judge_classifier --rebuild` | `data/judge_classifier_eval.json` | CPU |
@@ -259,10 +259,10 @@ has to be diagnosed **before** any cluster time is spent on SFT/GRPO.
    Rule: GRPO does not start until merged ≈ adapter-on for the real SFT adapter,
    so its start policy and KL anchor are the SFT student, as for Qwen.
 3. Then, on whatever cluster is available: `FAMILY=gemma4 sbatch
-   src/students/qwen/hpc/train_sft.slurm` → `FAMILY=gemma4 sbatch
-   src/students/qwen/hpc/compare_base_lora.slurm` → `sbatch
+   src/students/shared/hpc/train_sft.slurm` → `FAMILY=gemma4 sbatch
+   src/students/shared/hpc/compare_base_lora.slurm` → `sbatch
    src/students/gemma/hpc/train_grpo_gemma.slurm` → `FAMILY=gemma4 sbatch
-   src/students/qwen/hpc/eval_grpo.slurm`, and a test-split eval.
+   src/students/shared/hpc/eval_grpo.slurm`, and a test-split eval.
    `eval_test.slurm` is Qwen-only (hard-codes `FAMILY=qwen3`, the systems and
    the `qwen3-*` paths): **build B5** extends it to honour `FAMILY` like
    `eval_grpo.slurm` does.

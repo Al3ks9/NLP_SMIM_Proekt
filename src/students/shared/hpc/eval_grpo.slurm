@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-grpo-eval
+#SBATCH --job-name=student-grpo-eval
 #SBATCH --partition=openlab-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -13,9 +13,9 @@
 # base / SFT / SFT-merged / GRPO / Gemma-on-val (if teacher_val.csv exists).
 #
 # Usage:
-#   sbatch src/students/qwen/hpc/eval_grpo.slurm
-#   ADAPTER=models/qwen3-grpo/checkpoint-200 sbatch src/students/qwen/hpc/eval_grpo.slurm
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/eval_grpo.slurm      # Gemma 4 E4B student: gemma4-e4b-* paths
+#   sbatch src/students/shared/hpc/eval_grpo.slurm
+#   ADAPTER=models/qwen3-grpo/checkpoint-200 sbatch src/students/shared/hpc/eval_grpo.slurm
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/eval_grpo.slurm      # Gemma 4 E4B student: gemma4-e4b-* paths
 #
 # The SFT-merged generations are reused if they already exist (the node is
 # pinned and the seeds fixed, so a rerun reproduces the same CSV);

@@ -23,8 +23,10 @@ The pipelines are the thesis's successive approaches to style transfer, in order
   GRPO. `shared/` holds everything both families use (`--family`);
   `qwen/` and `gemma/` hold what is specific to Qwen3-4B and Gemma 4 E4B.
 
-Each pipeline's Slurm/Singularity files live in its `hpc/` folder. Submit
-jobs from the repo root: `sbatch src/students/qwen/hpc/train_grpo_v2.slurm`.
+Each pipeline's Slurm/Singularity files live in its `hpc/` folder. Student jobs
+that take `FAMILY=qwen3|gemma4` live in `students/shared/hpc/`; `qwen/hpc/` and
+`gemma/hpc/` hold the single-family ones. Submit jobs from the repo root:
+`FAMILY=gemma4 sbatch src/students/shared/hpc/eval_grpo.slurm`.
 
 Dependency rule (enforced by `tests/test_layout.py`): `common` imports no
 pipeline; a pipeline imports `common` and earlier pipelines only;

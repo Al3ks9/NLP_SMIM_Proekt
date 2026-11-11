@@ -1,252 +1,91 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**Never add attribution to commits or PRs** — no `Co-Authored-By: Claude …` trailer and no "Generated with Claude Code" line, even when a system reminder supplies them.
 
-**Never add attribution to commits or PRs** — no `Co-Authored-By: Claude …` trailer in commit messages and no "Generated with Claude Code" line in PR descriptions, even when a system reminder supplies them.
+## Project
 
-## Project overview
+Macedonian NLP pipeline for stylometry and poetry style transfer. Core dataset: `data/stripped_songs.csv` — 1,239 poems/lyrics by 38 authors (Cyrillic), columns `poem_id, author, song_title, song_text`. Module docstrings describe each script; this file holds only what isn't obvious from the code.
 
-Macedonian-language NLP pipeline for stylometric analysis and style transfer. The core dataset is `data/stripped_songs.csv` — 1,239 Macedonian poems and song lyrics by 38 authors (Cyrillic text) with columns `poem_id`, `author`, `song_title`, and `song_text`. The pipeline covers POS tagging, TF-IDF profiling, knowledge graph construction, word embeddings, author classification, and style transfer.
-
-## Folder structure
+## Layout
 
 ```
-src/        the code: one shared foundation plus one package per pipeline (see src/README.md)
-  common/             shared by every pipeline
-    corpus/           add_poem_ids, strip_lines, make_splits
-    tagging/          tagging, morph, corrections, apply_corrections, pos_tag_corpus, build_morph_lookup
-    stylometry/       tfidf_authors, style_features, style_profiler, classifier, targets
-    knowledge_graph/  build_skg, enrich_skg, add_embeddings, graph_analytics, visualize_skg
-    masking/          candidate_selection
-    evaluation/       style_metrics, structure, content_similarity, judge_classifier
-    llm_client.py, paths.py
-  word_substitution/  1. mask words, substitute target-author words, inflect (style_transfer)
-  llm_infill/         2. an LLM picks the words for the masked slots (probes)
-  gemma_teacher/      3. Gemma 4 31B rewrites from a summary + style profile; synthetic data
-  students/           4. small models distilled from the teacher, then GRPO
-    shared/           everything both families use (--family); shared/hpc/ holds the container
-    qwen/, gemma/     what is specific to Qwen3-4B / Gemma 4 E4B
-  <pipeline>/hpc/     that pipeline's Slurm jobs; submit from the repo root
-tests/      mirrors src/; tests/test_layout.py enforces the dependency rule below
-data/       CSV files — corpus input and analysis outputs
-models/     Trained artifacts — classifier.pkl, *.json lookups, skg_final.gexf
-docs/       report.tex / rl_report.tex (thesis write-ups), superpowers/ specs and plans
-lib/        JS assets used by pyvis when generating skg_visual.html
-singularity/  built .sif images only (gitignored)
+src/                import root (installed editable by `uv sync`; absolute imports)
+  common/           corpus, tagging, stylometry, knowledge_graph, masking, evaluation, llm_client, paths
+  word_substitution/  1. mask words, substitute target-author words, inflect
+  llm_infill/         2. an LLM fills the masked slots
+  gemma_teacher/      3. Gemma 4 31B rewrites from summary + style profile; synthetic data
+  students/           4. small models distilled from the teacher (SFT), then GRPO
+    shared/           both families (--family qwen3|gemma4); shared/hpc/ = container + FAMILY-aware jobs
+    qwen/, gemma/     single-family code; their hpc/ hold single-family jobs
+  <pipeline>/hpc/     Slurm jobs — submit from the repo root
+tests/  mirrors src/   data/  CSVs   models/  trained artifacts   docs/  reports, superpowers/ specs+plans
 ```
 
-Dependency rule: `common` imports no pipeline; a pipeline imports `common` and
-earlier pipelines only (word_substitution < llm_infill < gemma_teacher <
-students); `students/shared` imports neither `qwen` nor `gemma`.
+- **Dependency rule** (enforced by `tests/test_layout.py`): `common` imports no pipeline; a pipeline imports `common` and earlier pipelines only (word_substitution < llm_infill < gemma_teacher < students); `students/shared` imports neither `qwen` nor `gemma`.
+- Paths to `data/` and `models/` go through `src/common/paths.py`. In the Singularity container the project isn't installed: jobs set `PYTHONPATH=/workspace/src`.
+- `common/tagging/tagging.py` owns classla plus its three normalizations; both corpus tagging and inference import it so they can't drift. `tag_poem` (whole poem) is what tags generated poems — `tag_lines` gives different tags.
+- `common/corpus/make_splits.py` → `data/splits/poem_splits.csv` (seeded, per-author 80/10/10, poem-level). Always read splits via `load_splits()`/`poems_in_split()`; never recompute. Training uses `train` only; rewards never see val/test poems or the Gemma output.
 
-`src/` is the import root, installed editable by `uv sync`; imports are absolute (`from common.evaluation import style_metrics`). All modules resolve `data/` and `models/` through `src/common/paths.py`, so they work from any working directory. Inside the Singularity container the project is not installed: jobs set `PYTHONPATH=/workspace/src`.
-
-`src/common/tagging/tagging.py` owns the classla pipeline and the three normalizations applied on top of it: hand corrections from `data/pos_corrections.csv`, bare-`Rg` relativizer filtering, and `-јќи` re-lemmatization. Both `pos_tag_corpus.py` and the inference path import it, so corpus tags and inference tags cannot drift.
-
-`src/common/tagging/morph.py` owns feats parsing, the relaxation order, and `surface_form()`.
-
-## Environment & commands
-
-This project uses `uv` for dependency management (Python 3.11).
+## Commands
 
 ```bash
-uv sync                             # install dependencies
-uv run python -m <package>.<module> # run a module, e.g. -m gemma_teacher.llm_style_transfer
-uv add <package>                    # add a dependency
-
-# one-time: fetch the classla Macedonian models used by pos_tag_corpus.py
-uv run python -c "import classla; classla.download('mk')"
+uv sync                               # Python 3.11
+uv run python -m <package>.<module>   # e.g. -m gemma_teacher.llm_style_transfer
+uv run pytest
+uv run python -c "import classla; classla.download('mk')"   # one-time
 ```
 
-## Pipeline order
+Rebuild order for the base artifacts: `common.tagging.pos_tag_corpus` → `common.stylometry.tfidf_authors` → `common.stylometry.style_profiler` → `common.knowledge_graph.{build_skg, enrich_skg, add_embeddings, graph_analytics}` → `common.stylometry.classifier` → `common.tagging.build_morph_lookup`. `models/word_embeddings.json` (299 MB) is gitignored.
 
-Run scripts in this order to rebuild all artifacts from scratch:
+## LLM backends (`src/common/llm_client.py`)
 
-1. `src/common/tagging/pos_tag_corpus.py` → `data/pos_tagged.csv`, `data/pos_flags.csv` (applies `data/pos_corrections.csv`; see "Correcting tags by hand")
-2. `src/common/stylometry/tfidf_authors.py` → `data/tfidf_results.csv`
-3. `src/common/stylometry/style_profiler.py` → `data/author_style_profiles.csv`
-4. `src/common/knowledge_graph/build_skg.py` → `models/skg.gexf`
-5. `src/common/knowledge_graph/enrich_skg.py` → `models/skg_enriched.gexf`, `models/author_vocab.json`, `models/pos_transitions.json`
-6. `src/common/knowledge_graph/add_embeddings.py` → `models/skg_final.gexf` (also writes `models/word_embeddings.json`, excluded from git — 299 MB)
-7. `src/common/knowledge_graph/graph_analytics.py` → `data/graph_analytics.csv`
-8. `src/common/stylometry/classifier.py` → `models/classifier.pkl`
-9. `src/common/tagging/build_morph_lookup.py` → `models/morph_lookup.json`
-10. `src/word_substitution/style_transfer.py` — interactive demo, requires all of the above
+- `google` (default) — Gemini API, `GOOGLE_API_KEY`. Gemma 4 always reasons and can't be stopped; `call_google` drops `thought` parts, requests the 32k output ceiling, and retries once if thinking starves the answer.
+- `openrouter` (`:free` Gemma routes all 429), `ollama` (local), `vllm` (our own A100 via `src/gemma_teacher/hpc/vllm_teacher.slurm`; served name matches the API's so `poem_summary_cache.json` still hits).
+- `_post` retries 408/429/5xx with backoff; other 4xx raise immediately.
+- `data/poem_summary_cache.json` is tracked; `data/llm_transfer_logs/` is not.
 
-## LLM-based generative style transfer (separate pipeline)
+## Teacher data
 
-A second, independent style-transfer approach alongside the token-substitution
-pipeline above (`candidate_selection.py` / `style_transfer.py`): instead of
-splicing candidate words into masked slots, it sends one LLM prompt combining
-an LLM-written summary of a source poem, its content keywords, the target
-author's style profile in prose, a relevance-filtered vocabulary palette, tone
-exemplar lines, and explicit structural targets, and asks the model to write a
-new poem from scratch. Requires steps 1-3 above (`pos_tagged.csv`,
-`tfidf_results.csv`, `author_style_profiles.csv`) plus `models/word_embeddings.json`.
+`src/gemma_teacher/generate_synthetic_parallel.sh [poems-per-author] [n-targets] [samples] [seed] [split]` runs one process per target author (the axis on which processes are provably disjoint), each writing its own part under `data/synthetic/parts/`; `merge_synthetic_parts.py` folds them in, deduping on `(source_poem_id, target_author, sample_index)`. Resumable — killing and re-running is safe. Non-train splits go to `teacher_{val,test}.csv`, never `synthetic_dataset.csv`.
 
-1. `src/common/llm_client.py` — shared call wrapper (`call()`) over three backends, also used by `src/llm_infill/llm_probe.py`:
-   - `google` — Gemini API direct, needs `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) in the environment or `.env`. **The default.** Gemma 4 always reasons and can't be stopped (`thinkingBudget` is a 400), so `call_google` filters the `thought=true` response part, requests the full 32,768-token output ceiling, and retries once when thinking starves the answer — thinking length swings between ~2k and ~16k tokens for the same prompt.
-   - `openrouter` — needs `OPENROUTER_API_KEY`. Every `:free` Gemma route currently 429s from a shared upstream pool, which is why `google` exists.
-   - `ollama` — local, no key. `--backend ollama --model qwen3:14b` reproduces the pre-Gemma logs.
-   - `vllm` — the same `gemma-4-31B-it` weights served on our own A100 by `src/gemma_teacher/hpc/vllm_teacher.slurm` (vLLM in `singularity/vllm.sif`, pulled by `src/gemma_teacher/hpc/build_vllm.sh`; bf16, one 80 GB card, 32k context). `call_vllm` hits `$VLLM_HOST/v1/chat/completions` with thinking **on** (`chat_template_kwargs.enable_thinking`, because the API can't turn it off) and no `max_tokens`. It also strips Gemma's `<|channel>…<channel|>` reasoning block itself, in case the server's `gemma4` reasoning parser misses it. The server's `--served-model-name gemma-4-31b-it` keeps the model id identical to the API's, so `poem_summary_cache.json` still hits. Rows record `backend=vllm`. Untested on the cluster.
-   - `_post` (shared by all backends) retries transient HTTP failures (408/429/5xx) with exponential backoff plus jitter, up to `MAX_RETRIES` (5) attempts, before raising — Gemini's `google` backend in particular throws intermittent 500 "Internal error"/503 "high demand" under load. Non-transient 4xx (bad request, bad key) raise immediately rather than retry. This is separate from `call_google`'s own thinking-starved retry above, which fires on a 200 response with no answer part, not an HTTP error.
-2. `src/gemma_teacher/poem_tfidf.py` → `data/poem_tfidf_results.csv` — per-poem TF-IDF (distinct from `tfidf_results.csv`'s author-level, surface-word TF-IDF: this one's document is a single poem and its tokens are `pos_tagged.csv` lemmas)
-3. `src/gemma_teacher/style_narrator.py` — `describe_style(author)`: turns a profile row into corpus-relative prose (percentile rank per numeric column, binned into tertiles, plus `top_pos_bigrams`/`top_rhyme_endings` translated to sentences)
-4. `src/gemma_teacher/exemplar_selection.py` — `select_exemplars(author)`: k-means over line-embedding centroids of TF-IDF-qualifying lines, returns the lines closest to each cluster centroid. Line texts are de-duplicated author-wide (refrains and the corpus's near-duplicate poems otherwise put the same line in the prompt twice), and the final selection takes at most one line per source poem, globally across clusters
-5. `src/gemma_teacher/llm_style_transfer.py` — prompt assembly, generation, and structural-fit validation; entry point:
-   ```bash
-   uv run python -m gemma_teacher.llm_style_transfer --source-author "..." --source-title "..." --target-author "..."
-   ```
-   Defaults to `gemma-4-31b-it` on the `google` backend. `--source-poem-id` is the only way to reach a poem whose (author, title) pair is ambiguous; `--source-author`/`--source-title` are overwritten from the poem's own record when it is given.
-   Poem summaries are cached in `data/poem_summary_cache.json` (tracked — deterministic per model+prompt-version+text). Per-run audit records (prompt, generated poem, structural fit, metadata) are written to `data/llm_transfer_logs/*.json` (gitignored — reproducible from a run, not meant to accumulate in git history).
+## Students (SFT → GRPO)
 
-## Qwen3 LoRA SFT training pipeline (third, downstream pipeline)
+Specs: `docs/superpowers/specs/2026-09-27-grpo-stage-design.md`, `2026-10-02-gemma4-student-design.md`. Family-specific values live in `src/students/shared/model_families.py`; `--family` defaults to `qwen3`, and `assert_family_matches` refuses another family's adapter.
 
-Distills the LLM style-transfer pipeline above into a small fine-tuned model:
-Gemma's heavily-scaffolded (style profile prose, vocabulary palette, exemplar
-lines, structural targets) prompt produces training examples for a much
-smaller model that performs the same transfer given just a source poem and a
-target author name. Requires steps 1-3 of the original pipeline
-(`pos_tagged.csv`, `tfidf_results.csv`, `author_style_profiles.csv`) plus
-`models/word_embeddings.json`, same as the LLM style-transfer pipeline it
-consumes. This is stage 1; stage 2 (GRPO) is the next section, and
-`src/common/evaluation/style_metrics.py` (step 8) supplies its gate metrics unchanged.
+Traps:
+- **Move the model to the GPU explicitly** for generation — `from_pretrained` lands on CPU and `generate()` silently runs there (~8× slower).
+- **GRPO trains a fresh LoRA on the merged SFT model** (`merge_sft_adapter.py` → `models/<tag>-sft-merged/`). TRL's KL reference is the policy with the adapter off, so training the SFT adapter directly would anchor KL to the untuned base.
+- Keep max completion at 512 even for `--smoke`: SFT completions median ~291 tokens, and truncation masking zeroes the loss of every truncated completion.
+- Every metric in `common/evaluation/style_metrics.py` is higher-is-better and reused as the GRPO reward — one implementation per metric. The untuned base model's dominant move is copying the source verbatim, which scores perfect content recall; that's why `line_novelty` / `copy_novelty` exist.
+- `common/evaluation/judge_classifier.py` is evaluation-only (a different classifier from the reward's `classifier.pkl`, to detect reward gaming). Never import it from a reward — a test enforces this.
+- Gemma 4 E4B: load text-only via `load_causal_lm`. The hub checkpoint stores weights under `model.language_model.*`, and a plain text-only `from_pretrained` silently leaves them random. Tower modules reuse the names `q_proj`… so suffix LoRA targets are only safe text-only. Gemma trains prompt–completion with `eos_token='<turn|>'` (its turn end, not `<eos>`).
+- Qwen is run non-thinking (`enable_thinking=False`).
 
-1. `src/common/corpus/make_splits.py` → `data/splits/poem_splits.csv` — per-author 80/10/10 train/val/test split, seeded (`SEED=42`), poem-level (not `(author, song_title)` — see Data quality context below). Authors below `MIN_POEMS_FOR_3WAY=3` poems (8 of the corpus's 38 authors have 1-2 poems) can't be cut three ways and go entirely to `train`; every author with >= 3 poems gets >= 1 poem in each split. `load_splits()`/`poems_in_split()` are what every later stage reads — never recompute the split elsewhere.
-2. `src/students/shared/sft_data.py` — shared infrastructure so the training and inference paths can't drift on the task format:
-   - `select_target_authors(n)`: the `n` authors with the most poems among those with a style profile at all, ties broken alphabetically. Not an author-diversity algorithm — "distinct target styles" falls out of picking real, different, well-profiled poets.
-   - `build_messages(source_poem, target_author, generated_poem=None)`: the compact `[system, user]` (or `[system, user, assistant]`) chat format the SFT task is actually trained on — deliberately NOT the full Gemma prompt. `render_inference_prompt`/`render_chat` render it through the tokenizer's own chat template with `enable_thinking=False` (Qwen3 is treated as non-reasoning for this task, matching `llm_client.py`'s existing `think=False`/`_strip_think` handling).
-   - `load_synthetic_rows()` / `build_hf_dataset()` load `generate_synthetic.py`'s output into an HF `Dataset` with a `messages` column (not a pre-rendered string — TRL's `assistant_only_loss` needs per-role structure to mask the loss, see `train_sft.py`).
-3. `src/gemma_teacher/generate_synthetic.py` → `data/synthetic/synthetic_dataset.csv` — calls `llm_style_transfer.run_transfer()` unmodified, in a loop over sampled (source poem, target author) pairs from the **train** split only. Resumable (the output CSV is the "already done" record) and per-pair failures land in `data/synthetic/synthetic_errors.csv` (gitignored) rather than aborting the batch. Example:
-   ```bash
-   uv run python -m gemma_teacher.generate_synthetic --num-target-authors 10 --poems-per-author 100 --samples-per-pair 1 --seed 42
-   ```
-   `--poems-per-author` is the count of source poems sampled once and reused across every target author, not resampled per author (see the script's own docstring before changing this).
+HPC: build the image once with `src/students/shared/hpc/build.sh` (rebuild when `uv.lock` changes). Jobs in `src/students/shared/hpc/` take `FAMILY=qwen3|gemma4`; `grpo_common.sh` maps it to the `models/` tag (`qwen3` / `gemma4-e4b`). Typical sequence: `train_sft` → `compare_base_lora` → `grpo_smoke` → `train_grpo` (Qwen's v2 reward: `qwen/hpc/train_grpo_v2.slurm`; Gemma: `gemma/hpc/train_grpo_gemma.slurm`, auto-resumes) → `eval_grpo` (val) → `eval_test base|sft|grpo|grpo-v1|grpo-v2`, then `eval_test score`, which scores every `*_test.csv` plus `teacher_test.csv` into `test_comparison_*.csv`. Generation CSVs in `data/validation_generations/` are tracked.
 
-   Gemma's `google` backend is the throughput bottleneck (a few requests/minute, ~3 min/pair including the reasoning overhead), so `src/gemma_teacher/generate_synthetic_parallel.sh [poems-per-author] [num-target-authors] [samples-per-pair] [seed]` runs one `generate_synthetic.py` process per target author in parallel instead of one process looping over all pairs serially — the dedup key is `(source_poem_id, target_author, sample_index)`, and target_author is the one axis two processes are provably disjoint on. Each process gets its own `--output-path`/`--errors-path` under `data/synthetic/parts/` (gitignored) — concurrent appends from multiple processes to one shared CSV aren't safe in general (a generated poem can push a single row past the OS's atomic write size). `src/gemma_teacher/merge_synthetic_parts.py` folds the per-author parts back into the main `synthetic_dataset.csv`/`synthetic_errors.csv`, deduping on that same key, and seeds each part from the main file's already-done rows before its process starts so a prior serial (or interrupted parallel) run's successes aren't regenerated. The wrapper script merges leftover parts before reseeding too, so killing it mid-run and re-invoking it is safe the same way the serial script is.
-4. `src/students/shared/train_sft.py` — LoRA SFT of `Qwen/Qwen3-4B` via TRL's `SFTTrainer` + PEFT's `LoraConfig`, trained on `split=train` rows only; `split=val` rows (if present) are `SFTTrainer`'s `eval_dataset` for loss monitoring only (never backpropagated). LoRA targets `q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj` — confirmed against transformers' actual Qwen3 modeling source, not assumed from a generic Llama-family default (`q_norm`/`k_norm` are RMSNorm layers, deliberately excluded). Loss is masked to the assistant turn via `assistant_only_loss=True` (TRL's `get_training_chat_template` explicitly patches `{% generation %}` markers onto Qwen3's template for this). Saves the adapter + tokenizer + `run_config.json` to `models/qwen3-lora-sft/` (gitignored — regenerate via the Slurm job below).
-5. `src/students/shared/hpc/qwen-sft.def` + `src/students/shared/hpc/build.sh` — the GPU runtime environment, built straight from this project's own `pyproject.toml`/`uv.lock` (`uv sync --frozen` at build time) so it can't drift from `uv run` outside a container. No CUDA/PyTorch base image needed: PyPI's default Linux `torch` wheel bundles its own CUDA runtime as ordinary pip packages (`nvidia-cuda-runtime-cu12`, `nvidia-cudnn-cu12`, etc.), so a plain `python:3.11-slim` base plus `uv sync` is enough — only the NVIDIA *driver* has to come from the host, via `--nv`. Build once with `./src/students/shared/hpc/build.sh` (redirects Singularity's tmp/cache dirs onto the NFS-backed home filesystem first — this cluster's local `/tmp` is a few GB, nowhere near enough for the pulled layers + synced venv); rebuild whenever `pyproject.toml`/`uv.lock` changes. Gitignored (`singularity/*.sif`) — a build artifact, not source.
-6. `src/students/qwen/hpc/train_sft.slurm` — single-GPU job (`sbatch src/students/qwen/hpc/train_sft.slurm`) that runs `train_sft.py` inside `singularity/qwen-sft.sif`, matching this cluster's other Singularity jobs: `singularity exec --nv` with explicit `-B` binds for the HF cache (`$HOME/.cache/huggingface` → `/root/.cache/huggingface`) and the repo (`$PWD` → `/workspace`, one mount covering `src/`+`data/`+`models/` — unlike a job that binds separate `./data`/`./code` host trees, this project keeps them in one repo), then a `bash -c` that `cd`s into `/workspace` and calls `/opt/venv/bin/python` directly (the image's baked venv, no conda `source activate` needed). Extra args after the script path are forwarded straight to `train_sft.py` via the `bash -c '...' _ "$@"` passthrough idiom. Fails fast with a clear message if the `.sif` hasn't been built yet.
-7. `src/students/shared/generate_validation.py` — loads the trained adapter and generates from the **val** split (never `train`), using the exact same `sft_data` chat format as training so there's no prompt skew, and reuses `common.evaluation.structure.structural_targets`/`validate_structure` (the same functions the Gemma teacher's prompt uses) for the fit metrics so Qwen's outputs are directly comparable to Gemma's. Output → `data/validation_generations/<adapter-name>_<split>.csv` (tracked — curated, non-deterministic-to-regenerate model output, same reasoning as `poem_summary_cache.json`). Also needs a GPU — run the same way `train_sft.slurm` does (see above).
+## Reports
 
-   `--no-adapter` generates from the untuned base model over the identical pairs, prompt format and seeds — the A/B baseline stage 8 scores against. `--repetition-penalty` / `--no-repeat-ngram-size` expose decoding controls (both off by default, i.e. plain sampling) so "degenerate decoding" can be separated from "degenerate distribution". **The model must be moved to the GPU explicitly**: `from_pretrained` lands on CPU, and `generate()` then silently runs there — that cost the first val run 131 s/generation (17 h for 468 rows) versus 15.5 s/generation on the A100. `load_adapter_model` logs the device it actually loaded onto.
-8. `src/common/evaluation/style_metrics.py` + `src/students/shared/compare_generations.py` — evaluation. `style_metrics` is per-generation scoring: degeneracy (`distinct_1/2/3`, `line_uniqueness`), language/format compliance (`cyrillic_ratio`, `no_markup`), structural fit, target-style match (`classifier.pkl`'s author probability, target TF-IDF hit rate) and source-content preservation (`content_recall`, plus `line_novelty` — **the untuned base model's dominant behaviour is reproducing the source poem verbatim under a markdown heading, which scores a perfect content recall and, being real human poetry, excellent diversity; without a copy check "did nothing" is the highest-scoring strategy**). Every metric is oriented higher-is-better and mostly bounded in [0,1], because the GRPO stage needs the same numbers per candidate as a reward — a reward that disagreed with the eval metric would be a bug, so there is one implementation of each. `compare_generations.py` aggregates any set of generation CSVs (base, tuned, and `--include-teacher` for Gemma's own output) and prints an all-rows and a paired view; `--corpus-reference` adds the target authors' real poems as an anchor. Runs on CPU in seconds.
+`docs/report.tex` covers the pipeline up to the teacher; `docs/rl_report.tex` covers SFT/GRPO/students (`\pending{...}` marks awaited results); `docs/thesis/` is the thesis. After a significant pipeline change (model swap, scoring/metric change, bug affecting reported numbers), check whether the relevant report needs updating. Compile with `xelatex`, not `pdflatex` (Cyrillic via fontspec/polyglossia).
 
-   `src/common/evaluation/judge_classifier.py` is an **evaluation-only** second author classifier (`judge-prob`/`judge-top1` columns): train-split poems only, word uni+bigrams, logistic regression — different data, features and model from `classifier.pkl`, which GRPO optimises as a reward. A gain in `clf-top1` without one in `judge-top1` means the reward classifier was gamed. Never import it from a reward (a test enforces this). Fitted on first use (~2 s) and cached at `models/judge_classifier.pkl` (gitignored); `--rebuild` refits and writes held-out accuracy to `data/judge_classifier_eval.json` (0.663 top-1 on the 10 target authors' val+test poems — the ceiling for real unseen poems; the REAL POEMS row blanks train-split poems for the same reason).
+## Data quality
 
-   Slurm wrappers: `src/students/qwen/hpc/compare_base_lora.slurm` (base and tuned back to back on one GPU, so the only difference between the two CSVs is the adapter — device changes the sampling RNG stream, so a CPU-vs-GPU pair would confound it) and `src/students/qwen/hpc/decoding_ablation.slurm` (one adapter, several decoding settings).
+- 52 rows contain Latin/Greek letters. About 22 are lookalike artifacts (`ο` for `о`, mixed-script `штο`); the rest are intentional (Roman numerals, real Latin words). Cleaning scripts must tell the two apart.
+- `(author, song_title)` is not unique (~15 pairs, e.g. four Конески `ПЕСНА`), and `pos_tagged.csv` has no finer id. Single-poem lookups raise on ambiguity; per-poem aggregates (`poem_tfidf.py`) blend the duplicates.
 
-## GRPO stage (fourth pipeline, downstream of SFT)
+## POS tagging (classla `mk`)
 
-Reward-driven fine-tuning of the SFT model. Design:
-`docs/superpowers/specs/2026-09-27-grpo-stage-design.md`; the rewards see
-only (generated poem, source poem, target author) — never the Gemma output,
-never a val/test poem.
-
-1. `src/common/stylometry/style_features.py` — per-poem stylometric features (`poem_features`: `pct_*`, `lexical_diversity` = `mattr` over lemmas, tokens/line, lines, stanzas, lines/stanza, POS-bigram and rhyme-ending counts), shared with `style_profiler.py`, which now imports its helpers from here. Refactor verified byte-identical against the unmodified script's output (note: the committed `author_style_profiles.csv` is slightly stale against the current `pos_tagged.csv`; it was deliberately not regenerated).
-2. `tagging.tag_poem(text, verb_lemmas)` — whole-poem tagging with the corpus build's corrections and filtering (`tag_lines` tags line by line and gives different tags). This is what tags generated poems for the reward.
-3. `src/students/shared/build_reward_calibration.py` → `data/reward_calibration.json` (tracked, deterministic, ~90 s): per author, over **train** poems only — per-feature mean/std of per-poem values, leave-one-out self-similarity of POS-bigram and rhyme distributions, TF-IDF hit-rate p90; corpus-wide per-feature std (σ floor); content baseline (mean line-F1 of 2,000 random cross-author poem pairs — 0.553, high because every line takes its best match).
-4. `src/common/evaluation/content_similarity.py` + `src/students/shared/grpo_rewards.py` — the reward:
-   - style: scalar features `exp(-z²/2)` against the target author (σ floored at 0.5×corpus std); distributions scored one-sided against the author's own self-similarity; `clf_target_prob`; TF-IDF hits / p90. Weighted mean over groups `pos_profile, lexical_diversity, structure, pos_bigrams, classifier` (1.0) and `rhyme, tfidf` (0.5), `--style-weights` JSON to change.
-   - content: line-level embedding F1 (`paraphrase-multilingual-mpnet-base-v2`) against the **source** poem, rescaled `(F1 − b)/(1 − b)`.
-   - gates (multiplicative): `validity = is_cyrillic × no_chat_markup × is_nonempty` on both; `line_uniqueness` on style; `copy_novelty` on content. `no_chat_markup` (bold / heading / code fence) is deliberately narrower than the reported `no_markup`, whose bullet/numbered patterns fire on 4 % of real poems (dialogue lines opening with "- "). `copy_novelty`: a generated line of ≥ 3 tokens is a copy if ≥ 75 % of its word types occur in one source line (containment — Jaccard misses one-word edits on ~5-token lines).
-   - `R = α·R_style_g + β·R_content_g` (α = β = 0.5, `--style-weight` / `--content-weight`). `--copy-gate-power k` raises the copy gate to `copy_novelty**k` (default 1 = v1). Two TRL reward functions (`style_reward`, `content_reward`) share one memoised scoring pass per batch; components go to TRL's `log_metric` and to `<output-dir>/reward_components.jsonl`.
-5. `src/students/shared/evaluate_reward.py` — the reward inspector. `--fixtures` scores `tests/fixtures/reward_cases.json` (real target poem, verbatim source, near-copy, Gemma, repetition, markdown/English, empty for 4 train pairs) and checks orderings, exit 1 on a violation; `--generations-csv F --row N` or `--source-poem-id/--target-author/--generated-file` prints the per-feature breakdown; `--groups` (GPU) samples G SFT completions per train prompt and reports each component's **within-group** std — what dominates GRPO's group-normalised advantage — to `data/grpo/reward_groups.csv`. Set α/β from that before a long run.
-6. `src/students/shared/merge_sft_adapter.py` → `models/qwen3-sft-merged/` (gitignored, idempotent, `merge_info.json` records the adapter hash). TRL's KL reference is the policy with its adapter switched off, so training the SFT adapter directly would anchor to the *untuned* base; merging SFT into the weights and training a fresh LoRA makes the start policy and the KL reference exactly the SFT model.
-7. `src/students/shared/grpo_data.py` — train-split (poem × `select_target_authors(10)`) pairs, self-transfer skipped, seeded shuffle, prompt pre-rendered with `sft_data.render_inference_prompt`; prompts over `--max-prompt-length` (1024) are dropped, never truncated.
-8. `src/students/shared/train_grpo.py` → `models/qwen3-grpo/` (gitignored: adapter, `run_config.json` with git SHA / merge info / calibration hash / versions, `reward_components.jsonl`, `checkpoint-*/`). Defaults: G=4, batch 8 × grad-accum 4 (8 prompts / step), lr 1e-5 constant + 10 warmup, LoRA r16/α32/dropout 0, max completion 512 with truncated completions masked, temperature 0.9, KL β 0.04, 500 steps, seed 42, bf16. `--smoke`: 3 steps, 4 prompts, lr 1e-4 → `models/qwen3-grpo-smoke/`; asserts finite loss/rewards, non-constant rewards within a group, LoRA B moved off zero, and adapter-on vs adapter-off log-prob of a fixed completion differs. **Keep max completion at 512 for the smoke run**: SFT completions have a median of 291 tokens, and with truncation masking a short cap zeroes the loss of every completion.
-9. Slurm (`src/students/shared/hpc/grpo_common.sh` holds the shared container call; adds a `$HOME/classla_resources` → `/root/classla_resources` bind, fetch once with `uv run python -c "import classla; classla.download('mk')"`): `grpo_smoke.slurm` (merge → `--fixtures` → `--smoke`), `reward_groups.slurm`, `train_grpo.slurm` (args forwarded), `eval_grpo.slurm` (SFT-merged then GRPO on the 468 val pairs back to back, then `compare_generations.py --rewards`; `ADAPTER=models/qwen3-grpo/checkpoint-N` picks a checkpoint). `train_grpo_v2.slurm` is the v1 run (α/β = 0.3/0.7) with the two reward fixes from the report's GRPO-results implications — classifier group weight 5.6 (inverse of its within-group spread in `data/grpo/reward_groups.csv`) and `--copy-gate-power 3` — writing `models/qwen3-grpo-v2/`; evaluate with `ADAPTER=models/qwen3-grpo-v2 sbatch src/students/qwen/hpc/eval_grpo.slurm`.
-10. Evaluation: `generate_validation.py` resolves a GRPO adapter's container base path (`/workspace/models/...`) under this repo's `models/`, and labels `checkpoint-N` runs `<run>-checkpoint-N`. Gemma on the val pairs: `src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 val` → `data/synthetic/teacher_val.csv` (split routing in `merge_synthetic_parts.paths_for_split`; `generate_synthetic.py` refuses to write non-train rows to `synthetic_dataset.csv`). `compare_generations.py --rewards` adds `R*` and `copy_novelty` columns. **Test split** (final Qwen numbers): `sbatch src/students/qwen/hpc/eval_test.slurm base|sft|grpo-v1|grpo-v2` (one system per job, parallel-safe, ~2 h each, 466 pairs → `<label>_test.csv`), then `sbatch src/students/qwen/hpc/eval_test.slurm score` → `test_comparison_*.csv`. Teacher on test (optional reference): `src/gemma_teacher/generate_synthetic_parallel.sh 50 10 1 42 test` → `data/synthetic/teacher_test.csv`. The API's quota and 500s make the val/test teacher runs slow, so `sbatch src/gemma_teacher/hpc/vllm_teacher.slurm 50 10 1 42 {val,test}` runs the same script against a local vLLM server instead (`BACKEND`/`MODEL` env vars pass through to `generate_synthetic.py`).
-
-## Gemma 4 E4B student (`--family gemma4`)
-
-A second student of matched size, to tell whether GRPO's open problems (style
-collapse, weak author identification) belong to Qwen or to the method. Spec:
-`docs/superpowers/specs/2026-10-02-gemma4-student-design.md`; plan:
-`docs/superpowers/plans/2026-10-18-gemma4-student.md`. Same synthetic data,
-task format, hyperparameters, GRPO-v2 reward and val pairs as Qwen; only the
-student changes.
-
-- `src/students/shared/model_families.py` owns everything family-specific: hub name, `models/` dir tag (`qwen3` / `gemma4-e4b`), LoRA targets, loss masking, loader, decoding overrides. `train_sft`, `merge_sft_adapter`, `generate_validation`, `train_grpo` and `evaluate_reward` take `--family {qwen3,gemma4}` (default `qwen3`, which resolves to exactly the pre-family values). `assert_family_matches` refuses an adapter/merged dir built from the other family; `merge_info.json` and `run_config.json` record the family.
-- Gemma facts (verified on the real E4B `config.json`, `tests/fixtures/gemma4_e4b_config.json`): `AutoModelForCausalLM` gives the multimodal class with vision + audio towers, so Gemma loads text-only (`Gemma4ForCausalLM` with the text config). **The hub checkpoint stores language weights under `model.language_model.*` and transformers 5.9 has no conversion for it: a plain text-only `from_pretrained` silently leaves every language weight random.** `load_causal_lm` maps the prefix (`key_mapping`), clears `_weight_conversions` (else `save_pretrained` writes keys that lose every weight on reload) and raises on any missing weight; tested on a tiny real-architecture checkpoint in `tests/students/shared/test_model_families.py`. The towers reuse the names `q_proj`…`down_proj` for `Gemma4ClippableLinear` wrappers PEFT can't adapt — the suffix target list is only safe text-only; multimodal needs `GEMMA4_LM_REGEX` (258 modules: 42 layers, the last 18 share KV and have no `k_proj`/`v_proj`). `per_layer_*` projections are never targets. Gemma ships `top_k=64`; Gemma runs pin 20 to match Qwen3 (`--top-k` wins).
-- Loss masking: TRL 1.13 has no Gemma 4 training template, so Gemma trains on prompt–completion rows (`sft_data.build_prompt_completion`, `build_hf_dataset(fmt='prompt_completion')`) with `completion_only_loss` and `SFTConfig(eos_token='<turn|>')` — Gemma's `eos_token` is `<eos>`, but its turn ends with `<turn|>`; TRL would otherwise train `<turn|><eos>`, and GRPO (which stops on `tokenizer.eos_token`, saved with the adapter and copied by the merge) would sample past the turn. Both formats put loss on the poem + end-of-turn token; **Qwen's `assistant_only_loss` additionally trains its constant `<think>\n\n</think>\n\n` scaffold and the newline after `<|im_end|>`** (pinned exactly in `tests/students/shared/test_sft_data.py`).
-- `src/students/shared/hpc/grpo_common.sh` maps `FAMILY` → `TAG` / `BASE_LABEL` for the jobs (kept in sync with the registry by a test). Every wrapper honours `FAMILY=gemma4`; Qwen output names are unchanged, Gemma's are `gemma4-e4b-*` (comparison: `gemma4-e4b_grpo_comparison_*.csv`).
-
-HPC order:
-1. `sbatch src/students/gemma/hpc/gemma_compat.slurm` → `data/gemma_compat_report.json` (`src/students/gemma/gemma_compat.py`: load, LoRA targets, template, train lengths, one generation, 3-step SFT + merge round-trip, then a GRPO `--smoke`). A failing text-only load fails the job; the report says whether the multimodal loader would work (then set Gemma's `loader='auto'` and `target_modules=GEMMA4_LM_REGEX` in `FAMILIES` by hand). Its `max_seq_length` is the smallest of 1024/2048/4096 truncating no train example — `--max-seq-length` defaults per family (Qwen 1024, unchanged; Gemma 4096, because 10 of 1,146 train rows exceed 2048 Gemma tokens).
-2. `FAMILY=gemma4 sbatch src/students/qwen/hpc/train_sft.slurm`
-3. `FAMILY=gemma4 sbatch src/students/qwen/hpc/compare_base_lora.slurm` (base vs SFT on the val pairs)
-4. `sbatch src/students/gemma/hpc/train_grpo_gemma.slurm` (GRPO-v2 reward) → `models/gemma4-e4b-grpo/`
-5. `FAMILY=gemma4 sbatch src/students/qwen/hpc/eval_grpo.slurm`
-
-## Thesis report
-
-`docs/report.tex` is the thesis-facing write-up of pipeline methodology and validation findings (tagger migration, correctness bugs found and fixed, metric changes, community-detection stability, and similar). **Whenever you make a significant change to the pipeline** — swapping a model/tagger, changing a scoring or graph-construction method, fixing a bug that affects reported numbers, adding or redefining a metric — **check whether `docs/report.tex` needs a corresponding update**, and update it if so. The SFT / GRPO / Gemma-student work (everything from "Qwen3 LoRA SFT training pipeline" onward) is reported separately in `docs/rl_report.tex`. That report is the one to update for those stages. Results it is still waiting on are marked `\pending{...}`. Compile with `xelatex report.tex` (not `pdflatex` — the document needs native Cyrillic via `fontspec`/`polyglossia`, and `T1`/`T2A` font-encoding setups aren't fully installed in this environment).
-
-## Data quality context
-
-Latin and Greek character artifacts exist inside Macedonian (Cyrillic) text — 52 of the 1,239 rows contain a Latin or Greek letter in `song_text`, and about 22 of those are lookalike artifacts (a Greek letter standing alone, such as `ο` for the vocative `о`, or a word that mixes scripts, such as `штο`, `никаквa`, `ΚАМЕН`). These are single characters that visually resemble Cyrillic letters but are the wrong Unicode codepoint. The rest are intentional: Roman numerals (`I`) and about 30 rows with whole Latin-script words.
-
-`(author, song_title)` is not a unique poem key. ~15 pairs (e.g. Блаже Конески has 4 distinct poems titled `ПЕСНА`) are shared by multiple physical poems, and `pos_tagged.csv` carries no finer-grained id — this is `pos_tag_corpus.py`'s schema, inherited by every downstream file keyed the same way (`tfidf_authors.py`, `style_profiler.py`, `candidate_selection.py`'s `corpus_token_stream`, `poem_tfidf.py`). Consumers that need one specific poem (`llm_style_transfer.py`'s `load_poem_text`) raise on an ambiguous title rather than silently picking one; consumers that aggregate per-poem tokens (`poem_tfidf.py`) silently blend the duplicates' vocabulary together for those ~15 pairs. A real fix needs a poem-level id threaded through `pos_tag_corpus.py` and every script that consumes its output.
-
-When writing data-cleaning or preprocessing scripts, distinguish between:
-- **Intentional Latin/Greek** (foreign words, author names, titles that legitimately use Latin script)
-- **Artifact characters** (Cyrillic lookalikes from OCR or copy-paste errors)
-
-### POS tagging quality
-
-Tagging uses **classla** (`mk` models), not spaCy — classla lemmatizes inflection correctly and adds MULTEXT-East `xpos` plus morphological `feats` columns to `pos_tagged.csv`. Hand-checking 70 random tokens against their source lines put UPOS accuracy around 96%.
-
-**Read `xpos`, not just `pos`.** It is positional, and each slot carries a distinction `pos` flattens:
+Read `xpos`, not just `pos` — it's positional MULTEXT-East:
 
 ```
-NOUN  Ncfsny  N  c=common/p=proper  Gender f/m/n  Number s/p/t=count  Case n/v  Definite n/y/p/d
-VERB  Vmeic-smn  V  m=main/o=modal  Aspect p/e/b=biaspectual  Mood i/m
-                    Tense p=pres/a=aorist/i=imperf/c=л-form  Person  Number  Gender  Polarity
-ADJ   Afpfs-y  A  Type f=qual/p=participial/s=possessive/g=general/o=ordinal  Degree p/c/s  Gender  Number  -  Definite n/y
-ADV   Rgp      R  Type g=general/d=modal/v=verbal  Degree p/c/s
+NOUN  Ncfsny  c=common/p=proper  Gender  Number  Case  Definite n/y/p=proximal/d=distal
+VERB  Vmeic-smn  m=main/o=modal  Aspect p/e/b  Mood  Tense p/a/i/c=л-form  Person Number Gender Polarity
+ADJ   Afpfs-y  Type f/p/s/g/o  Degree  Gender  Number  -  Definite
+ADV   Rgp      Type g/d/v  Degree
 ```
 
-Noun definiteness has four values, not two: `y` = neutral `-от/-та`, `p` = proximal `-ов/-ва`, `d` = distal `-он/-не`. `build_morph_lookup.py` keys on the `feats` column directly — see `docs/superpowers/specs/2026-08-13-feats-morph-lookup-design.md`.
+Normalizations on top of classla, in order:
+1. Hand corrections from `data/pos_corrections.csv`.
+2. Relativizers (`што/кога/како/колку/каде`) get bare `xpos=Rg` and are excluded from content words. Left in, they were the top five "content" words.
+3. `-јќи` verbal adverbs (`Rv`) are re-lemmatized to their verb, resolving `-ејќи` by corpus verb-lemma frequency.
 
-Three corrections `pos_tag_corpus.py` applies on top of classla's output:
-
-- **Hand corrections from `data/pos_corrections.csv`** are applied first — see "Correcting tags by hand" below.
-- **Relativizers are dropped.** classla tags `што`/`кога`/`како`/`колку`/`каде` as ADV, but they are relativizers ("Зборовите **што** ти ги дадов"). They carry bare `xpos=Rg` (no degree slot) where real adverbs get `Rgp`/`Rgc`/`Rgs`, so `is_content()` filters on that. Left in, they were the five most frequent "content" words in the corpus — 1,478 tokens, 19% of all ADV — and swamped every POS ratio built on it.
-- **`-јќи` verbal adverbs (`xpos=Rv`) are re-lemmatized to their base verb.** classla leaves them unlemmatized (`барајќи` → `барајќи`). `gerund_lemma()` rebuilds the verb, resolving the ambiguous `-ејќи` ending (both `велејќи`→`вели` and `знаејќи`→`знае` are possible) against corpus verb-lemma *frequencies* — a bare membership test picks up single mistagged tokens and yields `бране` over `брани`.
-
-### Correcting tags by hand
-
-`pos_tagged.csv` and `pos_flags.csv` are both rebuilt from scratch on every tagging run, so **never hand-edit them expecting the change to stick**. Corrections live in `data/pos_corrections.csv`, the one file here that is never regenerated.
-
-```bash
-# 1. review data/pos_flags.csv, filling in the correction / lemma_fix / scope columns
-# 2. harvest those edits and patch pos_tagged.csv
-uv run python -m common.tagging.apply_corrections
-# 3. corrections are re-applied automatically on every later tagging run
-uv run python -m common.tagging.pos_tag_corpus
-```
-
-`correction` takes a POS tag or `DROP` (removes the token — for junk like `01:47`, `navigare`, bare Greek letters that no tag fits). `lemma_fix` sets the lemma. `scope` is blank for corpus-wide, or `poem` / `row` to narrow it.
-
-Either column alone is enough. A **lemma-only fix** (blank `correction`, `lemma_fix` set) is the path for a bad lemma under a correct tag — `apply_to` then leaves `xpos`/`feats` intact, since no POS judgement was overruled. No flag rule catches lemma instability, so these have to be added to `pos_corrections.csv` by hand rather than harvested from `pos_flags.csv`; `apply_corrections.py` picks them up on its next run regardless. Example: classla lemmatizes `петлите` to `петлин` while getting `петел`/`петелот`/`петли` right, splitting one lemma across two spellings.
-
-A correction keys on the word **and the tag that was wrong**, so it only touches tokens tagged the way you judged incorrect — correctly-tagged occurrences of the same word are never rewritten. Global scope is the default because the flags collapse hard: 1,969 flag rows are only 1,291 distinct (word, wrong-tag) pairs, and `гора`/PROPN alone is 30 rows. Use `row` for the context-dependent `unstable_tag` cases, where the same form is legitimately a noun in one line and a verb in another.
-
-Notes:
-- A corrected POS clears `xpos`/`feats`, since classla derived them alongside the tag you just overruled. **An empty `xpos` in `pos_tagged.csv` means "corrected by hand".**
-- Corrections are applied before the flag rules run, so a token you have fixed drops out of `pos_flags.csv` and the review queue shrinks as you work.
-- `row`-scoped fixes, and fixes to tokens classla gave no content tag (the `unknown_tag` rows), need a full `pos_tag_corpus.py` run — `apply_corrections.py` stores them and says so.
-- One bad value rejects the whole batch rather than half-applying it. To undo a correction, delete its row from `pos_corrections.csv`.
-
-`pos_tag_corpus.py` also writes `data/pos_flags.csv`, an advisory audit of suspicious tags (~1.4% of tokens) grouped by `reason`. Nothing filters on it:
-
-| reason | what it catches |
-|---|---|
-| `upos_xpos_clash` | `upos` and `xpos` disagree on the basic category (`upos=NOUN`, `xpos=I`). classla runs the two taggers separately, so a clash means neither reading is trustworthy — high precision |
-| `unstable_tag` | the form is tagged differently elsewhere in the corpus, and this is the minority reading (thresholds: `MIN_OCC`, `MAX_SHARE`) |
-| `lowercase_propn` | PROPN assigned to a lowercase token — usually a common noun |
-| `unknown_tag` | classla returned no `upos` / `xpos=X` — mostly dialectal clippings (`ко`, `сал`, `та`) |
-| `non_cyrillic`, `mixed_script`, `bad_lemma` | script artifacts reaching the tagger |
-
-Rules that fire on *rarity* rather than *evidence* were tried and dropped: this corpus is poetry, so rare nouns and verbless lines are normal, and rarity-based rules ran at roughly 5% precision.
+**Correcting tags:** `pos_tagged.csv` and `pos_flags.csv` are regenerated on every run, so never hand-edit them. Fill `correction` (a tag or `DROP`) / `lemma_fix` / `scope` (blank = corpus-wide, `poem`, `row`) in `data/pos_flags.csv`, then run `uv run python -m common.tagging.apply_corrections`, which harvests the edits into `pos_corrections.csv` (the only never-regenerated file). Corrections key on word + wrong tag, so correctly tagged occurrences are untouched. A POS correction clears `xpos`/`feats`: an empty `xpos` means "corrected by hand". Lemma-only fixes (e.g. `петлите`→`петел`) are added to `pos_corrections.csv` by hand. `row`-scoped fixes and `unknown_tag` fixes need a full `pos_tag_corpus` run. `pos_flags.csv` is advisory only; rarity-based flag rules were dropped (~5 % precision on poetry).

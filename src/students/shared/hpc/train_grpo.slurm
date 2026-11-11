@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-grpo
+#SBATCH --job-name=student-grpo
 #SBATCH --partition=openlab-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -13,9 +13,9 @@
 # grpo_smoke.slurm first. Extra args go straight to train_grpo.py.
 #
 # Usage:
-#   sbatch src/students/qwen/hpc/train_grpo.slurm
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/train_grpo.slurm   # Gemma 4 E4B student (see train_grpo_gemma.slurm)
-#   sbatch src/students/qwen/hpc/train_grpo.slurm --max-steps 200 --style-weight 0.6 --content-weight 0.4
+#   sbatch src/students/shared/hpc/train_grpo.slurm
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/train_grpo.slurm   # Gemma 4 E4B student (see train_grpo_gemma.slurm)
+#   sbatch src/students/shared/hpc/train_grpo.slurm --max-steps 200 --style-weight 0.6 --content-weight 0.4
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"

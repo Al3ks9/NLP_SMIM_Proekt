@@ -467,9 +467,9 @@ only.
 
 {\raggedright\paragraph{Reproducibility.} Splits: \texttt{make\_splits.py}. Teacher data:
 \texttt{generate\_synthetic\_parallel.sh}. SFT, GRPO and evaluation:
-\texttt{src/students/qwen/hpc/train\_sft.slurm}, \texttt{train\_grpo.slurm},
-\texttt{train\_grpo\_v2.slurm}, \texttt{eval\_grpo.slurm},
-\texttt{eval\_test.slurm} (Table~\ref{tab:test}). The repetition-penalty and
+\texttt{src/students/shared/hpc/train\_sft.slurm}, \texttt{train\_grpo.slurm},
+\texttt{eval\_grpo.slurm}, \texttt{eval\_test.slurm}
+(Table~\ref{tab:test}; Qwen's v2 run: \texttt{src/students/qwen/hpc/train\_grpo\_v2.slurm}). The repetition-penalty and
 checkpoint-300 judge numbers are in
 \texttt{judge\_comparison\_*.csv}. Tables:
 \texttt{compare\_generations.py} with \texttt{--rewards} and

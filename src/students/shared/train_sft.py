@@ -39,7 +39,7 @@ are RMSNorm layers, not nn.Linear, and are deliberately excluded; Qwen3MLP
 inherits GemmaMLP: gate_proj/up_proj/down_proj), not assumed from a generic
 Llama-family default.
 
-Usage (single A100 80GB; see src/students/qwen/hpc/train_sft.slurm for the cluster job):
+Usage (single A100 80GB; see src/students/shared/hpc/train_sft.slurm for the cluster job):
     uv run python -m students.shared.train_sft \\
         --num-train-epochs 3 --per-device-train-batch-size 4 \\
         --gradient-accumulation-steps 4 --learning-rate 2e-4

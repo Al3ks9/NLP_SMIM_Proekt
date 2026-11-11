@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-lora-sft
+#SBATCH --job-name=student-sft
 #SBATCH --partition=cybermacs-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=2
@@ -20,9 +20,9 @@
 # (bound in via --nv).
 #
 # Usage:
-#   sbatch src/students/qwen/hpc/train_sft.slurm
-#   sbatch src/students/qwen/hpc/train_sft.slurm --num-train-epochs 5 --learning-rate 1e-4   # extra args forwarded to train_sft.py
-#   FAMILY=gemma4 sbatch src/students/qwen/hpc/train_sft.slurm      # Gemma 4 E4B student (--max-seq-length defaults per family: qwen3 1024, gemma4 4096)
+#   sbatch src/students/shared/hpc/train_sft.slurm
+#   sbatch src/students/shared/hpc/train_sft.slurm --num-train-epochs 5 --learning-rate 1e-4   # extra args forwarded to train_sft.py
+#   FAMILY=gemma4 sbatch src/students/shared/hpc/train_sft.slurm      # Gemma 4 E4B student (--max-seq-length defaults per family: qwen3 1024, gemma4 4096)
 
 set -euo pipefail
 

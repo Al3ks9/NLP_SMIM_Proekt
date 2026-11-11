@@ -18,7 +18,7 @@ From: python:3.11-slim
 # note below about redirecting build tmp/cache off the local disk):
 #   singularity build --fakeroot singularity/qwen-sft.sif src/students/shared/hpc/qwen-sft.def
 #
-# Run, e.g. from src/students/qwen/hpc/train_sft.slurm:
+# Run, e.g. from src/students/shared/hpc/train_sft.slurm:
 #   singularity exec --nv --env PYTHONPATH=src singularity/qwen-sft.sif \
 #       python -m students.shared.train_sft --num-train-epochs 3 ...
 #

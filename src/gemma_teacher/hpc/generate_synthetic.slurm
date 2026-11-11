@@ -37,7 +37,7 @@
 
 set -euo pipefail
 
-# See src/students/qwen/hpc/train_sft.slurm for why $0 can't be used here: Slurm copies the
+# See src/students/shared/hpc/train_sft.slurm for why $0 can't be used here: Slurm copies the
 # script into a per-job spool dir before running it, so dirname "$0" would
 # resolve to that spool path, not this file's real location.
 cd "$SLURM_SUBMIT_DIR"

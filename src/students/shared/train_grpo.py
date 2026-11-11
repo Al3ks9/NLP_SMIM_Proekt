@@ -14,7 +14,7 @@ per completion to <output-dir>/reward_components.jsonl.
 
 --smoke runs 3 tiny steps and asserts the loop works end to end (see
 run_smoke_checks). No evaluation inside training: checkpoints are evaluated
-afterwards with generate_validation.py (src/students/qwen/hpc/eval_grpo.slurm).
+afterwards with generate_validation.py (src/students/shared/hpc/eval_grpo.slurm).
 
 --family gemma4 trains the Gemma 4 E4B student instead (start policy
 models/gemma4-e4b-sft-merged, output models/gemma4-e4b-grpo; model_families.py).

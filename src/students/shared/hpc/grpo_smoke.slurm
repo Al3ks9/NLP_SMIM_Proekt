@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-grpo-smoke
+#SBATCH --job-name=student-grpo-smoke
 #SBATCH --partition=openlab-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -12,7 +12,7 @@
 # GRPO steps with the real rewards on the real model. Exits non-zero if the
 # fixtures' ordering expectations or the smoke assertions fail.
 #
-# Usage: sbatch src/students/qwen/hpc/grpo_smoke.slurm
+# Usage: sbatch src/students/shared/hpc/grpo_smoke.slurm
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"

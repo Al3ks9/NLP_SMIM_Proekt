@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3-reward-groups
+#SBATCH --job-name=student-reward-groups
 #SBATCH --partition=openlab-queue
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
@@ -12,7 +12,7 @@
 # group-normalised advantage) -> data/grpo/reward_groups.csv. Run before the
 # long job to choose --style-weight / --content-weight.
 #
-# Usage: sbatch src/students/qwen/hpc/reward_groups.slurm [--num-prompts 20 --num-generations 4]
+# Usage: sbatch src/students/shared/hpc/reward_groups.slurm [--num-prompts 20 --num-generations 4]
 
 set -euo pipefail
 cd "$SLURM_SUBMIT_DIR"

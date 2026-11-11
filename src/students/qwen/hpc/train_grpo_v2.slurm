@@ -19,7 +19,7 @@
 #     content reward instead of 5 %.
 #
 # Output: models/qwen3-grpo-v2/. Evaluate with
-#   ADAPTER=models/qwen3-grpo-v2 sbatch src/students/qwen/hpc/eval_grpo.slurm
+#   ADAPTER=models/qwen3-grpo-v2 sbatch src/students/shared/hpc/eval_grpo.slurm
 # Extra args are appended (and override the ones below).
 
 set -euo pipefail
